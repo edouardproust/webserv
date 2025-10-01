@@ -33,12 +33,11 @@ In summary: provide helper functions like “given a request, find the right roo
 ## Project modules / structure
 
 webserv\
-|\
 |_ server\
 |_ http\
 |_ cgi\
 |_ config\
-|_ signals\
+|_ signals
 
 ## How to use
 
