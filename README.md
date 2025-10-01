@@ -15,7 +15,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 ## Project structure
 
 **Modules**
-- **util**: [shared] Utils functions, like error and signal handling.
+- **`util`**: [shared] Utils functions, like error and signal handling.
 - **`server`:** [Daniel] Listen for TCP connections, read raw request, send raw response.
 - **`http`:** [Ava] Parse raw request into Request object and build raw response.
 - **`config`:** parse configuration file into a structured Config object.
@@ -45,7 +45,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 
 ### Allowed functions used per module
 
-**`util`**
+**util**
 - `strerror` / `errno` → error handling
 - `signal` / `kill` → signal handling for shutdown/interrupts
 
