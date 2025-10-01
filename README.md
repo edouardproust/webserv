@@ -6,7 +6,7 @@ Subject: [click here](subject/en.subject.pdf)
 
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
-## Edouard – Networking & Core
+## Daniel – Networking & Core
 
 * Set up socket, listen, accept.
 * Handle multiple connections (poll/epoll).
@@ -22,7 +22,7 @@ In summary : produce “raw request strings” and send back “raw response str
 
 In summary: make a raw request string → parse it → build a response string.
 
-## Daniel – Config & Features
+## Edouard – Config & Features
 
 * Parse config file into structured data.
 * Implement per-server/location settings (roots, error pages, etc.).
