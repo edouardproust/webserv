@@ -32,12 +32,31 @@ In summary: provide helper functions like “given a request, find the right roo
 
 ## Project modules / structure
 
-webserv\
-|_ server\
-|_ http\
-|_ cgi\
-|_ config\
-|_ signals
+**Base:**
+- **`server`**
+	- role: Communicate with client and listening for requests from it and send responses back to it.
+	- entrypoint call: `webserv()`
+	- return: status / error code only ?
+- **`http`**
+	- role: Parse the plain request from `server` into a `Request` instance. Then (build a `Response` instance and) send back to `server` a stringified response.
+	- entrypoint calls: `parse_request()` (first way), `parse_response()` (way back)
+	- return: `Request` or `Response` instance
+- **`cgi`**
+	- role: Process dynamic files (eg. PHP) = database requests needed.
+	- entrypoint call: `process_cgi()`
+	- return: content as plain text to `http` (via `parse_response`) ?
+- **`static`**
+	- role: Process static files (eg. HTML, JS, CSS, JPEG) = no db requests needed \
+	- entrypoint call: `process_static()`
+	- return: content as plain text to `http` (via `parse_response`) ?
+- **`config`**
+	- role: Parse config file in a `ConfigContent` instance + compare content of if with the content of `Request` instance
+	- entrypoint call: `is_static()`
+	- return: boolean
+
+**Updates (mandatory):**
+- **HTML1.0 to HTML 1.1:** will concern `server` and `http` modules (and `config`?)
+- **Implement signals:** will be spread over the project
 
 ## How to use
 
