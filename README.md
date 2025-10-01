@@ -6,121 +6,97 @@ Subject: [click here](subject/en.subject.pdf)
 
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
-## Daniel – Networking & Core
-
-* Set up socket, listen, accept.
-* Handle multiple connections (poll/epoll).
-* Manage client buffers (reading/writing).
-
-In summary : produce “raw request strings” and send back “raw response strings.”
-
-## Foteini – HTTP Protocol & Requests
-
-* Parse HTTP requests into objects (method, path, headers).
-* Build HTTP responses with headers and body.
-* Implement GET/POST/DELETE logic.
-
-In summary: make a raw request string → parse it → build a response string.
-
-## Edouard – Config & Features
-
-* Parse config file into structured data.
-* Implement per-server/location settings (roots, error pages, etc.).
-* Add CGI handling.
-
-In summary: provide helper functions like “given a request, find the right root/error page/CGI program.”
-
-## Project modules / structure
-
-**Base:**
-- **`server`**
-	- role: Communicate with client and listening for requests from it and send responses back to it.
-	- entrypoint call: `webserv()`
-	- return: status / error code only ?
-- **`http`**
-	- role: Parse the plain request from `server` into a `Request` instance. Then (build a `Response` instance and) send back to `server` a stringified response.
-	- entrypoint calls: `parse_request()` (first way), `parse_response()` (way back)
-	- return: `Request` or `Response` instance
-- **`cgi`**
-	- role: Process dynamic files (eg. PHP) = database requests needed.
-	- entrypoint call: `process_cgi()`
-	- return: content as plain text to `http` (via `parse_response`) ?
-- **`static`**
-	- role: Process static files (eg. HTML, JS, CSS, JPEG) = no db requests needed \
-	- entrypoint call: `process_static()`
-	- return: content as plain text to `http` (via `parse_response`) ?
-- **`config`**
-	- role: Parse config file in a `ConfigContent` instance + compare content of if with the content of `Request` instance
-	- entrypoint call: `is_static()`
-	- return: boolean
-
-**Updates (mandatory):**
-- **HTML1.0 to HTML 1.1:** will concern `server` and `http` modules (and `config`?)
-- **Implement signals:** will be spread over the project
-
 ## How to use
 
 ```bash
 ./webserv [configuration file]
 ```
 
-## Allowed functions
+## Project structure
 
-All functionalities must be implemented in C++ 98.
+**Modules**
+- **util**: [shared] Utils functions, like error and signal handling.
+- **`server`:** [Daniel] Listen for TCP connections, read raw request, send raw response.
+- **`http`:** [Ava] Parse raw request into Request object and build raw response.
+- **`config`:** parse configuration file into a structured Config object.
+- **`router`:** Determine if request is for static content or CGI.
+- **`static`:** [Ava] Read static files and produce raw HTTP response.
+- **`cgi`:** [Edouard] Execute CGI program and retrieve output.
 
-### Process Control & Program Execution (For handling multiple client requests)
-* `fork`: Creates a new process to handle a client connection concurrently, allowing the main server to continue accepting new connections.
-* `execve`: Replaces the current process image (e.g., to run a CGI script like PHP or Perl).
-* `waitpid`: Allows the server to clean up finished child processes ("zombies") to free up system resources.
+**Mandatory Updates**
+- **HTML1.0 to HTML 1.1:** will concern `server` (keep-alive connexions) and `http` modules (and `config`?)
+- **Implement signals:** will be spread over the project
 
-### Inter-Process Communication (IPC) - Pipes (Mainly for CGI)
-* `pipe`: Creates a channel for communication between the web server and a CGI script (e.g., to send data to the script and read its output).
-* `dup` / `dup2`: Redirects standard input (stdin) and output (stdout) of a CGI script to/from the pipes created by the server.
+**Global logic**
+- `main` calls `server`
+- `server` is the starting point of the program (infinite loop listening for requests).
+- On request catch, `server` performs several actions:
+	```cpp
+	std::string plain_req = get_request(socket);
+	Request req = parse_request(std::string); // module 'http'
+	std:string plain_res;
+	if (is_static(req)) // module `router`
+		plain = process_static(req); // module 'static'
+	else
+		plain = process_cgi(req); // module 'cgi'
+	Reponse res = parse_response(); // module 'http'
+	send_response(socket);
+	```
 
-### Signal Handling (For graceful server shutdown and management)
-* `signal`: Catches signals like SIGINT (Ctrl-C) to allow the server to shut down gracefully (close all sockets, clean up child processes).
-* `kill`: Sends signals to child processes, for example, to terminate a long-running CGI script.
+### Allowed functions used per module
 
-### File & Directory Management (For serving static files)
-* `open` / `close`: Open and close files requested by clients (e.g., HTML, CSS, JPEG files).
-* `read` / `write`: Read the content of a file to send it in an HTTP response, or write uploaded data to a new file.
-* `access` / `stat`: Check if a file exists, is readable, and get its size (for the `Content-Length` header) and modification date (for caching headers).
-* `chdir`: Change the current working directory to the web root directory for security.
-* `opendir` / `readdir` / `closedir`: List the contents of a directory to generate an automatic directory listing if no index file is present.
+**util**
+- `strerror` / `errno` → error handling
+- `signal` / `kill` → signal handling for shutdown/interrupts
 
-### Error Handling (For robust error reporting)
-* `errno` / `strerror`: Get and display human-readable error messages when system calls (like `open`, `accept`) fail.
-* `gai_strerror`: Get human-readable error messages for failures in hostname lookup (`getaddrinfo`).
+**server**
 
-### Network Core (The foundation of the web server)
+- `socket` → create server socket
+- `bind` → bind socket to address/port
+- `listen` → set socket to listen mode
+- `accept` → accept client connection
+- `recv` → read bytes from socket
+- `send` → write bytes to socket
+- `close` → close socket
+- `poll` / `select` / `epoll` → handle multiple simultaneous connections
+- `fcntl` → set socket to non-blocking mode
+- `htons`, `htonl`, `ntohs`, `ntohl` → network/host byte conversion for ports and addresses
+- `getaddrinfo` / `freeaddrinfo` → hostname resolution if needed
 
-#### Byte Order Conversion (For correct network communication)
-* `htons` / `htonl`: Convert port numbers and addresses from the host's byte order to network byte order before binding a socket.
-* `ntohs` / `ntohl`: Convert network data back to the host's byte order after receiving it.
+**http**
 
-#### Socket Creation and Configuration
-* `socket`: Creates the main listening socket that will wait for incoming HTTP connections.
-* `setsockopt`: Crucial for setting the `SO_REUSEADDR` option, allowing the server to restart immediately without waiting for the previous socket to timeout.
-* `fcntl`: Used to set sockets to **non-blocking** mode, which is essential for efficient I/O multiplexing with `poll`/`epoll`/`kqueue`.
-* `getsockname`: Finds out which port the server is actually listening on if it was configured to use a random port (port 0).
+- `std::string` functions (`str.find`, `str.substr`...) → Parsing
 
-#### Address Resolution (For binding to a host and port)
-* `getaddrinfo` / `freeaddrinfo`: The modern way to prepare the server's address structure for `bind()`. It handles both IPv4 and IPv6 transparently.
+**config**
 
-### HTTP Protocol Engine (Handling connections and requests)
+- `open` → open config file
+- `read` → read file contents
+- `close` → close file
+- `access` → check existence of files/directories referenced in config
+- `stat` → file/directory information (root, cgi-bin, error pages)
+- `opendir` / `readdir` / `closedir` → optionally for directory indexes or listings
 
-#### Connection Management (TCP Lifecycle)
-* `bind`: Assigns the server's IP address and port number (e.g., port 80) to the listening socket.
-* `listen`: Puts the socket into a state where it can accept incoming TCP connections from HTTP clients (browsers).
-* `accept`: Accepts an incoming connection, creating a new socket dedicated to communication with that specific client.
-* `recv`: Reads the HTTP request (e.g., `GET /index.html HTTP/1.1`) sent by the client.
-* `send`: Sends the HTTP response (headers and file content) back to the client.
-* `connect`: *Less common in a server*, but could be used if the server itself acts as a client (e.g., a proxy server).
+**router**
 
-### High-Performance Concurrency (Handling thousands of simultaneous clients)
+- `access` → check if file exists
+- `stat` → check if path is file or directory
 
-This is the most critical part for a scalable web server.
+**static**
 
-#### I/O Multiplexing (The heart of the event loop)
-* **`select` / `poll`**: The portable way to monitor the **listening socket** and all active **client sockets** simultaneously. The server sleeps until one or more sockets are ready (e.g., a new connection arrives or a client sends data). This avoids the need for one thread/process per client.
-* **`epoll` (Linux) / `kqueue` (macOS/BSD)**: Superior, modern alternatives to `select`/`poll`. They are dramatically more efficient when handling tens of thousands of concurrent connections, as they only return the sockets that are actually ready, without scanning the entire list.
+- `open` → open requested file
+- `read` → read file content
+- `close` → close file
+- `stat` → get file size for Content-Length
+- `access` → check file permissions
+- `opendir` / `readdir` / `closedir` → for directory listings or index.html handling
+
+**cgi**
+
+- `pipe` → create parent/child communication channels for stdin/stdout
+- `fork` → create child process
+- `dup2` → redirect child stdin/stdout to pipe
+- `execve` → execute CGI script (php-cgi, Python, etc.)
+- `write` → send POST body to CGI
+- `read` → read CGI output
+- `close` → close unused pipe ends
+- `waitpid` → wait for child process
