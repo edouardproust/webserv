@@ -45,7 +45,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 
 ### Allowed functions used per module
 
-**util**
+**`util`**
 - `strerror` / `errno` → error handling
 - `signal` / `kill` → signal handling for shutdown/interrupts
 
