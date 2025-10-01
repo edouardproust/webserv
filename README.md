@@ -30,6 +30,16 @@ In summary: make a raw request string → parse it → build a response string.
 
 In summary: provide helper functions like “given a request, find the right root/error page/CGI program.”
 
+## Project modules / structure
+
+webserv
+|
+|_ server
+|_ http
+|_ cgi
+|_ config
+|_ signals
+
 ## How to use
 
 ```bash
