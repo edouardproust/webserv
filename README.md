@@ -9,9 +9,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 ## Edouard – Networking & Core
 
 * Set up socket, listen, accept.
-
 * Handle multiple connections (poll/epoll).
-
 * Manage client buffers (reading/writing).
 
 In summary : produce “raw request strings” and send back “raw response strings.”
@@ -19,22 +17,18 @@ In summary : produce “raw request strings” and send back “raw response str
 ## Foteini – HTTP Protocol & Requests
 
 * Parse HTTP requests into objects (method, path, headers).
-
 * Build HTTP responses with headers and body.
-
 * Implement GET/POST/DELETE logic.
 
-In summary : ake a raw request string → parse it → build a response string.
+In summary: make a raw request string → parse it → build a response string.
 
 ## Daniel – Config & Features
 
 * Parse config file into structured data.
-
 * Implement per-server/location settings (roots, error pages, etc.).
-
 * Add CGI handling.
 
-In summary : provide helper functions like “given a request, find the right root/error page/CGI program.”
+In summary: provide helper functions like “given a request, find the right root/error page/CGI program.”
 
 ## How to use
 
