@@ -1,3 +1,4 @@
+# File types
 *.swo
 *.swp
 *.bak
@@ -5,7 +6,9 @@
 *.tmp
 *~
 
-_obj
-webserv
+# Specific folders
+obj/
+.vscode/
 
-.vscode
+# Specitif files
+webserv

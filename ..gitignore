@@ -1,3 +1,4 @@
+# File types
 *.swo
 *.swp
 *.bak
@@ -5,11 +6,13 @@
 *.tmp
 *~
 
-_obj
-webserv
-subject
-README.md
+# Specific folders
+obj/
+subject/
+.vscode/
 
-.vscode
+# Specitif files
+webserv
+README.md
 .gitignore
-..gitkeep
+.gitkeep

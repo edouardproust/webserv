@@ -1,44 +1,52 @@
 NAME = webserv
 
-CC = c++
+CXX = c++
 
-FLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -MP
+CXX_FLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRCS_FILES = main.cpp
+# ------- Sources -------
 
-SRCS_DIR = src
+SRC_FILES = main.cpp
 
-SRCS = $(addprefix $(SRCS_DIR)/, $(SRCS_FILES))
+SRC_DIR = src
 
-OBJS_DIR = $(SRCS_DIR)/_obj
+SRCS = $(addprefix $(SRC_DIR)/, $(SRC_FILES))
 
-OBJS = $(addprefix $(OBJS_DIR)/, $(SRCS_FILES:.cpp=.o))
+OBJ_DIR = obj
+
+OBJS = $(addprefix $(OBJ_DIR)/, $(SRC_FILES:.cpp=.o))
+
+# ------- Includes -------
+
+INC_DIR = inc
+
+INC_FLAGS = -I $(INC_DIR)
+
+# ------- Deps -------
+
+DEPS_FLAGS = -MMD
 
 DEPS = $(OBJS:.o=.d)
 
-
 # ------- Rules -------
+
+.PHONY: all clean fclean re
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $^ -o $@
+	$(CXX) $^ -o $@
 
-$(OBJS_DIR)/%.o: %.cpp Makefile
-	mkdir -p $(OBJS_DIR)
-	$(CC) -c $< -o $@ $(FLAGS)
+$(OBJ_DIR)/%.o: %.cpp Makefile
+	mkdir -p $(OBJ_DIR)
+	$(CXX) -c $< -o $@ $(CXX_FLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
+
+-include $(DEPS)
 
 clean:
-	rm -rf $(OBJS_DIR)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
-
-
-# ------- Other -------
-
--include $(DEPS)
-
-.PHONY: all clean fclean re
