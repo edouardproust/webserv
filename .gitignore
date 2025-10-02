@@ -2,5 +2,10 @@
 *.swp
 *.bak
 *.out
+*.tmp
+*~
+
 _obj
 webserv
+
+.vscode

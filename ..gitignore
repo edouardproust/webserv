@@ -2,9 +2,14 @@
 *.swp
 *.bak
 *.out
+*.tmp
+*~
+
 _obj
 webserv
 subject
 README.md
+
+.vscode
 .gitignore
 ..gitkeep
