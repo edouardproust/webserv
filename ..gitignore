@@ -2,6 +2,9 @@
 *.swp
 *.bak
 *.out
+_obj
 webserv
 subject
 README.md
+.gitignore
+..gitkeep
