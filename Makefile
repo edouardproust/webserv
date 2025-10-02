@@ -37,7 +37,7 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CXX) $^ -o $@
 
-$(OBJ_DIR)/%.o: %.cpp Makefile
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	mkdir -p $(OBJ_DIR)
 	$(CXX) -c $< -o $@ $(CXX_FLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
 
