@@ -9,6 +9,7 @@
 # Specific folders
 obj/
 subject/
+tests/
 .vscode/
 
 # Specitif files
