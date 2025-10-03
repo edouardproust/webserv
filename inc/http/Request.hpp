@@ -34,6 +34,12 @@ class Request
 	std::string	getVersion() const;
 	const std::map<std::string, std::string>&	getHeaders() const;
 	std::string getBody() const;
+
+	void	setMethod(Method method);
+    void	setPath(const std::string& path);
+    void	setVersion(const std::string& version);
+    void	addHeader(const std::string& name, const std::string& value);
+	void	setBody(const std::string& body);
 };
 
 #endif

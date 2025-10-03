@@ -6,7 +6,9 @@ CXX_FLAGS = -Wall -Wextra -Werror -std=c++98
 
 # ------- Sources -------
 
-SRC_FILES = main.cpp
+SRC_FILES = dev.create_raw_request.cpp \
+			http/Request.cpp \
+			http/RequestParser.cpp
 
 SRC_DIR = src
 
@@ -38,7 +40,7 @@ $(NAME): $(OBJS)
 	$(CXX) $^ -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
-	mkdir -p $(OBJ_DIR)
+	mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(CXX_FLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
 
 -include $(DEPS)
