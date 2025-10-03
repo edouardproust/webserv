@@ -1,10 +1,16 @@
-class Config {
-    std::vector<ServerConfig>   servers;
+#ifndef CONFIG_HPP
+#define CONFIG_HPP
 
-    method parse(file_path):
-        read file line by line
-        for each "server { ... }" block:
-            create ServerConfig instance
-            parse server block
-            append to servers
+#include "ServerBlock.hpp"
+#include <vector>
+
+class Config {
+
+	std::vector<ServerBlock>   servers;
+
+	public:
+
+		void	parse(std::string&);
 };
+
+#endif
