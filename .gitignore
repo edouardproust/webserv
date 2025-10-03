@@ -1,5 +1,14 @@
+# File types
 *.swo
 *.swp
 *.bak
 *.out
+*.tmp
+*~
+
+# Specific folders
+obj/
+.vscode/
+
+# Specitif files
 webserv
