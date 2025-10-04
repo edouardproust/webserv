@@ -3,6 +3,7 @@
 
 # include "Request.hpp"
 # include <string>
+# include <sstream>
 
 enum Status
 {
@@ -26,6 +27,7 @@ class RequestParser
 	bool	isValidPath(const std::string& path) const;
 	bool	isValidVersion(const std::string& version) const;
 	bool	hasBody(const std::string& rawRequest) const;
+	bool	hasExtraContent(std::istringstream& line);
 
 	public :
 

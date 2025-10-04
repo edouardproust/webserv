@@ -22,9 +22,9 @@ int main()
         "Multiple spaces in request line - Valid",
         "Tabs instead of spaces - Valid",
         "Path with special chars - Valid",
-        "Extra space after request line - Invalid", //TO FIX!
+        "Extra chars after version - Invalid",
         "Empty line after request line - Invalid",
-        "Two empty lines after headers - Invalid"   //TO FIX!
+        "Two empty lines after headers - Valid"   //Extra lines considered as body
     };
 
     const char* rawRequests[] =
@@ -42,9 +42,9 @@ int main()
         "GET    /index.html    HTTP/1.0\r\nHost: localhost\r\n\r\n",
         "GET\t/index.html\tHTTP/1.0\r\nHost: localhost\r\n\r\n",
         "GET /index123&.html HTTP/1.0\r\nHost: localhost\r\n\r\n",
-        "GET /index.html HTTP/1.0 \r\nHost: localhost\r\n\r\n"   ,
-        "GET /index.html HTTP/1.0 \r\n\r\nHost: localhost\r\n\r\n",
-        "POST /index.html HTTP/1.0 \r\nHost: localhost\r\n\r\n\r\n"
+        "GET /index.html HTTP/1.0 \r\nHost: localhost\r\n\r\n",
+        "GET /index.html HTTP/1.0\r\n\r\nHost: localhost\r\n\r\n",
+        "POST /index.html HTTP/1.0\r\nHost: localhost\r\n\r\n\r\n"
     };
 
     const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);

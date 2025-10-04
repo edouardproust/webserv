@@ -1,5 +1,4 @@
 #include "http/RequestParser.hpp"
-#include <sstream>
 #include <iostream>
 
 RequestParser::RequestParser() {}
@@ -48,8 +47,7 @@ Status	RequestParser::parseRequestLine(Request& request, const std::string& line
 
 	if (!(requestLineStream >> methodStr >> path >> version))
 		return (BAD_REQUEST);
-	std::string extraContent;
-	if (requestLineStream >> methodStr >> path >> version >> extraContent)
+	if (hasExtraContent(requestLineStream))
 		return (BAD_REQUEST);
 	if (!isValidMethod(methodStr))
 		return (METHOD_NOT_ALLOWED);
@@ -117,4 +115,12 @@ bool	RequestParser::hasBody(const std::string& rawRequest) const
 	if (rawRequest.length() > headersEnd + 4)
 		return (true);
 	return (false);
+}
+
+bool	RequestParser::hasExtraContent(std::istringstream& line)
+{
+	std::string	remaining;
+	std::getline(line, remaining);
+
+	return (!remaining.empty());
 }
