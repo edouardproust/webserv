@@ -1,23 +1,36 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
-#include "ServerBlock.hpp"
+#include "config/ServerBlock.hpp"
 #include <vector>
 
 class Config {
 
-	std::vector<ServerBlock>   servers;
+	std::string	const&			_filePath;
+	std::vector<ServerBlock>	_servers;
+
+	Config();
+
+	void		_addServer(ServerBlock const&);
+	std::string	_extractFileContent();
+
+	static void			_addTokenIf(std::string& token, std::vector<std::string>& tokens);
+	static std::string	_getBlockContent(std::string const& content, size_t& index);
 
 	public:
 
-		void	parse(std::string&);
+		Config(std::string const& filePath);
+
+		void	parse();
+		void	print() const;
+
+		std::vector<ServerBlock> const&	getServers() const;
 };
 
 #endif
 
 /*
-
-function parseConfig(file_path):
+function parse(file_path):
     rootContext = new Context("root")
     contextStack = [rootContext]   // stack pour gérer les nested blocks
 
