@@ -20,10 +20,13 @@ Status	RequestParser::parse_request(Request& request, const std::string& rawRequ
 {
 	if (rawRequest.empty())
 		return (BAD_REQUEST);
-	size_t	headersEnd = rawRequest.find("\r\n\r\n");
+	size_t requestStart;
+	if (!isValidStart(rawRequest, requestStart))
+		return (BAD_REQUEST);
+	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
 		return (BAD_REQUEST);
-	std::string partBeforeBody = rawRequest.substr(0, headersEnd);
+	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
 		return (BAD_REQUEST);
@@ -32,8 +35,6 @@ Status	RequestParser::parse_request(Request& request, const std::string& rawRequ
 	Status	result = parseRequestLine(request, requestLine);
 	if (result != SUCCESS)
 		return (result);
-	if (hasBody(rawRequest) && request.getMethod() == GET)
-		return (LENGTH_REQUIRED);
 	result = parseHeaders(request, headersPart);
 	if (result != SUCCESS)
 		return (result);
@@ -63,11 +64,58 @@ Status	RequestParser::parseRequestLine(Request& request, const std::string& line
 
 Status RequestParser::parseHeaders(Request& request, const std::string& headersPart)
 {
-    (void)request; 
-    (void)headersPart;
-    
-    // TODO: Implement header parsing later
-    return (SUCCESS);
+	std::istringstream	headersStream(headersPart);
+	std::string	line;
+
+	if (headersPart.empty() && request.getVersion() == "HTTP/1.0")
+    	return (SUCCESS);
+	while (std::getline(headersStream, line))
+	{
+		if (!line.empty() && line[line.length() - 1] == '\r')
+			line.erase(line.length()-1);
+		if (line.empty())
+			break ;
+		if (std::isspace(line[0]))
+			return (HEADER_SYNTAX_ERROR);
+		Status result = parseHeaderLine(request, line);
+		if (result != SUCCESS)
+			return (result);
+	}
+	return (SUCCESS);
+}
+
+Status	RequestParser::parseHeaderLine(Request& request, const std::string& line)
+{
+	size_t	colonPos = line.find(":");
+	if (colonPos == std::string::npos)
+		return (HEADER_SYNTAX_ERROR);
+	std::string	name = line.substr(0, colonPos);
+	std::string	value = line.substr(colonPos + 1);
+	if (name.empty())
+		return (HEADER_NAME_EMPTY);
+	for (size_t i = 0; i < name.length(); i++)
+	{
+		if (!std::isalnum(name[i]) && name[i] != '-')
+			return (HEADER_SYNTAX_ERROR);
+	}
+	if (!isValidHeaderValue(value))
+		return (HEADER_SYNTAX_ERROR);
+	request.addHeader(name, value);
+	return (SUCCESS);
+}
+
+bool	RequestParser::isValidStart(const std::string& rawRequest, size_t& requestStart) const
+{
+	for (size_t i = 0; i < rawRequest.length(); i++)
+	{
+		if (rawRequest[i] == '\r' || rawRequest[i] == '\n')
+			continue ;
+		if (std::isspace(rawRequest[i]))
+			return (false);
+		requestStart = i;
+		return (true);
+	}
+	return (false);
 }
 
 Method RequestParser::methodFromString(const std::string& methodStr)
@@ -108,19 +156,32 @@ bool	RequestParser::isValidVersion(const std::string& version) const
 		return (false);
 	return (version == "HTTP/1.0"); // version == "HTTP/1.1" for later
 }
-
-bool	RequestParser::hasBody(const std::string& rawRequest) const
+//This check must he moved to Response
+/*bool	RequestParser::hasBody(const std::string& rawRequest) const
 {
 	size_t	headersEnd = rawRequest.find("\r\n\r\n");
 	if (rawRequest.length() > headersEnd + 4)
 		return (true);
 	return (false);
-}
+}*/
 
 bool	RequestParser::hasExtraContent(std::istringstream& line)
 {
-	std::string	remaining;
-	std::getline(line, remaining);
+	char	c;
 
-	return (!remaining.empty());
+	while (line.get(c))
+		return (true);
+	return (false);
+}
+
+bool	RequestParser::isValidHeaderValue(const std::string& value) const
+{
+	for (size_t i = 0; i < value.length(); i++)
+	{
+		if (value[i] < 32 && value[i] != '\t')
+			return (false);
+		if (value[i] == 127)
+			return (false);
+	}
+	return (true);
 }

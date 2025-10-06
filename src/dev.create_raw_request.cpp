@@ -9,9 +9,7 @@ int main()
 
     const char* descriptions[] =
     {
-        "GET with no body - Valid",
-        "POST with body - Valid",
-        "GET with body - Invalid",
+        "GET with body - Valid",
         "No empty line at end of headers - Invalid",
         "Method lowercase - Invalid",
         "Path without starting '/' - Invalid",
@@ -20,17 +18,15 @@ int main()
         "No spaces in request line - Invalid",
         "Wrong HTTP version - Invalid",
         "Multiple spaces in request line - Valid",
-        "Tabs instead of spaces - Valid",
+        "Tabs instead of spaces - Valid", //should be not valid
         "Path with special chars - Valid",
-        "Extra chars after version - Invalid",
+        "Extra chars after version - Invalid", //only whitespaces valid-everything else invalid even tabs
         "Empty line after request line - Invalid",
         "Two empty lines after headers - Valid"   //Extra lines considered as body
     };
 
     const char* rawRequests[] =
     {
-        "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
-        "POST /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\nHello world",
         "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\nHello world",
         "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
         "get /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
