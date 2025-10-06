@@ -1,14 +1,42 @@
 #include "config/Config.hpp"
 #include "config/ServerBlock.hpp"
-#include "config/LocationBlock.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 
-Config::Config() {}
+Config::Config(): _filePath("default.config") {}
 
 Config::Config(std::string const& filePath): _filePath(filePath) {}
+
+
+void	Config::parse() {
+	std::string content = _extractFileContent();
+	std::string token = "";
+	std::vector<std::string> tokens;
+	int braceDepth = 0;
+	for (size_t i = 0; i < content.size(); ++i) {
+		_skipCommentIf(content, i);
+		if(content[i] == '{') {
+			++braceDepth;
+			if (tokens[0] == "server" && tokens.size() == 1) {
+				ServerBlock sb;
+				std::string blockContent = _getBlockContent(content, i, braceDepth);
+				sb.parse(blockContent);
+				_addServer(sb);
+			if (tokens.size() <= 0)
+				throw std::runtime_error("Unexpected '{'");
+			} else {
+				throw std::runtime_error("Invalid block: " + tokens[0]);
+			}
+			tokens.clear();
+		} else if (isspace(content[i])) {
+			_addTokenIf(token, tokens);
+		} else {
+			token += content[i];
+		}
+	}
+}
 
 std::string	Config::_extractFileContent() {
 	std::ifstream	file(_filePath.c_str());
@@ -26,59 +54,31 @@ void	Config::_addTokenIf(std::string& token, std::vector<std::string>& tokens) {
 	}
 }
 
-std::string	Config::_getBlockContent(std::string const& content, size_t& index) {
-	size_t	start = index;
-
+std::string	Config::_getBlockContent(std::string const& content, size_t& index, int& braceDepth) {
 	std::string	blockContent = "";
-	while (index < content.size() && content[index] = '}') {
+	index++; // skip the '{'
+	while (index < content.size() && braceDepth > 0) {
+		if (content[index] == '{') {
+			++braceDepth;
+		} else if (content[index] == '}') {
+			--braceDepth;
+			if (braceDepth == 0) {
+				index++; // skip the '}'
+				break;
+			}
+		}
 		blockContent += content[index];
 		++index;
 	}
-	if (index >= content.size())
+	if (braceDepth > 0)
 		throw std::runtime_error("Unmatched '{' in configuration file");
 	return blockContent;
 }
 
-void	Config::parse() {
-	std::string content = _extractFileContent();
-	for (size_t i = 0; i < content.size(); ++i) {
-		char c = content[i];
-		std::string token = "";
-		std::vector<std::string> tokens;
-		if (c == '#') {
-			while (i < content.size() && content[i] != '\n')
-				++i;
-		} else if (c == '{') {
-			if (tokens.size() <= 0)
-				throw std::runtime_error("Unexpected '{'");
-			else if (tokens[0] == "server" && tokens.size() == 1) {
-				ServerBlock sb;
-				std::string blockContent = _getBlockContent(content, i);
-				sb.parse(blockContent);
-				_addServer(sb);
-			} else if (tokens[0] == "location" && tokens.size() == 2) {
-				if (_servers.empty())
-					throw std::runtime_error("Location block outside of server block");
-				LocationBlock lb(tokens[1]);
-				std::string blockContent = _getBlockContent(content, i);
-				lb.parse(blockContent);
-				_servers.back().addLocation(lb);
-			} else {
-				throw std::runtime_error("Invalid block: " + tokens[0]);
-			}
-		} else if (c == '}') {
-			_addTokenIf(token, tokens);
-			// end of current block
-			// pop context from stack
-		} else if (c == ';') {
-			_addTokenIf(token, tokens);
-			// end of directive
-			// add directive to current context}
-		} else if (isspace(c)) {
-			_addTokenIf(token, tokens);
-		} else {
-			token += c;
-		}
+void	Config::_skipCommentIf(std::string const& content, size_t& index) {
+	if (content[index] == '#') {
+		while (index < content.size() && content[index] != '\n')
+			++index;
 	}
 }
 
@@ -88,26 +88,6 @@ void	Config::_addServer(ServerBlock const& server) {
 
 void	Config::print() const {
 	for (size_t i = 0; i < _servers.size(); ++i) {
-		std::cout << "Server " << i << ":\n";
-		std::cout << "  Root: " << _servers[i].getRoot() << "\n";
-		std::cout << "  Server Name: " << _servers[i].getServerName() << "\n";
-		std::cout << "  Listen: " << _servers[i].getListen() << "\n";
-		const std::vector<LocationBlock>& locations = _servers[i].getLocations();
-		for (size_t j = 0; j < locations.size(); ++j) {
-			std::cout << "  Location " << j << ":\n";
-			std::cout << "    Path: " << locations[j].getPath() << "\n";
-			std::cout << "    Root: " << locations[j].getRoot() << "\n";
-			std::cout << "    CGI Root: " << locations[j].getCgiRoot() << "\n";
-			std::cout << "    CGI Extension: " << locations[j].getCgiExtension() << "\n";
-			std::cout << "    CGI Executable: " << locations[j].getCgiExecutable() << "\n";
-			const std::vector<std::string>& indexFiles = locations[j].getIndexFiles();
-			std::cout << "    Index Files: ";
-			for (size_t k = 0; k < indexFiles.size(); ++k) {
-				std::cout << indexFiles[k];
-				if (k + 1 < indexFiles.size())
-					std::cout << ", ";
-			}
-			std::cout << "\n";
-		}
+		_servers[i].print();
 	}
 }
