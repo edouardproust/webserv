@@ -9,7 +9,7 @@ enum Status
 {
 	SUCCESS = 200,
 	BAD_REQUEST = 400, // Wrong request line formst
-	METHOD_NOT_ALLOWED = 405, // Methods we don't use but normally exist
+	METHOD_NOT_ALLOWED = 405, // For response
 	HTTP_VERSION_NOT_SUPPORTED = 505, // Not HTTP/1.0 (or HTPP/1.1 for later)
 	LENGTH_REQUIRED = 411, // For empty body eg in POST
 	HEADER_SYNTAX_ERROR = 400, // Wrong header line
@@ -30,8 +30,6 @@ class RequestParser
 	bool	isValidMethod(const std::string& method) const;
 	bool	isValidPath(const std::string& path) const;
 	bool	isValidVersion(const std::string& version) const;
-	//bool	hasBody(const std::string& rawRequest) const; -> wrong, should be handled in Response
-	bool	hasExtraContent(std::istringstream& line);
 	bool	isValidHeaderValue(const std::string& value) const;
 
 	public :

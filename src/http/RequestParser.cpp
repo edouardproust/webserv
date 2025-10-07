@@ -43,15 +43,24 @@ Status	RequestParser::parse_request(Request& request, const std::string& rawRequ
 
 Status	RequestParser::parseRequestLine(Request& request, const std::string& line)
 {
+
+	for (size_t i = 0; i < line.length(); i++)
+	{
+		if (line[i] != ' ' && std::isspace(line[i]))
+			return (BAD_REQUEST);
+	}
 	std::istringstream	requestLineStream(line);
 	std::string	methodStr, path, version;
-
 	if (!(requestLineStream >> methodStr >> path >> version))
 		return (BAD_REQUEST);
-	if (hasExtraContent(requestLineStream))
-		return (BAD_REQUEST);
+	char c;
+	while (requestLineStream.get(c))
+	{
+		if (c != ' ')
+			 return (BAD_REQUEST);
+	}
 	if (!isValidMethod(methodStr))
-		return (METHOD_NOT_ALLOWED);
+		return (BAD_REQUEST);
 	if (!isValidPath(path))
 		return (BAD_REQUEST);
 	if (!isValidVersion(version))
@@ -155,23 +164,6 @@ bool	RequestParser::isValidVersion(const std::string& version) const
 	if (version.empty())
 		return (false);
 	return (version == "HTTP/1.0"); // version == "HTTP/1.1" for later
-}
-//This check must he moved to Response
-/*bool	RequestParser::hasBody(const std::string& rawRequest) const
-{
-	size_t	headersEnd = rawRequest.find("\r\n\r\n");
-	if (rawRequest.length() > headersEnd + 4)
-		return (true);
-	return (false);
-}*/
-
-bool	RequestParser::hasExtraContent(std::istringstream& line)
-{
-	char	c;
-
-	while (line.get(c))
-		return (true);
-	return (false);
 }
 
 bool	RequestParser::isValidHeaderValue(const std::string& value) const

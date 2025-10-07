@@ -9,7 +9,8 @@ int main()
 
     const char* descriptions[] =
     {
-        "GET with body - Valid",
+        "GET with body - Valid", //GET doesn't need a body, but it is allowed to have one
+        "Chars before method in request line - Invalid", //Nothing should be before method, even spaces
         "No empty line at end of headers - Invalid",
         "Method lowercase - Invalid",
         "Path without starting '/' - Invalid",
@@ -18,16 +19,17 @@ int main()
         "No spaces in request line - Invalid",
         "Wrong HTTP version - Invalid",
         "Multiple spaces in request line - Valid",
-        "Tabs instead of spaces - Valid", //should be not valid
+        "Tabs instead of spaces - Invalid",
         "Path with special chars - Valid",
-        "Extra chars after version - Invalid", //only whitespaces valid-everything else invalid even tabs
-        "Empty line after request line - Invalid",
+        "Extra spaces after version - Valid", //only whitespaces valid-everything else invalid even tabs
+        "Empty line after request line - Invalid", //here strictly following RFC, nginx allows it but doesn't make sense
         "Two empty lines after headers - Valid"   //Extra lines considered as body
     };
 
     const char* rawRequests[] =
     {
         "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\nHello world",
+        "     GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
         "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
         "get /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
         "GET index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
@@ -38,7 +40,7 @@ int main()
         "GET    /index.html    HTTP/1.0\r\nHost: localhost\r\n\r\n",
         "GET\t/index.html\tHTTP/1.0\r\nHost: localhost\r\n\r\n",
         "GET /index123&.html HTTP/1.0\r\nHost: localhost\r\n\r\n",
-        "GET /index.html HTTP/1.0 \r\nHost: localhost\r\n\r\n",
+        "GET /index.html HTTP/1.0   \r\nHost: localhost\r\n\r\n",
         "GET /index.html HTTP/1.0\r\n\r\nHost: localhost\r\n\r\n",
         "POST /index.html HTTP/1.0\r\nHost: localhost\r\n\r\n\r\n"
     };
