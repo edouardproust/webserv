@@ -10,28 +10,29 @@ class ServerBlock {
 
 	std::string					_root;
 	std::string					_serverName;
-	int							_listen;
+	unsigned int				_listen;
+	unsigned long				_clientMaxBodySize;
 	std::map<int, std::string>	_error_pages;
 	std::vector<std::string>	_indexFiles;
 	std::vector<LocationBlock>	_locations;
 
-	void	_addLocation(LocationBlock const&);
+	ServerBlock();
 
-	protected:
-
-		std::string					_clientMaxBodySize;
+	void	_parse(std::string const&);
+	void	_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
+	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
 
 	public:
 
-		ServerBlock();
+		ServerBlock(std::string const&);
 
-		void	parse(std::string const&);
+		void	validate();
 		void	print() const;
 
 		std::string const&					getRoot() const;
 		std::string const&					getServerName() const;
-		int									getListen() const;
-		std::string const&					getClientMaxBodySize() const;
+		unsigned int						getListen() const;
+		unsigned long						getClientMaxBodySize() const;
 		std::map<int, std::string> const&	getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		std::vector<LocationBlock> const&	getLocations() const;

@@ -7,24 +7,15 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	Config cfg(argv[1]);
 	try {
-		cfg.parse();
+		Config cfg(argv[1]);
 		cfg.print(); // DEBUG
+		//Server server(cfg);
+		//server.run(cfg);
 	} catch (const std::exception& e) {
-		std::cerr << "Config error: " << e.what() << std::endl;
+		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;
 	}
-
-	/*
-	try {
-		Server server(cfg.port);
-		server.run();
-	} catch (const std::exception& e) {
-		std::cerr << "Server error: " << e.what() << std::endl;
-		return 1;
-	}
-	*/
 
 	return 0;
 }
