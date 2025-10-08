@@ -6,7 +6,7 @@ CXX_FLAGS = -Wall -Wextra -Werror -std=c++98
 
 # ------- Sources -------
 
-SRC_FILES = parser_debug.cpp \
+SRC_FILES = main.cpp \
 	utils/utils.cpp \
 	config/Config.cpp \
 	config/LocationBlock.cpp \
