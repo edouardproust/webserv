@@ -16,68 +16,68 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 
 RequestParser::~RequestParser() {}
 
-Status	RequestParser::parse_request(Request& request, const std::string& rawRequest)
+ParseStatus	RequestParser::parse_request(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	size_t requestStart;
 	if (!isValidStart(rawRequest, requestStart))
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
-	Status	result = parseRequestLine(request, requestLine);
-	if (result != SUCCESS)
+	ParseStatus	result = parseRequestLine(request, requestLine);
+	if (result != PARSE_SUCCESS)
 		return (result);
 	result = parseHeaders(request, headersPart);
-	if (result != SUCCESS)
+	if (result != PARSE_SUCCESS)
 		return (result);
-	return (SUCCESS);
+	return (PARSE_SUCCESS);
 }
 
-Status	RequestParser::parseRequestLine(Request& request, const std::string& line)
+ParseStatus	RequestParser::parseRequestLine(Request& request, const std::string& line)
 {
 
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
-			return (BAD_REQUEST);
+			return (PARSE_ERR_BAD_REQUEST);
 	}
 	std::istringstream	requestLineStream(line);
 	std::string	methodStr, path, version;
 	if (!(requestLineStream >> methodStr >> path >> version))
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	char c;
 	while (requestLineStream.get(c))
 	{
 		if (c != ' ')
-			 return (BAD_REQUEST);
+			 return (PARSE_ERR_BAD_REQUEST);
 	}
 	if (!isValidMethod(methodStr))
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	if (!isValidPath(path))
-		return (BAD_REQUEST);
+		return (PARSE_ERR_BAD_REQUEST);
 	if (!isValidVersion(version))
-		return (HTTP_VERSION_NOT_SUPPORTED);
+		return (PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED);
 	request.setMethod(methodFromString(methodStr));
 	request.setPath(path);
 	request.setVersion(version);
-	return (SUCCESS);
+	return (PARSE_SUCCESS);
 }
 
-Status RequestParser::parseHeaders(Request& request, const std::string& headersPart)
+ParseStatus RequestParser::parseHeaders(Request& request, const std::string& headersPart)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
 
 	if (headersPart.empty() && request.getVersion() == "HTTP/1.0")
-    	return (SUCCESS);
+    	return (PARSE_SUCCESS);
 	while (std::getline(headersStream, line))
 	{
 		if (!line.empty() && line[line.length() - 1] == '\r')
@@ -85,32 +85,32 @@ Status RequestParser::parseHeaders(Request& request, const std::string& headersP
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return (HEADER_SYNTAX_ERROR);
-		Status result = parseHeaderLine(request, line);
-		if (result != SUCCESS)
+			return (PARSE_ERR_HEADER_SYNTAX_ERROR);
+		ParseStatus result = parseHeaderLine(request, line);
+		if (result != PARSE_SUCCESS)
 			return (result);
 	}
-	return (SUCCESS);
+	return (PARSE_SUCCESS);
 }
 
-Status	RequestParser::parseHeaderLine(Request& request, const std::string& line)
+ParseStatus	RequestParser::parseHeaderLine(Request& request, const std::string& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return (HEADER_SYNTAX_ERROR);
+		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
+	if (!name.empty() && std::isspace(name[name.length() - 1]))
+		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
 	if (name.empty())
-		return (HEADER_NAME_EMPTY);
-	for (size_t i = 0; i < name.length(); i++)
-	{
-		if (!std::isalnum(name[i]) && name[i] != '-')
-			return (HEADER_SYNTAX_ERROR);
-	}
-	if (!isValidHeaderValue(value))
-		return (HEADER_SYNTAX_ERROR);
-	request.addHeader(name, value);
-	return (SUCCESS);
+		return (PARSE_ERR_HEADER_NAME_EMPTY);
+	if (isInvalidAfterColon(value))
+		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
+	if (!isValidHeaderName(name))
+		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
+	std::string normalizedName = normalizeHeaderName(name);
+	request.addHeader(normalizedName, value);
+	return (PARSE_SUCCESS);
 }
 
 bool	RequestParser::isValidStart(const std::string& rawRequest, size_t& requestStart) const
@@ -166,14 +166,34 @@ bool	RequestParser::isValidVersion(const std::string& version) const
 	return (version == "HTTP/1.0"); // version == "HTTP/1.1" for later
 }
 
-bool	RequestParser::isValidHeaderValue(const std::string& value) const
+bool	RequestParser::isValidHeaderName(const std::string& name) const
 {
-	for (size_t i = 0; i < value.length(); i++)
+	const std::string validChars = "!#$%&'*+-.^_`|~";
+
+	for (size_t i = 0; i < name.length(); i++)
 	{
-		if (value[i] < 32 && value[i] != '\t')
-			return (false);
-		if (value[i] == 127)
+		if (!std::isalnum(name[i]) && validChars.find(name[i]) == std::string::npos)
 			return (false);
 	}
 	return (true);
+}
+
+bool	RequestParser::isInvalidAfterColon(const std::string& value) const
+{
+	for (size_t i = 0; i < value.length(); i++)
+	{
+		if (!std::isspace(value[i]))
+			return (false);
+		if (value[i] != ' ')
+			return (true);
+	}
+	return (false);
+}
+
+std::string	RequestParser::normalizeHeaderName(const std::string& name) const
+{
+	std::string normalized = name;
+	for (size_t i = 0; i < normalized.length(); ++i)
+		normalized[i] = std::tolower(normalized[i]);
+	return (normalized);
 }

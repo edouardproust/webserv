@@ -5,32 +5,33 @@
 # include <string>
 # include <sstream>
 
-enum Status
+enum ParseStatus
 {
-	SUCCESS = 200,
-	BAD_REQUEST = 400, // Wrong request line formst
-	METHOD_NOT_ALLOWED = 405, // For response
-	HTTP_VERSION_NOT_SUPPORTED = 505, // Not HTTP/1.0 (or HTPP/1.1 for later)
-	LENGTH_REQUIRED = 411, // For empty body eg in POST
-	HEADER_SYNTAX_ERROR = 400, // Wrong header line
-	HEADER_NAME_EMPTY = 400, // Empty header name
-	MISSING_HOST_HEADER = 400 //To implement for HTTP 1.1
+	PARSE_SUCCESS,  //200, OK
+	PARSE_ERR_BAD_REQUEST, // 400 Wrong request line formst
+	PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED, // 505 Not HTTP/1.0 (or HTPP/1.1 for later)
+	PARSE_ERR_LENGTH_REQUIRED,  //411 For empty body eg in POST will be used later when body is parsed
+	PARSE_ERR_HEADER_SYNTAX_ERROR, // 400 Wrong header line
+	PARSE_ERR_HEADER_NAME_EMPTY, // 400 Empty header name
+	PARSE_ERR_MISSING_HOST_HEADER // 400 To implement for HTTP 1.1
 };
 
 class RequestParser
 {
 	private :
 
-	Status	parseRequestLine(Request& request, const std::string& line);
-	Status	parseHeaders(Request& request, const std::string& headersPart);
-	Status	parseHeaderLine(Request& request, const std::string& line);
+	ParseStatus	parseRequestLine(Request& request, const std::string& line);
+	ParseStatus	parseHeaders(Request& request, const std::string& headersPart);
+	ParseStatus	parseHeaderLine(Request& request, const std::string& line);
 
 	bool	isValidStart(const std::string& rawRequest, size_t& requestStart) const;
 	Method	methodFromString(const std::string& methodStr);
 	bool	isValidMethod(const std::string& method) const;
 	bool	isValidPath(const std::string& path) const;
 	bool	isValidVersion(const std::string& version) const;
-	bool	isValidHeaderValue(const std::string& value) const;
+	bool	isValidHeaderName(const std::string& name) const;
+	bool	isInvalidAfterColon(const std::string& value) const;
+	std::string	normalizeHeaderName(const std::string& name) const;
 
 	public :
 
@@ -39,7 +40,7 @@ class RequestParser
 	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
-	Status	parse_request(Request& request, const std::string& rawRequest);
+	ParseStatus	parse_request(Request& request, const std::string& rawRequest);
 };
 
 #endif

@@ -28,7 +28,7 @@ int main()
 
     const char* rawRequests[] =
     {
-        "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\nHello world",
+        "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\nhost: value\twith\ttabs\r\n\r\nHello world",
         "     GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
         "GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
         "get /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
@@ -47,12 +47,12 @@ int main()
 
     const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
 
-    for (int i = 0; i < numTests; i++)
+ for (int i = 0; i < numTests; i++)
     {
-        Status result = parser.parse_request(request, rawRequests[i]);
+        Request request;
+        ParseStatus result = parser.parse_request(request, rawRequests[i]);
         std::cout << "Test " << (i + 1) << " (" << descriptions[i]
                   << ") -> result code: " << result << std::endl;
     }
-
     return 0;
 }
