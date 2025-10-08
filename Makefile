@@ -1,4 +1,5 @@
 NAME = webserv
+PARSER_TEST = parse_tester
 
 CXX = c++
 
@@ -6,9 +7,13 @@ CXX_FLAGS = -Wall -Wextra -Werror -std=c++98
 
 # ------- Sources -------
 
-SRC_FILES = dev.create_raw_request.cpp \
-			http/Request.cpp \
-			http/RequestParser.cpp
+SRC_FILES = parser_debug.cpp \
+	utils/utils.cpp \
+	config/Config.cpp \
+	config/LocationBlock.cpp \
+	config/ServerBlock.cpp \
+	http/Request.cpp \
+	http/RequestParser.cpp \
 
 SRC_DIR = src
 
