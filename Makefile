@@ -1,5 +1,4 @@
 NAME = webserv
-PARSER_TEST = parse_tester
 
 CXX = c++
 
