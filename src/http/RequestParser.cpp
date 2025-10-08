@@ -3,17 +3,6 @@
 
 RequestParser::RequestParser() {}
 
-RequestParser::RequestParser(const RequestParser& other)
-{
-	(void)other;
-}
-
-RequestParser& RequestParser::operator=(const RequestParser& other)
-{
-	(void)other;
-	return (*this);
-}
-
 RequestParser::~RequestParser() {}
 
 ParseStatus	RequestParser::parse_request(Request& request, const std::string& rawRequest)
@@ -104,8 +93,6 @@ ParseStatus	RequestParser::parseHeaderLine(Request& request, const std::string& 
 		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
 	if (name.empty())
 		return (PARSE_ERR_HEADER_NAME_EMPTY);
-	if (isInvalidAfterColon(value))
-		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
 	if (!isValidHeaderName(name))
 		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
 	std::string normalizedName = normalizeHeaderName(name);
@@ -176,18 +163,6 @@ bool	RequestParser::isValidHeaderName(const std::string& name) const
 			return (false);
 	}
 	return (true);
-}
-
-bool	RequestParser::isInvalidAfterColon(const std::string& value) const
-{
-	for (size_t i = 0; i < value.length(); i++)
-	{
-		if (!std::isspace(value[i]))
-			return (false);
-		if (value[i] != ' ')
-			return (true);
-	}
-	return (false);
 }
 
 std::string	RequestParser::normalizeHeaderName(const std::string& name) const

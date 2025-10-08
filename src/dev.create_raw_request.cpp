@@ -13,7 +13,9 @@ const char* parseStatusToString(ParseStatus status)
         case PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED:
             return ("PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED");
         case PARSE_ERR_HEADER_NAME_EMPTY:
-            return ("PARSE_ERR_HEADER_NAME_EMPTY,");
+            return ("PARSE_ERR_HEADER_NAME_EMPTY");
+        case PARSE_ERR_HEADER_SYNTAX_ERROR:
+            return ("PARSE_ERR_HEADER_SYNTAX_ERROR");
         default:
             return ("UNKNOWN");
     }
@@ -39,7 +41,9 @@ int main()
         "Path with special chars - Valid",
         "Extra spaces after version - Valid", //only whitespaces valid-everything else invalid even tabs
         "Empty line after request line - Invalid", //here strictly following RFC, nginx allows it but doesn't make sense
-        "Two empty lines after headers - Valid"   //Extra lines considered as body
+        "Two empty lines after headers - Valid",   //Extra lines considered as body
+        "Spaces after header name - Invalid",
+        "Spaces after headers - Valid"
     };
 
     const char* rawRequests[] =
@@ -58,7 +62,9 @@ int main()
         "GET /index123&.html HTTP/1.0\r\nHost: localhost\r\n\r\n",
         "GET /index.html HTTP/1.0   \r\nHost: localhost\r\n\r\n",
         "GET /index.html HTTP/1.0\r\n\r\nHost: localhost\r\n\r\n",
-        "POST /index.html HTTP/1.0\r\nHost: localhost\r\n\r\n\r\n"
+        "POST /index.html HTTP/1.0\r\nHost: localhost\r\n\r\n\r\n",
+        "POST /index.html HTTP/1.0\r\nHost\t   : localhost\r\n\r\n",
+        "POST /index.html HTTP/1.0\r\nHost: localhost    \t \v   \r\n\r\n"
     };
 
     const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);

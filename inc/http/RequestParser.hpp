@@ -30,14 +30,11 @@ class RequestParser
 	bool	isValidPath(const std::string& path) const;
 	bool	isValidVersion(const std::string& version) const;
 	bool	isValidHeaderName(const std::string& name) const;
-	bool	isInvalidAfterColon(const std::string& value) const;
 	std::string	normalizeHeaderName(const std::string& name) const;
 
 	public :
 
 	RequestParser();
-	RequestParser(const RequestParser& other);
-	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
 	ParseStatus	parse_request(Request& request, const std::string& rawRequest);

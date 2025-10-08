@@ -25,8 +25,6 @@ class Request
 	public:
 
 	Request();
-	Request(const Request& other);
-	Request& operator=(const Request& other);
 	~Request();
 
 	Method	getMethod() const;
