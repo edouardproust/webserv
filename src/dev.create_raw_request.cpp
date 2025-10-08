@@ -2,10 +2,26 @@
 #include "http/Request.hpp"
 #include "http/RequestParser.hpp"
 
+const char* parseStatusToString(ParseStatus status)
+{
+    switch (status)
+    {
+        case PARSE_SUCCESS:
+            return ("OK");
+        case PARSE_ERR_BAD_REQUEST:
+            return ("PARSE_ERR_BAD_REQUEST");
+        case PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED:
+            return ("PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED");
+        case PARSE_ERR_HEADER_NAME_EMPTY:
+            return ("PARSE_ERR_HEADER_NAME_EMPTY,");
+        default:
+            return ("UNKNOWN");
+    }
+}
+
 int main()
 {
     RequestParser parser;
-    Request request;
 
     const char* descriptions[] =
     {
@@ -46,13 +62,14 @@ int main()
     };
 
     const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
-
- for (int i = 0; i < numTests; i++)
+    
+    for (int i = 0; i < numTests; i++)
     {
         Request request;
         ParseStatus result = parser.parse_request(request, rawRequests[i]);
-        std::cout << "Test " << (i + 1) << " (" << descriptions[i]
-                  << ") -> result code: " << result << std::endl;
+         std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
+            << (result == PARSE_SUCCESS ? "PASS" : "FAIL") 
+            << " (" << parseStatusToString(result) << ")" << std::endl;
     }
-    return 0;
+    return (0);
 }
