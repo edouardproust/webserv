@@ -79,21 +79,28 @@ Config::_addTokenIf(token, tokens);
 }
 
 void	LocationBlock::validate(ServerBlock const& server) const {
-	if (_path.empty() || _path[0] != '/')
+	if (!utils::isAbsolutePath(_path))
 		throw std::runtime_error("Invalid location path: " + _path);
-	if (!_autoindex.empty() && _autoindex != "on" && _autoindex != "off")
+	else if (!_root.empty() && !utils::isAbsolutePath(_root)) {
+		throw std::runtime_error("Invalid root " + _root + " in location " + _path);
+	} else if (!_autoindex.empty() && _autoindex != "on" && _autoindex != "off")
 		throw std::runtime_error("Invalid autoindex value in location " + _path + ": " + _autoindex);
 	if (_return.first != -1 && (_return.first < 100 || _return.first > 599))
-		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::to_string(_return.first));
+		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::toString(_return.first));
+	if (server.getErrorPages().find(_return.first) != server.getErrorPages().end())
+        throw std::runtime_error("Conflict: return " + utils::toString(_return.first) + " in location " + _path + " conflicts with error_page in server block");
 	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > Config::MAX_CLIENT_BODY_SIZE))
 		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
 	if (!_cgiExtension.empty() && _cgiExtension[0] != '.')
 		throw std::runtime_error("Invalid cgi_extension in location " + _path + ": " + _cgiExtension);
 	if ((!_cgiRoot.empty() || !_cgiExtension.empty() || !_cgiExecutable.empty())
-		&& (_cgiRoot.empty() || _cgiExtension.empty() || _cgiExecutable.empty()))
+		&& (_cgiExtension.empty() || _cgiExecutable.empty()))
 		throw std::runtime_error("Incomplete CGI configuration in location " + _path);
+	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
+		if (*it != "GET" && *it != "POST" && *it != "DELETE") //TODO: make it dynamic
+			throw std::runtime_error("Not allowed limit_except method " + *it + " in location " + _path);
+	}
 	// Additional location block validation can be added here
-	(void)server; //TODO
 }
 
 void	LocationBlock::print() const {
@@ -101,7 +108,7 @@ void	LocationBlock::print() const {
 		<< "- path: " << _path << "\n"
 		<< "- root: " << (_root.empty() ? "[empty]" : _root) << "\n"
 		<< "- autoindex: " << (_autoindex.empty() ? "[empty]" : _autoindex) << "\n"
-		<< "- allowed_methods: " << _limitExcept.size() << "\n";
+		<< "- limit_except: " << _limitExcept.size() << "\n";
 	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); ++it)
 		std::cout << "  - " << *it << "\n";
 	if (_return.first != -1)
@@ -124,10 +131,13 @@ std::string const&	LocationBlock::getPath() const {
 	return _path;
 }
 
-std::string const&	LocationBlock::getRoot(ServerBlock const& server) const {
+std::string const	LocationBlock::getRoot(ServerBlock const& server) const {
 	if (!_root.empty())
 		return _root;
-	return server.getRoot();
+	if (!server.getRoot().empty())
+		return server.getRoot();
+	else
+		return "index.html";
 }
 
 std::string const&	LocationBlock::getAutoindex() const {

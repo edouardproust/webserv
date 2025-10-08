@@ -14,7 +14,7 @@ class Config {
 	void		_parse(std::string const&);
 	void		_parseBlock(std::vector<std::string>&, std::string const& content,
 					size_t&, int&);
-	void		_validate();
+	void		_validate() const;
 
 	public:
 

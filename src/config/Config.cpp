@@ -6,7 +6,7 @@
 #include <fstream>
 #include <sstream>
 
-unsigned long	Config::_MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
+unsigned long	Config::MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
 
 Config::Config() {} // Not used
 
@@ -63,25 +63,22 @@ void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& co
 	tokens.clear();
 }
 
-void	Config::_validate() {
+void	Config::_validate() const {
 	if (_servers.empty())
 		throw std::runtime_error("No server blocks defined in configuration");
+	std::set<std::pair<int, std::string> > seenServers;
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		int port = _servers[i].getListen();
+		std::string name = _servers[i].getServerName();
+		std::pair<int, std::string> currentServer = std::make_pair(port, name);
+		if (seenServers.find(currentServer) != seenServers.end())
+			throw std::runtime_error("Duplicate server_name + listen port: " + name + ":" + utils::toString(port));
+		seenServers.insert(currentServer);
+	}
+	// Additional validation can be added here
 	for (size_t i = 0; i < _servers.size(); ++i) {
 		_servers[i].validate();
 	}
-	std::set<int> servPorts;
-	std::set<std::string> servNames;
-	for (int i = 0; i < static_cast<int>(_servers.size()); ++i) {
-		int port = _servers[i].getListen();
-		std::string name = _servers[i].getServerName();
-		if (servPorts.find(port) != servPorts.end())
-			throw std::runtime_error("Duplicate listen port across server blocks: " + utils::to_string(port));
-		if (servNames.find(name) != servNames.end())
-			throw std::runtime_error("Duplicate server_name across server blocks: " + name);
-		servPorts.insert(port);
-		servNames.insert(name);
-	}
-	// Additional validation can be added here
 }
 
 void	Config::print() const {

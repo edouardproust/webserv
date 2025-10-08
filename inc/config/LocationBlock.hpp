@@ -34,7 +34,7 @@ class LocationBlock {
 		void	print() const;
 
 		std::string const&					getPath() const;
-		std::string const&					getRoot(ServerBlock const&) const;
+		std::string const					getRoot(ServerBlock const&) const;
 		std::string const&					getAutoindex() const;
 		std::set<std::string> const&		getAllowedMethods() const;
 		std::pair<int, std::string>	const&	getReturn() const;

@@ -12,7 +12,7 @@ class ServerBlock {
 	std::string					_serverName;
 	unsigned int				_listen;
 	unsigned long				_clientMaxBodySize;
-	std::map<int, std::string>	_error_pages;
+	std::map<int, std::string>	_errorPages;
 	std::vector<std::string>	_indexFiles;
 	std::vector<LocationBlock>	_locations;
 
@@ -26,8 +26,10 @@ class ServerBlock {
 
 		ServerBlock(std::string const&);
 
-		void	validate();
-		void	print() const;
+		void					validate() const;
+		void					print() const;
+		LocationBlock const&	getBestLocationForPath(std::string const& path) const;
+
 
 		std::string const&					getRoot() const;
 		std::string const&					getServerName() const;

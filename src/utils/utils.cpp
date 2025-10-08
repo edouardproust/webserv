@@ -1,5 +1,7 @@
 #include "utils/utils.hpp"
 #include <sstream>
+#include <sys/stat.h>
+#include <unistd.h>
 
 bool	utils::isNumeric(std::string const& str)
 {
@@ -10,6 +12,29 @@ bool	utils::isNumeric(std::string const& str)
 			return false;
 	}
 	return true;
+}
+
+bool	utils::isAccessibleDirectory(std::string const& path) {
+	// is not empty and starts with '/' ?
+	if (path.empty() || path[0] != '/')
+		return false;
+	// is a directory ?
+	struct stat fileinfo;
+	if (stat(path.c_str(), &fileinfo) == -1)
+		return false;
+	if ((fileinfo.st_mode & S_IFDIR) == 0)
+		return false;
+	// is accessible ?
+	if (access(path.c_str(), R_OK | X_OK) != 0)
+    	return false;
+	return true;
+}
+
+
+bool	utils::isAbsolutePath(std::string const& path) {
+	if (path.empty() || path[0] != '/')
+		return false;
+    return true;
 }
 
 unsigned long	utils::parseSize(std::string const& value)
@@ -35,4 +60,10 @@ unsigned long	utils::parseSize(std::string const& value)
 		multiplier = 1024 * 1024 * 1024;
 	}
 	return number * multiplier;
+}
+
+std::string& utils::normalizePath(std::string& path) {
+	if (path.size() > 1 && path[path.size() - 1] == '/')
+		path.erase(path.size() - 1);
+	return path;
 }

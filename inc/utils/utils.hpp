@@ -8,10 +8,14 @@
 namespace utils {
 
 	template<typename T>
-	std::string		to_string(const T&);
+	std::string		toString(const T&);
 
 	bool			isNumeric(std::string const&);
+	bool			isAccessibleDirectory(std::string const& path); //TODO Unused but will be useful for static and cgi modules
+	bool			isAbsolutePath(std::string const& path);
+
 	unsigned long	parseSize(std::string const&);
+	std::string&	normalizePath(std::string& path);
 
 }
 
