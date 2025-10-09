@@ -2,8 +2,11 @@
 #define TYPEDEFS_HPP
 
 #include <string>
+#include <map>
 #include <utility>
 
-typedef	std::pair<std::string, int> IpPortPair;
+// config
+typedef	std::pair<std::string, int>			ListenDirective;	// {IP:port}
+typedef std::map<std::string, std::string>	CgiDirective;		// {extension:executable_path, ...}
 
 #endif

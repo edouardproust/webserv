@@ -64,12 +64,12 @@ void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& co
 void	Config::_validate() const {
 	if (_servers.empty())
 		throw std::runtime_error("No server blocks defined in configuration");
-	std::vector<IpPortPair > allListen;
+	std::vector<ListenDirective > allListen;
 
 	// Servers content validation
 	for (size_t i = 0; i < _servers.size(); ++i) {
 		// collect all listen ip:port pairs for global duplicate check
-		std::set<IpPortPair> const& listen = _servers[i].getListen();
+		std::set<ListenDirective> const& listen = _servers[i].getListen();
 		allListen.insert(allListen.end(), listen.begin(), listen.end());
 		// validate this server block individually
 		_servers[i].validate();
