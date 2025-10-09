@@ -119,6 +119,6 @@ make
 
 📚 **Resources**
 
-https://www.rfc-editor.org/rfc/rfc9112.html
-https://www.rfc-editor.org/rfc/rfc9110
-https://en.wikipedia.org/wiki/HTTP
+- https://www.rfc-editor.org/rfc/rfc9112.html
+- https://www.rfc-editor.org/rfc/rfc9110
+- https://en.wikipedia.org/wiki/HTTP
