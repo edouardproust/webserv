@@ -14,14 +14,12 @@ class Config {
 					size_t&, int&);
 	void		_validate() const;
 
-	// Not implemented (not used)
+	// Not used
 	Config();
 	Config(Config const&);
 	Config&	operator=(Config const&);
 
 	public:
-
-		static unsigned long	MAX_CLIENT_BODY_SIZE;
 
 		Config(std::string const&);
 		~Config();

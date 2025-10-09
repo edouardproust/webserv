@@ -1,6 +1,7 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
 #include "utils/utils.hpp"
+#include "constants.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <cstdlib>
@@ -8,6 +9,27 @@
 LocationBlock::LocationBlock(std::string const& path, std::string const& blockContent)
 : _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
 	_parse(blockContent);
+}
+
+LocationBlock::LocationBlock(const LocationBlock &other) {
+    *this = other;
+}
+
+LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
+	if (this != &other) {
+		_path = other._path;
+		_root = other._root;
+		_autoindex= other._autoindex;
+		_limitExcept= other._limitExcept;
+		_return = other._return;
+		_clientMaxBodySize = other._clientMaxBodySize;
+		_clientMaxBodySizeSet = other._clientMaxBodySizeSet;
+		_indexFiles = other._indexFiles;
+		_cgiRoot = other._cgiRoot;
+		_cgiExtension = other._cgiExtension;
+		_cgiExecutable = other._cgiExecutable;
+	}
+	return *this;
 }
 
 LocationBlock::~LocationBlock() {}
@@ -89,7 +111,7 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::toString(_return.first));
 	if (server.getErrorPages().find(_return.first) != server.getErrorPages().end())
         throw std::runtime_error("Conflict: return " + utils::toString(_return.first) + " in location " + _path + " conflicts with error_page in server block");
-	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > Config::MAX_CLIENT_BODY_SIZE))
+	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > MAX_CLIENT_BODY_SIZE))
 		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
 	if (!_cgiExtension.empty() && _cgiExtension[0] != '.')
 		throw std::runtime_error("Invalid cgi_extension in location " + _path + ": " + _cgiExtension);
@@ -100,7 +122,8 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		if (*it != "GET" && *it != "POST" && *it != "DELETE") //TODO: make it dynamic
 			throw std::runtime_error("Not allowed limit_except method " + *it + " in location " + _path);
 	}
-	// Additional location block validation can be added here
+	if (!utils::hasVectorUniqEntries(_indexFiles))
+		throw std::runtime_error("Duplicate index file in location " + _path);
 }
 
 void	LocationBlock::print() const {

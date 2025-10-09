@@ -16,22 +16,21 @@ class LocationBlock {
 	std::pair<int, std::string>	_return;				// optional (e.g. 301 /newpath/)
 	unsigned long				_clientMaxBodySize; 	// optional, overrides server limit
 	bool 						_clientMaxBodySizeSet;  // true if clientMaxBodySize is set in this location
+	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	std::string					_cgiRoot;				// optional
 	std::string					_cgiExtension;			// optional
 	std::string					_cgiExecutable;			// optional
-	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
 
-	// Not implemented (not used)
-	LocationBlock();
-	LocationBlock(LocationBlock const&);
-	LocationBlock&	operator=(LocationBlock const&);
+	LocationBlock(); // Not used
 
 	public:
 
 		LocationBlock(std::string const&, std::string const&);
+		LocationBlock(LocationBlock const&);
+		LocationBlock&	operator=(LocationBlock const&);
 		~LocationBlock();
 
 		void	validate(ServerBlock const&) const;
