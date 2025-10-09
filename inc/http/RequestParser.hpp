@@ -35,6 +35,8 @@ class RequestParser
 	public :
 
 	RequestParser();
+	RequestParser(const RequestParser& other);
+	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
 	ParseStatus	parse_request(Request& request, const std::string& rawRequest);

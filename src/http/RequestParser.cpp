@@ -3,6 +3,17 @@
 
 RequestParser::RequestParser() {}
 
+RequestParser::RequestParser(const RequestParser& other)
+{
+	(void)other;
+}
+
+RequestParser& RequestParser::operator=(const RequestParser& other)
+{
+	(void)other;
+	return (*this);
+}
+
 RequestParser::~RequestParser() {}
 
 ParseStatus	RequestParser::parse_request(Request& request, const std::string& rawRequest)
