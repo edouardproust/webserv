@@ -1,6 +1,8 @@
 #include <config/Config.hpp>
 #include "http/RequestParser.hpp"
 #include <iostream>
+#include "server/WebServer.hpp"
+#include <server/Socket.hpp>
 
 const char* parseStatusToString(ParseStatus status)
 {
@@ -81,25 +83,43 @@ void runParserTests()
 
 int main(int argc, char** argv) {
 
-	if (argc == 2 && std::string(argv[1]) == "--test-parser") {
-        runParserTests();
-        return 0;
+	// if (argc == 2 && std::string(argv[1]) == "--test-parser") {
+    //     runParserTests();
+    //     return 0;
+    // }
+
+	// if (argc < 2) {
+	// 	std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
+	// 	return 1;
+	// }
+
+	// try {
+	// 	Config cfg(argv[1]);
+	// 	cfg.print(); // DEBUG
+	// 	//Server server(cfg);
+	// 	//server.run(cfg);
+	// } catch (const std::exception& e) {
+	// 	std::cerr << "Error: " << e.what() << std::endl;
+	// 	return 1;
+	// }
+
+        
+    std::vector<t_server_config> configs;
+    t_server_config cfg;
+    cfg.port = "8080";
+    cfg.server_names.push_back("localhost");
+    configs.push_back(cfg);
+
+    try
+    {
+        WebServer server(configs);
+        server.start();
     }
-
-	if (argc < 2) {
-		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
-		return 1;
-	}
-
-	try {
-		Config cfg(argv[1]);
-		cfg.print(); // DEBUG
-		//Server server(cfg);
-		//server.run(cfg);
-	} catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-		return 1;
-	}
+    catch (const std::exception &e)
+    {
+        std::cerr << "[ERROR] " << e.what() << std::endl;
+        return 1;
+    }
 
 	return 0;
 }
