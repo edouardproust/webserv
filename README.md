@@ -116,3 +116,9 @@ make
 - `read` → read CGI output
 - `close` → close unused pipe ends
 - `waitpid` → wait for child process
+
+📚 **Resources**
+
+- https://www.rfc-editor.org/rfc/rfc9112.html
+- https://www.rfc-editor.org/rfc/rfc9110
+- https://en.wikipedia.org/wiki/HTTP
