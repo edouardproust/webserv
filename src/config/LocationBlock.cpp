@@ -5,12 +5,12 @@
 #include <iostream>
 #include <cstdlib>
 
-LocationBlock::LocationBlock() {} // Not used
-
 LocationBlock::LocationBlock(std::string const& path, std::string const& blockContent)
 : _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
 	_parse(blockContent);
 }
+
+LocationBlock::~LocationBlock() {}
 
 void	LocationBlock::_parse(std::string const& content) {
 	std::string token = "";

@@ -8,8 +8,6 @@
 
 unsigned long	Config::MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
 
-Config::Config() {} // Not used
-
 Config::Config(std::string const& filePath) {
 	try {
 		std::string content = _extractFileContent(filePath);
@@ -19,6 +17,8 @@ Config::Config(std::string const& filePath) {
 		throw std::runtime_error("Config: " + std::string(e.what()));
 	}
 }
+
+Config::~Config() {}
 
 std::string	Config::_extractFileContent(std::string const& filePath) {
 	std::ifstream	file(filePath.c_str());

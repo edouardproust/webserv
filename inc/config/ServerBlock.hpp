@@ -16,15 +16,19 @@ class ServerBlock {
 	std::vector<std::string>	_indexFiles;
 	std::vector<LocationBlock>	_locations;
 
-	ServerBlock();
-
 	void	_parse(std::string const&);
 	void	_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
 
+	// Not implemented (not used)
+	ServerBlock();
+	ServerBlock(ServerBlock const&);
+	ServerBlock& operator=(ServerBlock const&);
+
 	public:
 
 		ServerBlock(std::string const&);
+		~ServerBlock();
 
 		void					validate() const;
 		void					print() const;

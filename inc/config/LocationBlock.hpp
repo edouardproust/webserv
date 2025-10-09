@@ -21,14 +21,18 @@ class LocationBlock {
 	std::string					_cgiExecutable;			// optional
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 
-	LocationBlock();
-
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
+
+	// Not implemented (not used)
+	LocationBlock();
+	LocationBlock(LocationBlock const&);
+	LocationBlock&	operator=(LocationBlock const&);
 
 	public:
 
 		LocationBlock(std::string const&, std::string const&);
+		~LocationBlock();
 
 		void	validate(ServerBlock const&) const;
 		void	print() const;

@@ -5,12 +5,12 @@
 #include <iostream>
 #include <cstdlib>
 
-ServerBlock::ServerBlock() {} // Not used
-
 ServerBlock::ServerBlock(std::string const& blockContent)
 : _listen(0), _clientMaxBodySize(utils::parseSize("1M")) {
 	_parse(blockContent);
 }
+
+ServerBlock::~ServerBlock() {}
 
 void	ServerBlock::_parse(std::string const& content) {
 	std::string token = "";
