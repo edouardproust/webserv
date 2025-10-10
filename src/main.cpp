@@ -17,7 +17,11 @@ int main(int argc, char** argv) {
 		//server.run(cfg);
 		if (DEVMODE) {
 			cfg.print();
-			Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			try{
+				Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			} catch (const std::exception& e) {
+				static::sendErrorPage(e.code(), e.what());
+			}
 			Router router(request, cfg.getServers());
 			router.print();
 		}
