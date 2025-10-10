@@ -10,7 +10,9 @@ SRC_FILES = main.cpp \
 	utils/utils.cpp \
 	config/Config.cpp \
 	config/LocationBlock.cpp \
-	config/ServerBlock.cpp
+	config/ServerBlock.cpp \
+	http/Request.cpp \
+	http/RequestParser.cpp \
 
 SRC_DIR = src
 
