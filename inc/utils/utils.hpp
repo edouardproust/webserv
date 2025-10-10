@@ -4,11 +4,15 @@
 #include <string>
 #include <cstdlib>
 #include <stdexcept>
+#include <vector>
 
 namespace utils {
 
 	template<typename T>
-	std::string		toString(const T&);
+	std::string	toString(const T&);
+
+	template <typename T>
+	bool	hasVectorUniqEntries(const std::vector<T> &vec);
 
 	bool			isNumeric(std::string const&);
 	bool			isAccessibleDirectory(std::string const& path); //TODO Unused but will be useful for static and cgi modules

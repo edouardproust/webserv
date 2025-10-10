@@ -1,16 +1,9 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
+# include "constants.hpp"
 # include <string>
 # include <map>
-
-enum Method
-{
-	GET,
-	POST,
-	DELETE,
-	UNKNOWN
-};
 
 class Request
 {
