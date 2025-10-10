@@ -1,4 +1,7 @@
-#include <config/Config.hpp>
+#include "config/Config.hpp"
+#include "router/Router.hpp"
+#include "http/Request.hpp"
+#include "http/RequestParser.hpp"
 #include "constants.hpp"
 #include "http/dev.http.hpp"
 #include <iostream>
@@ -10,12 +13,14 @@ int main(int argc, char** argv) {
 	}
 	try {
 		Config cfg(argv[1]);
-		if (DEVMODE) {
-			cfg.print();
-			dev::runParserTests();
-		}
 		//Server server(cfg);
 		//server.run(cfg);
+		if (DEVMODE) {
+			cfg.print();
+			Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			Router router(request, cfg.getServers());
+			router.print();
+		}
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;

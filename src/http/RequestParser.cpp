@@ -16,7 +16,7 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 
 RequestParser::~RequestParser() {}
 
-ParseStatus	RequestParser::parse_request(Request& request, const std::string& rawRequest)
+ParseStatus	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
 		return (PARSE_ERR_BAD_REQUEST);

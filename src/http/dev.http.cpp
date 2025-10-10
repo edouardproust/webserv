@@ -1,9 +1,18 @@
 #include "http/dev.http.hpp"
-#include "http/Request.hpp"
 #include "http/RequestParser.hpp"
 #include <iostream>
 
-const char* dev::parseStatusToString(::ParseStatus status) {
+Request const&	dev::parseRequest(std::string const& rawRequest) {
+	static RequestParser parser;
+	static Request request;
+	::ParseStatus result = parser.parseRequest(request, rawRequest);
+	if (result != PARSE_SUCCESS) {
+		throw std::runtime_error("Error parsing request: " + getStatusString(result));
+	}
+	return (request);
+}
+
+std::string	dev::getStatusString(::ParseStatus status) {
 	switch (status) {
 		case PARSE_SUCCESS:
 			return ("OK");
@@ -67,9 +76,9 @@ void dev::runParserTests() {
 
 	for (int i = 0; i < numTests; i++) {
 		Request request;
-		::ParseStatus result = parser.parse_request(request, rawRequests[i]);
+		::ParseStatus result = parser.parseRequest(request, rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
 			<< (result == PARSE_SUCCESS ? "PASS" : "FAIL")
-			<< " (" << parseStatusToString(result) << ")" << std::endl;
+			<< " (" << getStatusString(result) << ")" << std::endl;
 	}
 }

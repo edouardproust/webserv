@@ -13,7 +13,8 @@ BASE_SRC_FILES = \
 	config/LocationBlock.cpp \
 	config/ServerBlock.cpp \
 	http/Request.cpp \
-	http/RequestParser.cpp
+	http/RequestParser.cpp \
+	router/Router.cpp
 
 DEV_SRC_FILES = \
 	http/dev.http.cpp
