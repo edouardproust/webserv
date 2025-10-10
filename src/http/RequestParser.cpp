@@ -1,4 +1,5 @@
 #include "http/RequestParser.hpp"
+#include "http/HttpException.hpp"
 #include <iostream>
 
 RequestParser::RequestParser() {}
@@ -16,68 +17,62 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 
 RequestParser::~RequestParser() {}
 
-ParseStatus	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
+void	RequestParser::parse(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Empty request");
 	size_t requestStart;
 	if (!isValidStart(rawRequest, requestStart))
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Invalid start of request");
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Headers not properly terminated");
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Request line not properly terminated");
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
-	ParseStatus	result = parseRequestLine(request, requestLine);
-	if (result != PARSE_SUCCESS)
-		return (result);
-	result = parseHeaders(request, headersPart);
-	if (result != PARSE_SUCCESS)
-		return (result);
-	return (PARSE_SUCCESS);
+	parseRequestLine(request, requestLine);
+	parseHeaders(request, headersPart);
 }
 
-ParseStatus	RequestParser::parseRequestLine(Request& request, const std::string& line)
+void	RequestParser::parseRequestLine(Request& request, const std::string& line)
 {
 
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
-			return (PARSE_ERR_BAD_REQUEST);
+			throw HttpException(400, "Invalid whitespace in request line");
 	}
 	std::istringstream	requestLineStream(line);
 	std::string	methodStr, path, version;
 	if (!(requestLineStream >> methodStr >> path >> version))
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Malformed request line");
 	char c;
 	while (requestLineStream.get(c))
 	{
 		if (c != ' ')
-			 return (PARSE_ERR_BAD_REQUEST);
+			throw HttpException(400, "Extra characters after HTTP version in request line");
 	}
 	if (!isValidMethod(methodStr))
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Invalid HTTP method in request line");
 	if (!isValidPath(path))
-		return (PARSE_ERR_BAD_REQUEST);
+		throw HttpException(400, "Invalid path in request line");
 	if (!isValidVersion(version))
-		return (PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED);
+		throw HttpException(505, "Unsupported HTTP version in request line");
 	request.setMethod(methodStr);
 	request.setPath(path);
 	request.setVersion(version);
-	return (PARSE_SUCCESS);
 }
 
-ParseStatus RequestParser::parseHeaders(Request& request, const std::string& headersPart)
+void	RequestParser::parseHeaders(Request& request, const std::string& headersPart)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
 
 	if (headersPart.empty() && request.getVersion() == "HTTP/1.0")
-    	return (PARSE_SUCCESS);
+    	return; // HTTP/1.0 doesn't require Host header
 	while (std::getline(headersStream, line))
 	{
 		if (!line.empty() && line[line.length() - 1] == '\r')
@@ -85,30 +80,28 @@ ParseStatus RequestParser::parseHeaders(Request& request, const std::string& hea
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return (PARSE_ERR_HEADER_SYNTAX_ERROR);
-		ParseStatus result = parseHeaderLine(request, line);
-		if (result != PARSE_SUCCESS)
-			return (result);
+			throw HttpException(400, "Header line starts with whitespace");
+		parseHeaderLine(request, line);
 	}
-	return (PARSE_SUCCESS);
 }
 
-ParseStatus	RequestParser::parseHeaderLine(Request& request, const std::string& line)
+void	RequestParser::parseHeaderLine(Request& request, const std::string& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
+		throw HttpException(400, "Header line missing ':' separator");
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
 	if (!name.empty() && std::isspace(name[name.length() - 1]))
-		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
+		throw HttpException(400, "Whitespace at end of header name");
 	if (name.empty())
-		return (PARSE_ERR_HEADER_NAME_EMPTY);
+		throw HttpException(400, "Empty header name");
 	if (!isValidHeaderName(name))
-		return (PARSE_ERR_HEADER_SYNTAX_ERROR);
+		throw HttpException(400, "Invalid characters in header name");
+	if (name == "host" && value.empty())
+		throw HttpException(400, "Empty Host header value");
 	std::string normalizedName = normalizeHeaderName(name);
 	request.addHeader(normalizedName, value);
-	return (PARSE_SUCCESS);
 }
 
 bool	RequestParser::isValidStart(const std::string& rawRequest, size_t& requestStart) const

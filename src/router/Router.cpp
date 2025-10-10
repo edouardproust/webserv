@@ -18,3 +18,29 @@ void	Router::print() {
 		}
 		std::cout << std::endl;
 }
+
+void	Router::resolve() {
+	ServerBlock const* server = _matchServerBlock();
+	if (server) {
+		std::cout << "Matched server block:\n";
+		server->print();
+	} else {
+		std::cout << "No matching server block found.\n";
+	}
+}
+
+ServerBlock const*	Router::_matchServerBlock() const {
+	IpPortPair const& reqHostPort = _getRequestHostPort();
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		std::set<IpPortPair> const& listenSet = _servers[i].getListen();
+		if (listenSet.find(reqHostPort) != listenSet.end()) {
+			return &_servers[i];
+		}
+	}
+	return NULL;
+}
+
+IpPortPair const&	Router::_getRequestHostPort() const {
+	IpPortPair dummy = IpPortPair("localhost", 80);
+	return (dummy);
+}

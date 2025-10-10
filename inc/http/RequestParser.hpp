@@ -10,9 +10,9 @@ class RequestParser
 {
 	private :
 
-	ParseStatus	parseRequestLine(Request& request, const std::string& line);
-	ParseStatus	parseHeaders(Request& request, const std::string& headersPart);
-	ParseStatus	parseHeaderLine(Request& request, const std::string& line);
+	void	parseRequestLine(Request& request, const std::string& line);
+	void	parseHeaders(Request& request, const std::string& headersPart);
+	void	parseHeaderLine(Request& request, const std::string& line);
 
 	bool	isValidStart(const std::string& rawRequest, size_t& requestStart) const;
 	bool	isValidMethod(const std::string& method) const;
@@ -28,7 +28,7 @@ class RequestParser
 	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
-	ParseStatus	parseRequest(Request& request, const std::string& rawRequest);
+	void	parse(Request& request, const std::string& rawRequest);
 };
 
 #endif

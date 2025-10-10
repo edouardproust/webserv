@@ -3,6 +3,7 @@
 
 #include "http/Request.hpp"
 #include "config/ServerBlock.hpp"
+#include "typedefs.hpp"
 
 class Router
 {
@@ -11,12 +12,16 @@ class Router
 
 	Router(); // Not used
 
+	ServerBlock const*	_matchServerBlock() const;
+	IpPortPair const&	_getRequestHostPort() const;
+
 	public:
 
 		Router(Request const&, std::vector<ServerBlock> const&);
 		~Router();
 
-		void print();
+		void	resolve();
+		void	print();
 
 };
 

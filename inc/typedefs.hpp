@@ -6,7 +6,7 @@
 #include <utility>
 
 // config
-typedef	std::pair<std::string, int>			ListenDirective;	// {IP:port}
+typedef	std::pair<std::string, int>			IpPortPair;	// {IP:port}
 typedef std::map<std::string, std::string>	CgiDirective;		// {extension:executable_path, ...}
 
 #endif
