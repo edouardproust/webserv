@@ -2,9 +2,9 @@
 # define REQUESTPARSER_HPP
 
 # include "Request.hpp"
+# include "constants.hpp"
 # include <string>
 # include <sstream>
-# include "constants.hpp"
 
 class RequestParser
 {

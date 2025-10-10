@@ -1,9 +1,9 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
+# include "constants.hpp"
 # include <string>
 # include <map>
-# include "constants.hpp"
 
 class Request
 {
