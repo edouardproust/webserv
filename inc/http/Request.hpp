@@ -3,14 +3,7 @@
 
 # include <string>
 # include <map>
-
-enum Method
-{
-	GET,
-	POST,
-	DELETE,
-	UNKNOWN
-};
+# include "constants.hpp"
 
 class Request
 {

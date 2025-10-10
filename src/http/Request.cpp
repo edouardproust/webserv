@@ -1,4 +1,5 @@
 #include "http/Request.hpp"
+#include "constants.hpp"
 
 Request::Request() : method(UNKNOWN), path(""), version(""), body("") {}
 
