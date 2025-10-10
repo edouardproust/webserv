@@ -7,14 +7,6 @@
 
 unsigned long const	MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
 
-enum Method
-{
-	GET,
-	POST,
-	DELETE,
-	UNKNOWN
-};
-
 enum ParseStatus
 {
 	PARSE_SUCCESS,  //200, OK
@@ -24,6 +16,13 @@ enum ParseStatus
 	PARSE_ERR_HEADER_SYNTAX_ERROR, // 400 Wrong header line
 	PARSE_ERR_HEADER_NAME_EMPTY, // 400 Empty header name
 	PARSE_ERR_MISSING_HOST_HEADER // 400 To implement for HTTP 1.1
+};
+
+enum RouteType {
+	STATIC_FILE,
+	CGI_EXECUTION,
+	REDIRECTION,
+	ERROR
 };
 
 #endif

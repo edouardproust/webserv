@@ -2,6 +2,7 @@
 #include "config/Config.hpp"
 #include "utils/utils.hpp"
 #include "constants.hpp"
+#include "http/Request.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <cstdlib>
@@ -66,15 +67,8 @@ Config::_addTokenIf(token, tokens);
 	} else if (tokens[0] == "limit_except" && tokens.size() >= 2) {
 		for (size_t j = 1; j < tokens.size(); ++j)
 			_limitExcept.insert(tokens[j]);
-	} else if (tokens[0] == "return" && tokens.size() == 3) {
-		if (_return.first != -1)
-			throw std::runtime_error("Duplicate return directive in location");
-		try {
-			_return.first = std::atoi(tokens[1].c_str());
-			_return.second = tokens[2];
-		} catch (std::exception& e) {
-			throw std::runtime_error("Invalid return code: " + tokens[1]);
-		}
+	} else if (tokens[0] == "return" && (tokens.size() == 2 || tokens.size() == 3)) {
+		_parseReturnDirective(tokens);
 	} else if (tokens[0] == "client_max_body_size" && tokens.size() == 2) {
 		try {
 			_clientMaxBodySizeSet = true;
@@ -105,6 +99,34 @@ void	LocationBlock::_addCgiDirective(std::string extension, std::string executab
 	_cgi[extension] = executable;
 }
 
+void	LocationBlock::_parseReturnDirective(std::vector<std::string>& tokens) {
+	if (_return.first != -1)
+		throw std::runtime_error("Duplicate return directive in location");
+	std::istringstream iss(tokens[1]);
+	int code;
+	bool isNumber = (iss >> code) && iss.eof();
+	if (tokens.size() == 3) { // case "return <code> <url|text>;"
+		if (!isNumber)
+			throw std::runtime_error("Invalid return code: " + tokens[1]);
+		if (code < 100 || code > 599)
+			throw std::runtime_error("Return code out of range: " + tokens[1]);
+		_return.first = code;
+		_return.second = tokens[2];
+	}
+	else if (tokens.size() == 2) {
+		if (isNumber) { // case "return <code>;"
+			if (code < 100 || code > 599)
+				throw std::runtime_error("Return code out of range: " + tokens[1]);
+			_return.first = code;
+			_return.second = "";
+		} else { // case "return <url>;"
+			_return.first = 302; // by default (nginx style)
+			_return.second = tokens[1];
+		}
+	}
+}
+
+
 void	LocationBlock::validate(ServerBlock const& server) const {
 	if (!utils::isAbsolutePath(_path))
 		throw std::runtime_error("Invalid location path: " + _path);
@@ -112,15 +134,13 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		throw std::runtime_error("Invalid root " + _root + " in location " + _path);
 	} else if (!_autoindex.empty() && _autoindex != "on" && _autoindex != "off")
 		throw std::runtime_error("Invalid autoindex value in location " + _path + ": " + _autoindex);
-	if (_return.first != -1 && (_return.first < 100 || _return.first > 599))
-		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::toString(_return.first));
 	if (server.getErrorPages().find(_return.first) != server.getErrorPages().end())
         throw std::runtime_error("Conflict: return " + utils::toString(_return.first) + " in location " + _path + " conflicts with error_page in server block");
 	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > MAX_CLIENT_BODY_SIZE))
 		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
 	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
-		if (*it != "GET" && *it != "POST" && *it != "DELETE") //TODO: make it dynamic
-			throw std::runtime_error("Not allowed limit_except method " + *it + " in location " + _path);
+		if (!Request::isSupportedMethod(*it))
+			throw std::runtime_error("Not supported limit_except method " + *it + " in location " + _path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicate index file in location " + _path);

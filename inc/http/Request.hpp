@@ -4,12 +4,12 @@
 # include "constants.hpp"
 # include <string>
 # include <map>
+# include <set>
 
 class Request
 {
-	private :
-
-	Method	method;
+	static std::set<std::string> _supportedMethods;
+	std::string	method;
 	std::string	path;
 	std::string	version;
 	std::map<std::string, std::string> headers;
@@ -22,13 +22,15 @@ class Request
 	Request& operator=(const Request& other);
 	~Request();
 
-	Method	getMethod() const;
-	std::string	getPath() const;
-	std::string	getVersion() const;
-	const std::map<std::string, std::string>&	getHeaders() const;
-	std::string getBody() const;
+	static bool	isSupportedMethod(std::string const&);
 
-	void	setMethod(Method method);
+	std::string const&	getMethod() const;
+	std::string	const&	getPath() const;
+	std::string const&	getVersion() const;
+	std::map<std::string, std::string> const&	getHeaders() const;
+	std::string const& getBody() const;
+
+	void	setMethod(std::string const& method);
     void	setPath(const std::string& path);
     void	setVersion(const std::string& version);
     void	addHeader(const std::string& name, const std::string& value);

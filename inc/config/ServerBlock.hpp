@@ -11,16 +11,16 @@
 class ServerBlock {
 
 	std::string					_root;
-	std::set<ListenDirective>		_listen;
+	std::set<ListenDirective>	_listen;
 	unsigned long				_clientMaxBodySize;
 	std::map<int, std::string>	_errorPages;
 	std::vector<std::string>	_indexFiles;
 	std::vector<LocationBlock>	_locations;
 
-	void			_parse(std::string const&);
-	void			_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
-	void			_parseDirective(std::string&, std::vector<std::string>&, bool);
-	ListenDirective	_parseListenDirective(std::string const&);
+	void	_parse(std::string const&);
+	void	_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
+	void	_parseDirective(std::string&, std::vector<std::string>&, bool);
+	void	_parseListenDirective(std::string const&);
 
 	ServerBlock(); // Not used
 
@@ -33,7 +33,7 @@ class ServerBlock {
 
 		void					validate() const;
 		void					print() const;
-		LocationBlock const&	getBestLocationForPath(std::string const& path) const;
+		LocationBlock const*	getBestLocationForPath(std::string const& path) const;
 
 		std::string const&					getRoot() const;
 		std::set<ListenDirective> const&	getListen() const;

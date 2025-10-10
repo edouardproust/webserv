@@ -15,7 +15,6 @@ class RequestParser
 	ParseStatus	parseHeaderLine(Request& request, const std::string& line);
 
 	bool	isValidStart(const std::string& rawRequest, size_t& requestStart) const;
-	Method	methodFromString(const std::string& methodStr);
 	bool	isValidMethod(const std::string& method) const;
 	bool	isValidPath(const std::string& path) const;
 	bool	isValidVersion(const std::string& version) const;

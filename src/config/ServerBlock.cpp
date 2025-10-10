@@ -83,7 +83,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 		if (tokens[0] == "root" && tokens.size() == 2) {
 			_root = utils::normalizePath(tokens[1]);
 		} else if (tokens[0] == "listen" && tokens.size() == 2) {
-			_listen.insert(_parseListenDirective(tokens[1]));
+			_parseListenDirective(tokens[1]);
 		} else if (tokens[0] == "error_page" && tokens.size() >= 3) {
 			for (size_t j = 1; j < tokens.size() - 1; ++j) {
 				try {
@@ -110,7 +110,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 	tokens.clear();
 }
 
-ListenDirective ServerBlock::_parseListenDirective(std::string const& token) {
+void	ServerBlock::_parseListenDirective(std::string const& token) {
 	std::string host = "0.0.0.0"; // default if no host specified
 	int port = 80; // default HTTP port
 	std::string::size_type colonPos = token.find(':');
@@ -132,7 +132,7 @@ ListenDirective ServerBlock::_parseListenDirective(std::string const& token) {
 	// Check port validity
 	if (port < 1 || port > 65535)
 		throw std::runtime_error("Invalid listen port (must be between 1 and 65535): " + token);
-	return ListenDirective(host, port);
+	_listen.insert(ListenDirective(host, port));
 }
 
 void	ServerBlock::validate() const {
@@ -186,7 +186,7 @@ void	ServerBlock::print() const {
 	std::cout << std::endl;
 }
 
-LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path) const {
+LocationBlock const*	ServerBlock::getBestLocationForPath(std::string const& path) const {
 	const LocationBlock* best = NULL;
 	size_t longest = 0;
 	for (size_t i = 0; i < _locations.size(); ++i) {
@@ -198,9 +198,7 @@ LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path
 			}
 		}
 	}
-	if (!best)
-		throw std::runtime_error("No matching location for path: " + path);
-	return *best;
+	return best;
 }
 
 

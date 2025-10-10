@@ -12,15 +12,16 @@ class LocationBlock {
 	std::string					_root;					// optional, overrides server root
 	std::string					_autoindex;				// optional
 	std::set<std::string>		_limitExcept;			// optional (if empty, all methods are allowed)
-	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
+	std::pair<int, std::string>	_return;				// optional (e.g. "return 301 url_or_text;" or "return 404;" or "return url;")
 	unsigned long				_clientMaxBodySize; 	// optional, overrides server limit
 	bool 						_clientMaxBodySizeSet;  // true if clientMaxBodySize is set in this location
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
-	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
+	CgiDirective				_cgi;					// optional (e.g. "cgi .php /usr/bin/php-cgi;")
 
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
 	void	_addCgiDirective(std::string extension, std::string executable);
+	void	_parseReturnDirective(std::vector<std::string>& tokens);
 
 	LocationBlock(); // Not used
 
