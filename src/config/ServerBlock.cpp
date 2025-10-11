@@ -10,7 +10,7 @@ ServerBlock::ServerBlock(std::string const& blockContent)
 : _clientMaxBodySize(utils::parseSize("1M")) {
 	_parse(blockContent);
 	if (_listen.empty())
-      	_listen.insert(ListenDirective("0.0.0.0", 80));
+      	_listen.insert(IpPortPair("0.0.0.0", 80));
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other) {
@@ -83,7 +83,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 		if (tokens[0] == "root" && tokens.size() == 2) {
 			_root = utils::normalizePath(tokens[1]);
 		} else if (tokens[0] == "listen" && tokens.size() == 2) {
-			_listen.insert(_parseListenDirective(tokens[1]));
+			_listen.insert(_parseIpPortPair(tokens[1]));
 		} else if (tokens[0] == "error_page" && tokens.size() >= 3) {
 			for (size_t j = 1; j < tokens.size() - 1; ++j) {
 				try {
@@ -110,7 +110,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 	tokens.clear();
 }
 
-ListenDirective ServerBlock::_parseListenDirective(std::string const& token) {
+IpPortPair ServerBlock::_parseIpPortPair(std::string const& token) {
 	std::string host = "0.0.0.0"; // default if no host specified
 	int port = 80; // default HTTP port
 	std::string::size_type colonPos = token.find(':');
@@ -132,7 +132,7 @@ ListenDirective ServerBlock::_parseListenDirective(std::string const& token) {
 	// Check port validity
 	if (port < 1 || port > 65535)
 		throw std::runtime_error("Invalid listen port (must be between 1 and 65535): " + token);
-	return ListenDirective(host, port);
+	return IpPortPair(host, port);
 }
 
 void	ServerBlock::validate() const {
@@ -170,7 +170,7 @@ void	ServerBlock::print() const {
 	std::cout << "Server:\n"
 		<< "- root: " << (_root.empty() ? "[empty]" : _root) << "\n"
 		<< "- listen: " << _listen.size() << "\n";
-	for (std::set<ListenDirective>::const_iterator it = _listen.begin(); it != _listen.end(); it++) {
+	for (std::set<IpPortPair>::const_iterator it = _listen.begin(); it != _listen.end(); it++) {
 		std::cout << "  - " << it->first << " -> " << it->second << "\n";
 	}
 	std::cout << "- client_max_body_size: " << _clientMaxBodySize << "\n"
@@ -208,7 +208,7 @@ std::string const&	ServerBlock::getRoot() const {
 	return _root;
 }
 
-std::set<ListenDirective> const&	ServerBlock::getListen() const {
+std::set<IpPortPair> const&	ServerBlock::getListen() const {
 	return _listen;
 }
 

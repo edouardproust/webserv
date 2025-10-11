@@ -50,7 +50,7 @@ make
 - On request catch, `server` performs several actions. Quick example:
 	```cpp
 	std::string raw_request = get_request(socket);
-	Request request = parse_request(std::string); // module 'http'
+	Request request = parseRequest(std::string); // module 'http'
 	std:string plain_response;
 	if (is_static(req)) // module `router`
 		raw_response = process_static(req); // module 'static'
