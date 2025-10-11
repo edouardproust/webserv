@@ -24,13 +24,13 @@ class Config {
 		Config(std::string const&);
 		~Config();
 
-		void	print() const;
-
 		static void			_addTokenIf(std::string&, std::vector<std::string>&);
 		static std::string	_getBlockContent(std::string const&, size_t&, int&);
 		static void			_skipComment(std::string const&, size_t&);
 
 		std::vector<ServerBlock> const&	getServers() const;
 };
+
+std::ostream&	operator<<(std::ostream&, Config const&);
 
 #endif

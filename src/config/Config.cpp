@@ -78,12 +78,6 @@ void	Config::_validate() const {
 		throw std::runtime_error("Duplicate listen ip:port pairs over servers");
 }
 
-void	Config::print() const {
-	for (size_t i = 0; i < _servers.size(); ++i) {
-		_servers[i].print();
-	}
-}
-
 void	Config::_addTokenIf(std::string& token, std::vector<std::string>& tokens) {
 	if (!token.empty()) {
 		tokens.push_back(token);
@@ -119,4 +113,13 @@ void	Config::_skipComment(std::string const& content, size_t& index) {
 
 std::vector<ServerBlock> const&	Config::getServers() const {
 	return _servers;
+}
+
+std::ostream&	operator<<(std::ostream& os, Config const& rhs) {
+	std::vector<ServerBlock> servers = rhs.getServers();
+	for (size_t i = 0; i < servers.size(); ++i) {
+		os << servers[i];
+	}
+	os << std::endl;
+	return os;
 }

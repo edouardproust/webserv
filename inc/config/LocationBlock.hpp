@@ -32,17 +32,19 @@ class LocationBlock {
 		~LocationBlock();
 
 		void	validate(ServerBlock const&) const;
-		void	print() const;
 
 		std::string const&					getPath() const;
 		std::string const					getRoot(ServerBlock const&) const;
 		std::string const&					getAutoindex() const;
 		std::set<std::string> const&		getAllowedMethods() const;
 		std::pair<int, std::string>	const&	getReturn() const;
+		bool								getClientMaxBodySizeSet();
 		unsigned long						getClientMaxBodySize(ServerBlock const&) const;
 		std::vector<std::string> const&		getIndexFiles(ServerBlock const&) const;
 		CgiDirective const&					getCgi() const;
 
 };
+
+std::ostream&	operator<<(std::ostream&, LocationBlock const&);
 
 #endif

@@ -166,26 +166,6 @@ void	ServerBlock::validate() const {
 		throw std::runtime_error("Duplicate path across location blocks");
 }
 
-void	ServerBlock::print() const {
-	std::cout << "Server:\n"
-		<< "- root: " << (_root.empty() ? "[empty]" : _root) << "\n"
-		<< "- listen: " << _listen.size() << "\n";
-	for (std::set<IpPortPair>::const_iterator it = _listen.begin(); it != _listen.end(); it++) {
-		std::cout << "  - " << it->first << " -> " << it->second << "\n";
-	}
-	std::cout << "- client_max_body_size: " << _clientMaxBodySize << "\n"
-		<< "- error_pages: " << _errorPages.size() << "\n";
-	for (std::map<int, std::string>::const_iterator it = _errorPages.begin(); it != _errorPages.end(); ++it)
-		std::cout << "  - " << it->first << " -> " << it->second << "\n";
-	std::cout << "- index_files: " << _indexFiles.size() << "\n";
-	for (size_t i = 0; i < _indexFiles.size(); ++i)
-		std::cout << "  - " << _indexFiles[i] << "\n";
-	std::cout << "- locations: " << _locations.size() << "\n";
-	for (size_t i = 0; i < _locations.size(); ++i)
-		_locations[i].print();
-	std::cout << std::endl;
-}
-
 LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path) const {
 	const LocationBlock* best = NULL;
 	size_t longest = 0;
@@ -226,4 +206,33 @@ std::vector<std::string> const&	ServerBlock::getIndexFiles() const {
 
 std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
 	return _locations;
+}
+
+std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
+	os << "Server:\n";
+	os << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
+
+	std::set<IpPortPair> const& listen = rhs.getListen();
+	os << "- listen: " << listen.size() << "\n";
+	for (std::set<IpPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
+		os << "  - " << it->first << " -> " << it->second << "\n";
+	}
+	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
+
+	std::map<int, std::string> const& errorPages = rhs.getErrorPages();
+	os << "- error_pages: " << errorPages.size() << "\n";
+	for (std::map<int, std::string>::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
+		os << "  - " << it->first << " -> " << it->second << "\n";
+
+	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();
+	os << "- index_files: " << indexFiles.size() << "\n";
+	for (size_t i = 0; i < indexFiles.size(); ++i)
+		os << "  - " << indexFiles[i] << "\n";
+
+	std::vector<LocationBlock> const& locations = rhs.getLocations();
+	os << "- locations: " << locations.size() << "\n";
+	for (size_t i = 0; i < locations.size(); ++i)
+		os << locations[i];
+	os << std::endl;
+	return os;
 }

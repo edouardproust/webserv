@@ -32,8 +32,7 @@ class ServerBlock {
 		~ServerBlock();
 
 		void					validate() const;
-		void					print() const;
-		LocationBlock const&	getBestLocationForPath(std::string const& path) const;
+		LocationBlock const&	getBestLocationForPath(std::string const&) const;
 
 		std::string const&					getRoot() const;
 		std::set<IpPortPair> const&	getListen() const;
@@ -43,5 +42,7 @@ class ServerBlock {
 		std::vector<LocationBlock> const&	getLocations() const;
 
 };
+
+std::ostream&	operator<<(std::ostream&, ServerBlock const&);
 
 #endif

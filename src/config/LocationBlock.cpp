@@ -127,31 +127,6 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		throw std::runtime_error("Duplicate index file in location " + _path);
 }
 
-void	LocationBlock::print() const {
-	std::cout << "Location:\n"
-		<< "- path: " << _path << "\n"
-		<< "- root: " << (_root.empty() ? "[empty]" : _root) << "\n"
-		<< "- autoindex: " << (_autoindex.empty() ? "[empty]" : _autoindex) << "\n"
-		<< "- limit_except: " << _limitExcept.size() << "\n";
-	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); ++it)
-		std::cout << "  - " << *it << "\n";
-	if (_return.first != -1)
-		std::cout << "- return: " << _return.first << " -> " << (_return.second.empty() ? "[empty]" : _return.second) << "\n";
-	else
-		std::cout << "- return: [empty]\n";
-	if (_clientMaxBodySizeSet)
-		std::cout << "- client_max_body_size: " << _clientMaxBodySize << "\n";
-	else
-		std::cout << "- client_max_body_size: [empty]\n";
-	std::cout << "- index_files: " << _indexFiles.size() << "\n";
-	for (size_t i = 0; i < _indexFiles.size(); ++i)
-		std::cout << "  - " << _indexFiles[i] << "\n";
-	std::cout << "- cgi: " << _cgi.size() << "\n";
-	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); it++) {
-		std::cout << "  - " << it->first << " -> " << it->second << "\n";
-	}
-}
-
 std::string const&	LocationBlock::getPath() const {
 	return _path;
 }
@@ -180,6 +155,10 @@ unsigned long	LocationBlock::getClientMaxBodySize(ServerBlock const& server) con
 	return server.getClientMaxBodySize();
 }
 
+bool	LocationBlock::getClientMaxBodySizeSet() {
+	return _clientMaxBodySizeSet;
+}
+
 CgiDirective const&	LocationBlock::getCgi() const {
 	return _cgi;
 }
@@ -188,4 +167,30 @@ std::vector<std::string> const&	LocationBlock::getIndexFiles(ServerBlock const& 
 	if (!_indexFiles.empty())
 		return _indexFiles;
 	return server.getIndexFiles();
+}
+
+std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
+	os << "Location:\n";
+	os << "- path: " << rhs.getPath() << "\n";
+	os << "- root: " << (_root.empty() ? "[empty]" : _root) << "\n";
+	os << "- autoindex: " << (_autoindex.empty() ? "[empty]" : _autoindex) << "\n";
+	os << "- limit_except: " << _limitExcept.size() << "\n";
+	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); ++it)
+		os << "  - " << *it << "\n";
+	if (_return.first != -1)
+		os << "- return: " << _return.first << " -> " << (_return.second.empty() ? "[empty]" : _return.second) << "\n";
+	else
+		os << "- return: [empty]\n";
+	if (rhs.getClientMaxBodySizeSet())
+		os << "- client_max_body_size: " << _clientMaxBodySize << "\n";
+	else
+		os << "- client_max_body_size: [empty]\n";
+	os << "- index_files: " << _indexFiles.size() << "\n";
+	for (size_t i = 0; i < _indexFiles.size(); ++i)
+		os << "  - " << _indexFiles[i] << "\n";
+	os << "- cgi: " << _cgi.size() << "\n";
+	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); it++) {
+		os << "  - " << it->first << " -> " << it->second << "\n";
+	}
+	return os;
 }
