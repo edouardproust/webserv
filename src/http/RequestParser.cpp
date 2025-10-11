@@ -16,7 +16,7 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 
 RequestParser::~RequestParser() {}
 
-ParseStatus	RequestParser::parse_request(Request& request, const std::string& rawRequest)
+ParseStatus	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
 		return (PARSE_ERR_BAD_REQUEST);
@@ -65,7 +65,7 @@ ParseStatus	RequestParser::parseRequestLine(Request& request, const std::string&
 		return (PARSE_ERR_BAD_REQUEST);
 	if (!isValidVersion(version))
 		return (PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED);
-	request.setMethod(methodFromString(methodStr));
+	request.setMethod(methodStr);
 	request.setPath(path);
 	request.setVersion(version);
 	return (PARSE_SUCCESS);
@@ -125,17 +125,6 @@ bool	RequestParser::isValidStart(const std::string& rawRequest, size_t& requestS
 	return (false);
 }
 
-Method RequestParser::methodFromString(const std::string& methodStr)
-{
-	if (methodStr == "GET")
-		return (GET);
-	if (methodStr == "POST")
-		return (POST);
-	if (methodStr == "DELETE")
-		return (DELETE);
-	return (UNKNOWN);
-}
-
 bool	RequestParser::isValidMethod(const std::string& methodStr) const
 {
 	if (methodStr.empty())
@@ -145,7 +134,7 @@ bool	RequestParser::isValidMethod(const std::string& methodStr) const
 		if (!std::isalpha(methodStr[i]) || !std::isupper(methodStr[i]))
 			return (false);
     }
-	return (methodStr == "GET" || methodStr == "POST" || methodStr == "DELETE");
+	return (Request::isSupportedMethod(methodStr));
 }
 
 bool	RequestParser::isValidPath(const std::string& path) const

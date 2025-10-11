@@ -1,16 +1,37 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
 #include "utils/utils.hpp"
+#include "http/Request.hpp"
+#include "constants.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <cstdlib>
-
-LocationBlock::LocationBlock() {} // Not used
 
 LocationBlock::LocationBlock(std::string const& path, std::string const& blockContent)
 : _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
 	_parse(blockContent);
 }
+
+LocationBlock::LocationBlock(const LocationBlock &other) {
+    *this = other;
+}
+
+LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
+	if (this != &other) {
+		_path = other._path;
+		_root = other._root;
+		_autoindex= other._autoindex;
+		_limitExcept= other._limitExcept;
+		_return = other._return;
+		_clientMaxBodySize = other._clientMaxBodySize;
+		_clientMaxBodySizeSet = other._clientMaxBodySizeSet;
+		_indexFiles = other._indexFiles;
+		_cgi = other._cgi;
+	}
+	return *this;
+}
+
+LocationBlock::~LocationBlock() {}
 
 void	LocationBlock::_parse(std::string const& content) {
 	std::string token = "";
@@ -62,12 +83,8 @@ Config::_addTokenIf(token, tokens);
 		catch (std::exception& e) {
 			throw std::runtime_error("Invalid client_max_body_size: " + tokens[1]);
 		}
-	} else if (tokens[0] == "cgi_root" && tokens.size() == 2) {
-		_cgiRoot = tokens[1];
-	} else if (tokens[0] == "cgi_extension" && tokens.size() == 2) {
-		_cgiExtension = tokens[1];
-	} else if (tokens[0] == "cgi_executable" && tokens.size() == 2) {
-		_cgiExecutable = tokens[1];
+	} else if (tokens[0] == "cgi" && tokens.size() == 3) {
+		_addCgiDirective(tokens[1], tokens[2]);
 	} else if (tokens[0] == "index" && tokens.size() >= 2) {
 		for (size_t j = 1; j < tokens.size(); ++j)
 			_indexFiles.push_back(tokens[j]);
@@ -76,6 +93,17 @@ Config::_addTokenIf(token, tokens);
 	}
 	// Additional directives can be added here
 	tokens.clear();
+}
+
+
+void	LocationBlock::_addCgiDirective(std::string extension, std::string executable) {
+	if (extension.empty() || executable.empty())
+		throw std::runtime_error("Invalid CGI directive: missing extension or executable");
+    if (extension[0] != '.')
+		throw std::runtime_error("Invalid CGI extension: must start with '.' -> " + extension);
+    if (_cgi.find(extension) != _cgi.end())
+		throw std::runtime_error("Duplicate CGI extension: " + extension);
+	_cgi[extension] = executable;
 }
 
 void	LocationBlock::validate(ServerBlock const& server) const {
@@ -89,18 +117,14 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::toString(_return.first));
 	if (server.getErrorPages().find(_return.first) != server.getErrorPages().end())
         throw std::runtime_error("Conflict: return " + utils::toString(_return.first) + " in location " + _path + " conflicts with error_page in server block");
-	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > Config::MAX_CLIENT_BODY_SIZE))
+	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > MAX_CLIENT_BODY_SIZE))
 		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
-	if (!_cgiExtension.empty() && _cgiExtension[0] != '.')
-		throw std::runtime_error("Invalid cgi_extension in location " + _path + ": " + _cgiExtension);
-	if ((!_cgiRoot.empty() || !_cgiExtension.empty() || !_cgiExecutable.empty())
-		&& (_cgiExtension.empty() || _cgiExecutable.empty()))
-		throw std::runtime_error("Incomplete CGI configuration in location " + _path);
 	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
-		if (*it != "GET" && *it != "POST" && *it != "DELETE") //TODO: make it dynamic
+		if (!Request::isSupportedMethod(*it))
 			throw std::runtime_error("Not allowed limit_except method " + *it + " in location " + _path);
 	}
-	// Additional location block validation can be added here
+	if (!utils::hasVectorUniqEntries(_indexFiles))
+		throw std::runtime_error("Duplicate index file in location " + _path);
 }
 
 void	LocationBlock::print() const {
@@ -119,12 +143,13 @@ void	LocationBlock::print() const {
 		std::cout << "- client_max_body_size: " << _clientMaxBodySize << "\n";
 	else
 		std::cout << "- client_max_body_size: [empty]\n";
-	std::cout << "- cgi_root: " << (_cgiRoot.empty() ? "[empty]" : _cgiRoot) << "\n"
-		<< "- cgi_extension: " << (_cgiExtension.empty() ? "[empty]" : _cgiExtension) << "\n"
-		<< "- cgi_executable: " << (_cgiExecutable.empty() ? "[empty]" : _cgiExecutable) << "\n"
-		<< "- index_files: " << _indexFiles.size() << "\n";
+	std::cout << "- index_files: " << _indexFiles.size() << "\n";
 	for (size_t i = 0; i < _indexFiles.size(); ++i)
 		std::cout << "  - " << _indexFiles[i] << "\n";
+	std::cout << "- cgi: " << _cgi.size() << "\n";
+	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); it++) {
+		std::cout << "  - " << it->first << " -> " << it->second << "\n";
+	}
 }
 
 std::string const&	LocationBlock::getPath() const {
@@ -134,10 +159,7 @@ std::string const&	LocationBlock::getPath() const {
 std::string const	LocationBlock::getRoot(ServerBlock const& server) const {
 	if (!_root.empty())
 		return _root;
-	if (!server.getRoot().empty())
-		return server.getRoot();
-	else
-		return "index.html";
+	return server.getRoot(); // returns "" if server::_root is not set either
 }
 
 std::string const&	LocationBlock::getAutoindex() const {
@@ -158,16 +180,8 @@ unsigned long	LocationBlock::getClientMaxBodySize(ServerBlock const& server) con
 	return server.getClientMaxBodySize();
 }
 
-std::string const&	LocationBlock::getCgiRoot() const {
-	return _cgiRoot;
-}
-
-std::string const&	LocationBlock::getCgiExtension() const {
-	return _cgiExtension;
-}
-
-std::string const&	LocationBlock::getCgiExecutable() const {
-	return _cgiExecutable;
+CgiDirective const&	LocationBlock::getCgi() const {
+	return _cgi;
 }
 
 std::vector<std::string> const&	LocationBlock::getIndexFiles(ServerBlock const& server) const {
