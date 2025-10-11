@@ -6,6 +6,10 @@ Subject: [click here](subject/en.subject.pdf)
 
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
+## TODO
+
+- Remove the virtual host form config parsing if not virtual host resolution is not implemented late on in the logic: remove `server_name` attribute and all the logic related in `ServerBlock`.
+
 ## How to use
 
 1. Install dependencies
@@ -46,7 +50,7 @@ make
 - On request catch, `server` performs several actions. Quick example:
 	```cpp
 	std::string raw_request = get_request(socket);
-	Request request = parse_request(std::string); // module 'http'
+	Request request = parseRequest(std::string); // module 'http'
 	std:string plain_response;
 	if (is_static(req)) // module `router`
 		raw_response = process_static(req); // module 'static'

@@ -3,20 +3,14 @@
 
 # include <string>
 # include <map>
-
-enum Method
-{
-	GET,
-	POST,
-	DELETE,
-	UNKNOWN
-};
+# include <set>
 
 class Request
 {
 	private :
 
-	Method	_method;
+	static std::set<std::string> _supportedMethods;
+	std::string	_method;
 	std::string	_path;
 	std::string	_version;
 	std::map<std::string, std::string> _headers;
@@ -29,17 +23,19 @@ class Request
 	Request& operator=(const Request& other);
 	~Request();
 
-	Method	getMethod() const;
-	std::string	getPath() const;
-	std::string	getVersion() const;
-	const std::map<std::string, std::string>&	getHeaders() const;
-	std::string getBody() const;
+	static bool	isSupportedMethod(std::string const& method);
 
-	void	setMethod(Method _method);
-    void	setPath(const std::string& _path);
-    void	setVersion(const std::string& _version);
-    void	addHeader(const std::string& name, const std::string& value);
-	void	setBody(const std::string& _body);
+	std::string const&	getMethod() const;
+	std::string	const&	getPath() const;
+	std::string	const&	getVersion() const;
+	std::map<std::string, std::string> const&	getHeaders() const;
+	std::string const&	getBody() const;
+
+	void	setMethod(std::string const& method);
+    void	setPath(std::string const& path);
+    void	setVersion(std::string const& version);
+    void	addHeader(std::string const& name, std::string const& value);
+	void	setBody(std::string const& body);
 };
 
 #endif

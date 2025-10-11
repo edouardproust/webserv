@@ -6,10 +6,6 @@
 #include <fstream>
 #include <sstream>
 
-unsigned long	Config::MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
-
-Config::Config() {} // Not used
-
 Config::Config(std::string const& filePath) {
 	try {
 		std::string content = _extractFileContent(filePath);
@@ -19,6 +15,8 @@ Config::Config(std::string const& filePath) {
 		throw std::runtime_error("Config: " + std::string(e.what()));
 	}
 }
+
+Config::~Config() {}
 
 std::string	Config::_extractFileContent(std::string const& filePath) {
 	std::ifstream	file(filePath.c_str());
@@ -66,19 +64,18 @@ void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& co
 void	Config::_validate() const {
 	if (_servers.empty())
 		throw std::runtime_error("No server blocks defined in configuration");
-	std::set<std::pair<int, std::string> > seenServers;
+	std::vector<IpPortPair > allListen;
+
+	// Servers content validation
 	for (size_t i = 0; i < _servers.size(); ++i) {
-		int port = _servers[i].getListen();
-		std::string name = _servers[i].getServerName();
-		std::pair<int, std::string> currentServer = std::make_pair(port, name);
-		if (seenServers.find(currentServer) != seenServers.end())
-			throw std::runtime_error("Duplicate server_name + listen port: " + name + ":" + utils::toString(port));
-		seenServers.insert(currentServer);
-	}
-	// Additional validation can be added here
-	for (size_t i = 0; i < _servers.size(); ++i) {
+		// collect all listen ip:port pairs for global duplicate check
+		std::set<IpPortPair> const& listen = _servers[i].getListen();
+		allListen.insert(allListen.end(), listen.begin(), listen.end());
+		// validate this server block individually
 		_servers[i].validate();
 	}
+	if (!utils::hasVectorUniqEntries(allListen))
+		throw std::runtime_error("Duplicate listen ip:port pairs over servers");
 }
 
 void	Config::print() const {

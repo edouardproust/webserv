@@ -14,6 +14,12 @@ tests/
 
 # Specitif files
 webserv
+webserv_dev
 README.md
 .gitignore
 .gitkeep
+
+# Development files
+dev.*
+test.*
+debug.*

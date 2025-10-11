@@ -125,17 +125,6 @@ bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& request
 	return false;
 }
 
-Method RequestParser::_methodFromString(const std::string& methodStr)
-{
-	if (methodStr == "GET")
-		return GET;
-	if (methodStr == "POST")
-		return POST;
-	if (methodStr == "DELETE")
-		return DELETE;
-	return UNKNOWN;
-}
-
 bool	RequestParser::_isValidMethod(const std::string& methodStr) const
 {
 	if (methodStr.empty())
@@ -145,7 +134,7 @@ bool	RequestParser::_isValidMethod(const std::string& methodStr) const
 		if (!std::isalpha(methodStr[i]) || !std::isupper(methodStr[i]))
 			return false;
     }
-	return (methodStr == "GET" || methodStr == "POST" || methodStr == "DELETE");
+	return (Request::isSupportedMethod(methodStr));
 }
 
 bool	RequestParser::_isValidPath(const std::string& _path) const

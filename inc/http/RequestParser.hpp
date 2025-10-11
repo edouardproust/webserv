@@ -1,7 +1,7 @@
 #ifndef REQUESTPARSER_HPP
 # define REQUESTPARSER_HPP
 
-# include "Request.hpp"
+# include "http/Request.hpp"
 # include <string>
 # include <sstream>
 
@@ -25,7 +25,6 @@ class RequestParser
 	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
 
 	bool	_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
-	Method	_methodFromString(const std::string& methodStr);
 	bool	_isValidMethod(const std::string& _method) const;
 	bool	_isValidPath(const std::string& _path) const;
 	bool	_isValidVersion(const std::string& _version) const;
