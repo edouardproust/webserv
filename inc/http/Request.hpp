@@ -16,11 +16,11 @@ class Request
 {
 	private :
 
-	Method	method;
-	std::string	path;
-	std::string	version;
-	std::map<std::string, std::string> headers;
-	std::string	body;
+	Method	_method;
+	std::string	_path;
+	std::string	_version;
+	std::map<std::string, std::string> _headers;
+	std::string	_body;
 
 	public:
 
@@ -35,11 +35,11 @@ class Request
 	const std::map<std::string, std::string>&	getHeaders() const;
 	std::string getBody() const;
 
-	void	setMethod(Method method);
-    void	setPath(const std::string& path);
-    void	setVersion(const std::string& version);
+	void	setMethod(Method _method);
+    void	setPath(const std::string& _path);
+    void	setVersion(const std::string& _version);
     void	addHeader(const std::string& name, const std::string& value);
-	void	setBody(const std::string& body);
+	void	setBody(const std::string& _body);
 };
 
 #endif

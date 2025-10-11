@@ -13,6 +13,7 @@ SRC_FILES = main.cpp \
 	config/ServerBlock.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
+	http/Response.cpp
 
 SRC_DIR = src
 

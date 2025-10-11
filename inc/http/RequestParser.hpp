@@ -20,17 +20,17 @@ class RequestParser
 {
 	private :
 
-	ParseStatus	parseRequestLine(Request& request, const std::string& line);
-	ParseStatus	parseHeaders(Request& request, const std::string& headersPart);
-	ParseStatus	parseHeaderLine(Request& request, const std::string& line);
+	ParseStatus	_parseRequestLine(Request& request, const std::string& line);
+	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart);
+	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
 
-	bool	isValidStart(const std::string& rawRequest, size_t& requestStart) const;
-	Method	methodFromString(const std::string& methodStr);
-	bool	isValidMethod(const std::string& method) const;
-	bool	isValidPath(const std::string& path) const;
-	bool	isValidVersion(const std::string& version) const;
-	bool	isValidHeaderName(const std::string& name) const;
-	std::string	normalizeHeaderName(const std::string& name) const;
+	bool	_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
+	Method	_methodFromString(const std::string& methodStr);
+	bool	_isValidMethod(const std::string& _method) const;
+	bool	_isValidPath(const std::string& _path) const;
+	bool	_isValidVersion(const std::string& _version) const;
+	bool	_isValidHeaderName(const std::string& name) const;
+	std::string	_normalizeHeaderName(const std::string& name) const;
 
 	public :
 
@@ -39,7 +39,7 @@ class RequestParser
 	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
-	ParseStatus	parse_request(Request& request, const std::string& rawRequest);
+	ParseStatus	parseRequest(Request& request, const std::string& rawRequest);
 };
 
 #endif
