@@ -1,6 +1,7 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
 #include "utils/utils.hpp"
+#include "http/Request.hpp"
 #include "constants.hpp"
 #include <stdexcept>
 #include <iostream>
@@ -119,7 +120,7 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > MAX_CLIENT_BODY_SIZE))
 		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
 	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
-		if (*it != "GET" && *it != "POST" && *it != "DELETE") //TODO: make it dynamic
+		if (!Request::isSupportedMethod(*it))
 			throw std::runtime_error("Not allowed limit_except method " + *it + " in location " + _path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
