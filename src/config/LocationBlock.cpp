@@ -7,8 +7,8 @@
 #include <iostream>
 #include <cstdlib>
 
-LocationBlock::LocationBlock(std::string const& path, std::string const& blockContent)
-: _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
+LocationBlock::LocationBlock(ServerBlock* server, std::string const& path, std::string const& blockContent)
+: _server(server), _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
 	_parse(blockContent);
 }
 
@@ -18,6 +18,7 @@ LocationBlock::LocationBlock(const LocationBlock &other) {
 
 LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 	if (this != &other) {
+		_server = other._server;
 		_path = other._path;
 		_root = other._root;
 		_autoindex= other._autoindex;
@@ -106,7 +107,7 @@ void	LocationBlock::_addCgiDirective(std::string extension, std::string executab
 	_cgi[extension] = executable;
 }
 
-void	LocationBlock::validate(ServerBlock const& server) const {
+void	LocationBlock::validate() const {
 	if (!utils::isAbsolutePath(_path))
 		throw std::runtime_error("Invalid location path: " + _path);
 	else if (!_root.empty() && !utils::isAbsolutePath(_root)) {
@@ -115,7 +116,7 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		throw std::runtime_error("Invalid autoindex value in location " + _path + ": " + _autoindex);
 	if (_return.first != -1 && (_return.first < 100 || _return.first > 599))
 		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::toString(_return.first));
-	if (server.getErrorPages().find(_return.first) != server.getErrorPages().end())
+	if (_server->getErrorPages().find(_return.first) != _server->getErrorPages().end())
         throw std::runtime_error("Conflict: return " + utils::toString(_return.first) + " in location " + _path + " conflicts with error_page in server block");
 	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > MAX_CLIENT_BODY_SIZE))
 		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
@@ -127,21 +128,25 @@ void	LocationBlock::validate(ServerBlock const& server) const {
 		throw std::runtime_error("Duplicate index file in location " + _path);
 }
 
+ServerBlock*	LocationBlock::getServer() const {
+	return _server;
+}
+
 std::string const&	LocationBlock::getPath() const {
 	return _path;
 }
 
-std::string const	LocationBlock::getRoot(ServerBlock const& server) const {
+std::string const	LocationBlock::getRoot() const {
 	if (!_root.empty())
 		return _root;
-	return server.getRoot(); // returns "" if server::_root is not set either
+	return _server->getRoot(); // returns "" if server::_root is not set either
 }
 
 std::string const&	LocationBlock::getAutoindex() const {
 	return _autoindex;
 }
 
-std::set<std::string> const&	LocationBlock::getAllowedMethods() const {
+std::set<std::string> const&	LocationBlock::getLimitExcept() const {
 	return _limitExcept;
 }
 
@@ -149,13 +154,13 @@ std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
 	return _return;
 }
 
-unsigned long	LocationBlock::getClientMaxBodySize(ServerBlock const& server) const {
+unsigned long	LocationBlock::getClientMaxBodySize() const {
 	if (_clientMaxBodySizeSet)
 		return _clientMaxBodySize;
-	return server.getClientMaxBodySize();
+	return _server->getClientMaxBodySize();
 }
 
-bool	LocationBlock::getClientMaxBodySizeSet() {
+bool	LocationBlock::getClientMaxBodySizeSet() const {
 	return _clientMaxBodySizeSet;
 }
 
@@ -163,34 +168,49 @@ CgiDirective const&	LocationBlock::getCgi() const {
 	return _cgi;
 }
 
-std::vector<std::string> const&	LocationBlock::getIndexFiles(ServerBlock const& server) const {
+std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
 	if (!_indexFiles.empty())
 		return _indexFiles;
-	return server.getIndexFiles();
+	return _server->getIndexFiles();
+}
+
+void LocationBlock::setServer(ServerBlock* server) {
+	_server = server;
 }
 
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
-	os << "Location:\n";
-	os << "- path: " << rhs.getPath() << "\n";
-	os << "- root: " << (_root.empty() ? "[empty]" : _root) << "\n";
-	os << "- autoindex: " << (_autoindex.empty() ? "[empty]" : _autoindex) << "\n";
-	os << "- limit_except: " << _limitExcept.size() << "\n";
-	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); ++it)
-		os << "  - " << *it << "\n";
-	if (_return.first != -1)
-		os << "- return: " << _return.first << " -> " << (_return.second.empty() ? "[empty]" : _return.second) << "\n";
+	std::string const in = "   "; // indentation
+	os << in << "Location:\n";
+	os << in << "- path: " << rhs.getPath() << "\n";
+	os << in << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
+	os << in << "- autoindex: " << (rhs.getAutoindex().empty() ? "[empty]" : rhs.getAutoindex()) << "\n";
+
+	std::set<std::string> const& limitExcept = rhs.getLimitExcept();
+	os << in << "- limit_except: " << limitExcept.size() << "\n";
+	for (std::set<std::string>::const_iterator it = limitExcept.begin(); it != limitExcept.end(); ++it)
+		os << in << "  - " << *it << "\n";
+
+	std::pair<int, std::string> const& retrn = rhs.getReturn();
+	if (retrn.first != -1)
+		os << in << "- return: " << retrn.first << " -> " << (retrn.second.empty() ? "[empty]" : retrn.second) << "\n";
 	else
-		os << "- return: [empty]\n";
+		os << in << "- return: [empty]\n";
+
 	if (rhs.getClientMaxBodySizeSet())
-		os << "- client_max_body_size: " << _clientMaxBodySize << "\n";
+		os << in << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 	else
-		os << "- client_max_body_size: [empty]\n";
-	os << "- index_files: " << _indexFiles.size() << "\n";
-	for (size_t i = 0; i < _indexFiles.size(); ++i)
-		os << "  - " << _indexFiles[i] << "\n";
-	os << "- cgi: " << _cgi.size() << "\n";
-	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); it++) {
-		os << "  - " << it->first << " -> " << it->second << "\n";
+		os << in << "- client_max_body_size: [empty]\n";
+
+	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();
+	os << in << "- index_files: " << indexFiles.size() << "\n";
+	for (size_t i = 0; i < indexFiles.size(); ++i)
+		os << in << "  - " << indexFiles[i] << "\n";
+
+	CgiDirective const& cgi = rhs.getCgi();
+	os << in << "- cgi: " << cgi.size() << "\n";
+	for (CgiDirective::const_iterator it = cgi.begin(); it != cgi.end(); it++) {
+		os << in << "  - " << it->first << " -> " << it->second << "\n";
 	}
+
 	return os;
 }

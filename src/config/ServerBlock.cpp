@@ -6,6 +6,9 @@
 #include <iostream>
 #include <cstdlib>
 
+ServerBlock::ServerBlock()
+: _clientMaxBodySize(utils::parseSize("1M")) {}
+
 ServerBlock::ServerBlock(std::string const& blockContent)
 : _clientMaxBodySize(utils::parseSize("1M")) {
 	_parse(blockContent);
@@ -14,20 +17,26 @@ ServerBlock::ServerBlock(std::string const& blockContent)
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other) {
-    *this = other;
+	*this = other;
 }
 
 ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
-	if (this != &other) {
-		_root = other._root;
-		_listen = other._listen;
-		_clientMaxBodySize = other._clientMaxBodySize;
-		_errorPages = other._errorPages;
-		_indexFiles = other._indexFiles;
-		_locations = other._locations;
-	}
-	return *this;
+    if (this != &other) {
+        _root = other._root;
+        _listen = other._listen;
+        _clientMaxBodySize = other._clientMaxBodySize;
+        _errorPages = other._errorPages;
+        _indexFiles = other._indexFiles;
+        _locations.clear();
+        _locations.reserve(other._locations.size());
+        for (size_t i = 0; i < other._locations.size(); ++i) {
+            _locations.push_back(other._locations[i]);
+            _locations.back().setServer(this);
+        }
+    }
+    return *this;
 }
+
 
 ServerBlock::~ServerBlock() {}
 
@@ -62,10 +71,8 @@ void	ServerBlock::_parseBlock(std::vector<std::string>& tokens, std::string cons
 		++braceDepth;
 		if (tokens[0] == "location" && tokens.size() == 2) {
 			std::string blockContent = Config::_getBlockContent(content, i, braceDepth);
-			LocationBlock lb(utils::normalizePath(tokens[1]), blockContent);
+			LocationBlock lb(this, utils::normalizePath(tokens[1]), blockContent);
 			_locations.push_back(lb);
-		if (tokens.size() <= 0)
-			throw std::runtime_error("Unexpected '{'");
 		} else {
 			throw std::runtime_error("Invalid block: " + tokens[0]);
 		}
@@ -160,13 +167,16 @@ void	ServerBlock::validate() const {
 		// collect all location paths for global duplicate check
 		allLocationPaths.push_back(_locations[i].getPath());
 		// validate this location individually
-		_locations[i].validate(*this);
+		_locations[i].validate();
 	}
 	if (!utils::hasVectorUniqEntries(allLocationPaths))
 		throw std::runtime_error("Duplicate path across location blocks");
 }
 
-LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path) const {
+/**
+ * Router module is dealing with case _location.empty() -> location "/"
+ */
+LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path) {
 	const LocationBlock* best = NULL;
 	size_t longest = 0;
 	for (size_t i = 0; i < _locations.size(); ++i) {
@@ -182,7 +192,6 @@ LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path
 		throw std::runtime_error("No matching location for path: " + path);
 	return *best;
 }
-
 
 std::string const&	ServerBlock::getRoot() const {
 	return _root;
@@ -233,6 +242,6 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	os << "- locations: " << locations.size() << "\n";
 	for (size_t i = 0; i < locations.size(); ++i)
 		os << locations[i];
-	os << std::endl;
+
 	return os;
 }

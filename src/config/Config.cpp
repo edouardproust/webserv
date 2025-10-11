@@ -120,6 +120,5 @@ std::ostream&	operator<<(std::ostream& os, Config const& rhs) {
 	for (size_t i = 0; i < servers.size(); ++i) {
 		os << servers[i];
 	}
-	os << std::endl;
 	return os;
 }

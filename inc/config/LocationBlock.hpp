@@ -8,6 +8,7 @@ class ServerBlock;
 
 class LocationBlock {
 
+	ServerBlock*				_server;				// Pointer to parent server block, set during validation
 	std::string					_path;					// URI prefix (e.g. "/cgi-bin/")
 	std::string					_root;					// optional, overrides server root
 	std::string					_autoindex;				// optional
@@ -26,22 +27,25 @@ class LocationBlock {
 
 	public:
 
-		LocationBlock(std::string const&, std::string const&);
+		LocationBlock(ServerBlock*, std::string const&, std::string const&);
 		LocationBlock(LocationBlock const&);
 		LocationBlock&	operator=(LocationBlock const&);
 		~LocationBlock();
 
-		void	validate(ServerBlock const&) const;
+		void	validate() const;
 
+		ServerBlock*						getServer() const;
 		std::string const&					getPath() const;
-		std::string const					getRoot(ServerBlock const&) const;
+		std::string const					getRoot() const;
 		std::string const&					getAutoindex() const;
-		std::set<std::string> const&		getAllowedMethods() const;
+		std::set<std::string> const&		getLimitExcept() const;
 		std::pair<int, std::string>	const&	getReturn() const;
-		bool								getClientMaxBodySizeSet();
-		unsigned long						getClientMaxBodySize(ServerBlock const&) const;
-		std::vector<std::string> const&		getIndexFiles(ServerBlock const&) const;
+		bool								getClientMaxBodySizeSet() const;
+		unsigned long						getClientMaxBodySize() const;
+		std::vector<std::string> const&		getIndexFiles() const;
 		CgiDirective const&					getCgi() const;
+
+		void setServer(ServerBlock* server);
 
 };
 

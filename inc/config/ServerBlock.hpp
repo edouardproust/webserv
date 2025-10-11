@@ -17,22 +17,21 @@ class ServerBlock {
 	std::vector<std::string>	_indexFiles;
 	std::vector<LocationBlock>	_locations;
 
-	void			_parse(std::string const&);
-	void			_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
-	void			_parseDirective(std::string&, std::vector<std::string>&, bool);
+	void		_parse(std::string const&);
+	void		_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
+	void		_parseDirective(std::string&, std::vector<std::string>&, bool);
 	IpPortPair	_parseIpPortPair(std::string const&);
-
-	ServerBlock(); // Not used
 
 	public:
 
+		ServerBlock();
 		ServerBlock(std::string const&);
 		ServerBlock(ServerBlock const&);
 		ServerBlock& operator=(ServerBlock const&);
 		~ServerBlock();
 
 		void					validate() const;
-		LocationBlock const&	getBestLocationForPath(std::string const&) const;
+		LocationBlock const&	getBestLocationForPath(std::string const&);
 
 		std::string const&					getRoot() const;
 		std::set<IpPortPair> const&	getListen() const;
