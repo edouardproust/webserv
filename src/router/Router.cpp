@@ -6,20 +6,29 @@ Router::Router(Request const& request, std::vector<ServerBlock> const& servers)
 
 Router::~Router() {}
 
-void	Router::print() {
-	std::cout << "Router:\n"
-		<< "- Request method: " << _request.getMethod() << "\n"
-		<< "- Request path: " << _request.getPath() << "\n"
-		<< "- Request version: " << _request.getVersion() << "\n"
-		<< "- Headers: " << _request.getHeaders().size() << std::endl;
-		for (std::map<std::string, std::string>::const_iterator it = _request.getHeaders().begin();
-			it != _request.getHeaders().end(); ++it) {
-			std::cout << "  - " << it->first << ": " << it->second << "\n";
-		}
-		std::cout << std::endl;
-}
-
-void	Router::resolve() {
+void	Router::resolve() const {
 	// Match server block
 	std::cout << "TODO: Resolve server block" << std::endl;
+}
+
+Request const&	Router::getRequest() const {
+	return _request;
+}
+
+std::vector<ServerBlock> const&	Router::getServers() const {
+	return _servers;
+}
+
+std::ostream&	operator<<(std::ostream& os, Router const& rhs) {
+	Request const& request = rhs.getRequest();
+	os << "Router:\n";
+	os << "- Request method: " << request.getMethod() << "\n";
+	os << "- Request path: " << request.getPath() << "\n";
+	os << "- Request version: " << request.getVersion() << "\n";
+	os << "- Headers: " << request.getHeaders().size() << std::endl;
+	for (std::map<std::string, std::string>::const_iterator it = request.getHeaders().begin();
+		it != request.getHeaders().end(); ++it) {
+		os << "  - " << it->first << ": " << it->second << "\n";
+	}
+	return os;
 }

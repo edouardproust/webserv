@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
 			Request request;
 			request.parse("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
 			Router router(request, cfg.getServers());
-			router.print(); //TODO refactor using operator<<
+			std::cout << router << std::endl;
 		}
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;

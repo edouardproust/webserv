@@ -10,16 +10,23 @@ class Router
 	Request const&					_request;
 	std::vector<ServerBlock> const&	_servers;
 
-	Router(); // Not used
+	// Not used
+	Router();
+	Router(Router const&);
+	Router&	operator=(Router const&);
 
 	public:
 
 		Router(Request const&, std::vector<ServerBlock> const&);
 		~Router();
 
-		void	resolve();
-		void	print();
+		void	resolve() const;
+
+		Request const&					getRequest() const;
+		std::vector<ServerBlock> const&	getServers() const;
 
 };
+
+std::ostream&	operator<<(std::ostream&, Router const&);
 
 #endif
