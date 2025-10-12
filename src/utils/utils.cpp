@@ -67,3 +67,12 @@ std::string& utils::normalizePath(std::string& path) {
 		path.erase(path.size() - 1);
 	return path;
 }
+
+std::vector<IpPortPair>	utils::getAllListenPorts(std::vector<ServerBlock> const& servers) {
+	std::vector<IpPortPair> all;
+	for (size_t i = 0; i < servers.size(); ++i) {
+		std::set<IpPortPair> const& listen = servers[i].getListen();
+		all.insert(all.end(), listen.begin(), listen.end());
+	}
+	return all;
+}

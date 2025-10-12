@@ -1,4 +1,5 @@
 #include "http/Request.hpp"
+#include "http/RequestParser.hpp"
 
 std::set<std::string> Request::_supportedMethods;
 
@@ -22,6 +23,11 @@ Request& Request::operator=(const Request& other)
 }
 
 Request::~Request() {}
+
+ParseStatus	Request::parse(std::string const& rawRequest) {
+	RequestParser parser;
+	return parser.parseRequest(*this, rawRequest);
+}
 
 bool	Request::isSupportedMethod(std::string const& method) {
 	if (_supportedMethods.empty()) {

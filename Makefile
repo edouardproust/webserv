@@ -23,14 +23,16 @@ SRC_DIR = src
 
 # ------- Objects / Deps -------
 
+OBJ_DIR = build
+
 PROD_CXXFLAGS := $(CXXFLAGS) -O2
-PROD_OBJ_DIR = obj
+PROD_OBJ_DIR = $(OBJ_DIR)/prod
 PROD_SRCS = $(addprefix $(SRC_DIR)/, $(BASE_SRC_FILES))
 PROD_OBJS = $(addprefix $(PROD_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o))
 PROD_DEPS = $(PROD_OBJS:.o=.d)
 
 DEV_CXXFLAGS := $(CXXFLAGS) -DDEVMODE=1
-DEV_OBJ_DIR = $(PROD_OBJ_DIR)/dev
+DEV_OBJ_DIR = $(OBJ_DIR)/dev
 DEV_TARGET = $(NAME)_dev
 DEV_SRCS = $(addprefix $(SRC_DIR)/, $(BASE_SRC_FILES) $(DEV_SRC_FILES))
 DEV_OBJS = $(addprefix $(DEV_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o) $(DEV_SRC_FILES:.cpp=.o))
@@ -71,7 +73,7 @@ $(DEV_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 -include $(DEV_DEPS)
 
 clean:
-	rm -rf $(PROD_OBJ_DIR) $(DEV_DIR)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -f $(NAME)

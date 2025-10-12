@@ -4,17 +4,6 @@
 #include "http/dev.http.hpp"
 #include <iostream>
 
-Request const&	dev::parseRequest(std::string const& rawRequest) {
-	static RequestParser parser;
-	static Request request;
-	ParseStatus result = parser.parseRequest(request, rawRequest);
-	if (result != PARSE_SUCCESS) {
-		throw std::runtime_error("Error parsing request: " + parseStatusToString(result));
-	}
-	return (request);
-}
-
-
 std::string	dev::parseStatusToString(ParseStatus status) {
 	switch (status) {
 		case PARSE_SUCCESS:

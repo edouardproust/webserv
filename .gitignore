@@ -7,7 +7,7 @@
 *~
 
 # Specific folders
-obj/
+build/
 .vscode/
 
 # Specitif files

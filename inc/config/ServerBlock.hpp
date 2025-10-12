@@ -2,11 +2,6 @@
 #define SERVER_BLOCK_HPP
 
 #include "config/LocationBlock.hpp"
-#include "typedefs.hpp"
-#include <string>
-#include <vector>
-#include <map>
-#include <utility>
 
 class ServerBlock {
 
@@ -34,7 +29,7 @@ class ServerBlock {
 		LocationBlock const&	getBestLocationForPath(std::string const&);
 
 		std::string const&					getRoot() const;
-		std::set<IpPortPair> const&	getListen() const;
+		std::set<IpPortPair> const&			getListen() const;
 		unsigned long						getClientMaxBodySize() const;
 		std::map<int, std::string> const&	getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;

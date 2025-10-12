@@ -11,15 +11,37 @@ int main(int argc, char** argv) {
 	}
 	try {
 		Config cfg(argv[1]);
+		/*
+		Server server(cfg);
+		server.run(cfg);
+
+			// Inside server.run(), on each new request:
+			try {
+				Request request("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			} catch (const std::exception& e) {
+				std::string const& errorPageContent = static::buildErrorPage(res);
+				Response response(HTTP_VERSION, res, errorPageContent);
+				server.sendResponseToClient(response);
+			}
+			Router router(request, cfg.getServers());
+
+			OR:
+
+			Request request("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			if (request.getParsingStatus() != PARSE_SUCCESS) {
+				std::string const& errorPageContent = static::buildErrorPage(res);
+				Response response(HTTP_VERSION, res, errorPageContent);
+				server.sendResponseToClient(response);
+			}
+			Router router(request, cfg.getServers());
+		*/
 		if (DEVMODE) {
 			std::cout << cfg << std::endl;
-			//dev::runParserTests();
-			Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			Request request;
+			request.parse("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
 			Router router(request, cfg.getServers());
-			router.print();
+			router.print(); //TODO refactor using operator<<
 		}
-		//Server server(cfg);
-		//server.run(cfg);
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;

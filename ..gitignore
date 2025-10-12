@@ -7,7 +7,7 @@
 *~
 
 # Specific folders
-obj/
+build/
 subject/
 tests/
 .vscode/

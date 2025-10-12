@@ -1,6 +1,7 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
+# include "constants.hpp"
 # include <string>
 # include <map>
 # include <set>
@@ -22,6 +23,8 @@ class Request
 	Request(const Request& other);
 	Request& operator=(const Request& other);
 	~Request();
+
+	ParseStatus	parse(std::string const& rawRequest);
 
 	static bool	isSupportedMethod(std::string const& method);
 
