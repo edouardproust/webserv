@@ -16,24 +16,15 @@ int main(int argc, char** argv) {
 		server.run(cfg);
 
 			// Inside server.run(), on each new request:
-			try {
-				Request request("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
-			} catch (const std::exception& e) {
-				std::string const& errorPageContent = static::buildErrorPage(res);
-				Response response(HTTP_VERSION, res, errorPageContent);
-				server.sendResponseToClient(response);
-			}
-			Router router(request, cfg.getServers());
-
-			OR:
-
 			Request request("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
-			if (request.getParsingStatus() != PARSE_SUCCESS) {
+			int res = request.getHTTPStatus();
+			if (res < 400) {
+				Router router(request, cfg.getServers());
+			} else {
 				std::string const& errorPageContent = static::buildErrorPage(res);
 				Response response(HTTP_VERSION, res, errorPageContent);
 				server.sendResponseToClient(response);
 			}
-			Router router(request, cfg.getServers());
 		*/
 		if (DEVMODE) {
 			std::cout << cfg << std::endl;
