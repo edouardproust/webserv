@@ -1,4 +1,5 @@
 #include "http/RequestParser.hpp"
+#include "Constants.hpp"
 #include <iostream>
 
 RequestParser::RequestParser() {}
@@ -35,9 +36,19 @@ ParseStatus	RequestParser::parseRequest(Request& request, const std::string& raw
 	ParseStatus	result = _parseRequestLine(request, requestLine);
 	if (result != PARSE_SUCCESS)
 		return result;
-	result = _parseHeaders(request, headersPart);
+	bool hasBody = _hasBody(rawRequest, headersEnd);
+	result = _parseHeaders(request, headersPart, hasBody);
 	if (result != PARSE_SUCCESS)
 		return result;
+	size_t bodyStart = headersEnd + 4;
+	if (hasBody)
+	{
+		std::string body = rawRequest.substr(bodyStart);
+		request.setBody(body);
+		ParseStatus bodyResult = _validateBody(request);
+		if (bodyResult != PARSE_SUCCESS)
+			return bodyResult;
+	}
 	return PARSE_SUCCESS;
 }
 
@@ -65,19 +76,16 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidVersion(_version))
 		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
-	request.setMethod(_methodFromString(methodStr));
+	request.setMethod(methodStr);
 	request.setPath(_path);
 	request.setVersion(_version);
 	return PARSE_SUCCESS;
 }
 
-ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart)
+ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
-
-	if (headersPart.empty() && request.getVersion() == "HTTP/1.0")
-    	return PARSE_SUCCESS;
 	while (std::getline(headersStream, line))
 	{
 		if (!line.empty() && line[line.length() - 1] == '\r')
@@ -85,10 +93,18 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return PARSE_ERR_HEADER_SYNTAX_ERROR;
+			return PARSE_ERR_BAD_REQUEST;
 		ParseStatus result = _parseHeaderLine(request, line);
 		if (result != PARSE_SUCCESS)
 			return result;
+	}	
+	std::map<std::string, std::string> headers = request.getHeaders();
+	if (headers.find("host") == headers.end())
+		return PARSE_ERR_BAD_REQUEST;
+	if (request.getMethod() == "POST" && hasBody)
+	{
+		if (headers.find("content-length") == headers.end())
+			return PARSE_ERR_LENGTH_REQUIRED;
 	}
 	return PARSE_SUCCESS;
 }
@@ -97,17 +113,38 @@ ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string&
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return PARSE_ERR_HEADER_SYNTAX_ERROR;
+		return PARSE_ERR_BAD_REQUEST;
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
 	if (!name.empty() && std::isspace(name[name.length() - 1]))
-		return PARSE_ERR_HEADER_SYNTAX_ERROR;
+		return PARSE_ERR_BAD_REQUEST;
 	if (name.empty())
-		return PARSE_ERR_HEADER_NAME_EMPTY;
+		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidHeaderName(name))
-		return PARSE_ERR_HEADER_SYNTAX_ERROR;
+		return PARSE_ERR_BAD_REQUEST;
 	std::string normalizedName = _normalizeHeaderName(name);
 	request.addHeader(normalizedName, value);
+	return PARSE_SUCCESS;
+}
+
+ParseStatus	RequestParser::_validateBody(const Request& request)
+{
+	std::map<std::string, std::string> headers = request.getHeaders();
+
+	if (headers.find("content-length") != headers.end())
+	{
+		std::string contentLengthStr = headers["content-length"];
+		unsigned long contentLength;
+		std::istringstream contentLengthStream(contentLengthStr);
+		if (!(contentLengthStream >> contentLength))
+			return PARSE_ERR_BAD_REQUEST;
+		if (contentLength > MAX_CLIENT_BODY_SIZE)
+			return PARSE_ERR_BODY_TOO_LARGE;
+		if (request.getBody().length() != contentLength)
+			return PARSE_ERR_BAD_REQUEST;
+	}
+	if (request.getBody().length() > MAX_CLIENT_BODY_SIZE)
+		return PARSE_ERR_BAD_REQUEST;
 	return PARSE_SUCCESS;
 }
 
@@ -150,7 +187,7 @@ bool	RequestParser::_isValidVersion(const std::string& _version) const
 {
 	if (_version.empty())
 		return false;
-	return _version == "HTTP/1.1";
+	 return _version == "HTTP/1.1";
 }
 
 bool	RequestParser::_isValidHeaderName(const std::string& name) const
@@ -163,6 +200,11 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 			return false;
 	}
 	return true;
+}
+
+bool RequestParser::_hasBody(const std::string& rawRequest, size_t headersEnd) const
+{
+	return headersEnd + 4 < rawRequest.length();
 }
 
 std::string	RequestParser::_normalizeHeaderName(const std::string& name) const

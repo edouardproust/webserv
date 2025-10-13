@@ -2,7 +2,7 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() : method(""), path(""), version(""), body("") {}
+Request::Request() : _method(""), _path(""), _version(""), _body("") {}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -58,7 +58,7 @@ std::string const& Request::getBody() const
 	return this->_body;
 }
 
-void	Request::setMethod(std::string const& method)
+void	Request::setMethod(std::string const& _method)
 {
 	this->_method = _method;
 }
