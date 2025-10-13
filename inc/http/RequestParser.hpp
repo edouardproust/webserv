@@ -27,7 +27,7 @@ class RequestParser
 	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
-	ParseStatus	parseRequest(Request& request, const std::string& rawRequest);
+	void	parseRequest(Request& request, const std::string& rawRequest);
 };
 
 #endif

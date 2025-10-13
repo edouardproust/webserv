@@ -16,29 +16,37 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 
 RequestParser::~RequestParser() {}
 
-ParseStatus	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
+void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
-	if (rawRequest.empty())
-		return (PARSE_ERR_BAD_REQUEST);
+	if (rawRequest.empty()) {
+		request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return;
+	}
 	size_t requestStart;
-	if (!isValidStart(rawRequest, requestStart))
-		return (PARSE_ERR_BAD_REQUEST);
+	if (!isValidStart(rawRequest, requestStart)) {
+		request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return;
+	}
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
-	if (headersEnd == std::string::npos)
-		return (PARSE_ERR_BAD_REQUEST);
+	if (headersEnd == std::string::npos) {
+		request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return;
+	}
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
-	if (requestLineEnd == std::string::npos)
-		return (PARSE_ERR_BAD_REQUEST);
+	if (requestLineEnd == std::string::npos) {
+		request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return;
+	}
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
 	ParseStatus	result = parseRequestLine(request, requestLine);
-	if (result != PARSE_SUCCESS)
-		return (result);
+	if (result != PARSE_SUCCESS) {
+		request.setStatus(result);
+		return;
+	}
 	result = parseHeaders(request, headersPart);
-	if (result != PARSE_SUCCESS)
-		return (result);
-	return (PARSE_SUCCESS);
+	request.setStatus(result);
 }
 
 ParseStatus	RequestParser::parseRequestLine(Request& request, const std::string& line)

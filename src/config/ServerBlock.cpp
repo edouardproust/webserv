@@ -13,7 +13,7 @@ ServerBlock::ServerBlock(std::string const& blockContent)
 : _clientMaxBodySize(utils::parseSize("1M")) {
 	_parse(blockContent);
 	if (_listen.empty())
-      	_listen.insert(IpPortPair("0.0.0.0", 80));
+      	_listen.insert(HostPortPair("0.0.0.0", 80));
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other) {
@@ -90,7 +90,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 		if (tokens[0] == "root" && tokens.size() == 2) {
 			_root = utils::normalizePath(tokens[1]);
 		} else if (tokens[0] == "listen" && tokens.size() == 2) {
-			_listen.insert(_parseIpPortPair(tokens[1]));
+			_listen.insert(_parseHostPortPair(tokens[1]));
 		} else if (tokens[0] == "error_page" && tokens.size() >= 3) {
 			for (size_t j = 1; j < tokens.size() - 1; ++j) {
 				try {
@@ -117,7 +117,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 	tokens.clear();
 }
 
-IpPortPair ServerBlock::_parseIpPortPair(std::string const& token) {
+HostPortPair ServerBlock::_parseHostPortPair(std::string const& token) {
 	std::string host = "0.0.0.0"; // default if no host specified
 	int port = 80; // default HTTP port
 	std::string::size_type colonPos = token.find(':');
@@ -139,7 +139,7 @@ IpPortPair ServerBlock::_parseIpPortPair(std::string const& token) {
 	// Check port validity
 	if (port < 1 || port > 65535)
 		throw std::runtime_error("Invalid listen port (must be between 1 and 65535): " + token);
-	return IpPortPair(host, port);
+	return HostPortPair(host, port);
 }
 
 void	ServerBlock::validate() const {
@@ -197,7 +197,7 @@ std::string const&	ServerBlock::getRoot() const {
 	return _root;
 }
 
-std::set<IpPortPair> const&	ServerBlock::getListen() const {
+std::set<HostPortPair> const&	ServerBlock::getListen() const {
 	return _listen;
 }
 
@@ -221,9 +221,9 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	os << "Server:\n";
 	os << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
 
-	std::set<IpPortPair> const& listen = rhs.getListen();
+	std::set<HostPortPair> const& listen = rhs.getListen();
 	os << "- listen: " << listen.size() << "\n";
-	for (std::set<IpPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
+	for (std::set<HostPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
 		os << "  - " << it->first << " -> " << it->second << "\n";
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";

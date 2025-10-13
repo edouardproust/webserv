@@ -68,11 +68,18 @@ std::string& utils::normalizePath(std::string& path) {
 	return path;
 }
 
-std::vector<IpPortPair>	utils::getAllListenPorts(std::vector<ServerBlock> const& servers) {
-	std::vector<IpPortPair> all;
+std::vector<HostPortPair>	utils::getAllListenPorts(std::vector<ServerBlock> const& servers) {
+	std::vector<HostPortPair> all;
 	for (size_t i = 0; i < servers.size(); ++i) {
-		std::set<IpPortPair> const& listen = servers[i].getListen();
+		std::set<HostPortPair> const& listen = servers[i].getListen();
 		all.insert(all.end(), listen.begin(), listen.end());
 	}
 	return all;
+}
+
+std::string	utils::getFileExtension(std::string const& path) {
+	size_t dotPos = path.rfind('.');
+	if (dotPos == std::string::npos || dotPos == path.length() - 1)
+		return "";
+	return path.substr(dotPos);
 }

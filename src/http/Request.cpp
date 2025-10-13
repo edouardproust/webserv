@@ -3,7 +3,16 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() : method(""), path(""), version(""), body("") {}
+Request::Request() :
+	method(""),
+	path(""),
+	version(""),
+	body(""),
+	host("localhost"),
+	port(80),
+	queryString(""),
+	contentType("")
+{}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -24,9 +33,9 @@ Request& Request::operator=(const Request& other)
 
 Request::~Request() {}
 
-ParseStatus	Request::parse(std::string const& rawRequest) {
+void	Request::parse(std::string const& rawRequest) {
 	RequestParser parser;
-	return parser.parseRequest(*this, rawRequest);
+	parser.parseRequest(*this, rawRequest);
 }
 
 bool	Request::isSupportedMethod(std::string const& method) {
@@ -37,6 +46,11 @@ bool	Request::isSupportedMethod(std::string const& method) {
 		// More supported methods can be added here
 	}
 	return _supportedMethods.find(method) != _supportedMethods.end();
+}
+
+ParseStatus const& Request::getStatus() const
+{
+	return (this->_status);
 }
 
 std::string const& Request::getMethod() const
@@ -64,6 +78,11 @@ std::string const& Request::getBody() const
 	return (this->body);
 }
 
+void	Request::setStatus(ParseStatus status)
+{
+	this->_status = status;
+}
+
 void	Request::setMethod(std::string const& method)
 {
 	this->method = method;
@@ -87,4 +106,20 @@ void	Request::addHeader(const std::string& name, const std::string& value)
 void	Request::setBody(const std::string& body)
 {
 	this->body = body;
+}
+
+std::string const& Request::getHost() const {
+	return host;
+}
+
+int Request::getPort() const {
+	return port;
+}
+
+std::string const& Request::getQueryString() const {
+	return queryString;
+}
+
+std::string const& Request::getContentType() const {
+	return contentType;
 }

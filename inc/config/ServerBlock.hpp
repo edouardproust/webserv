@@ -6,7 +6,7 @@
 class ServerBlock {
 
 	std::string					_root;
-	std::set<IpPortPair>		_listen;
+	std::set<HostPortPair>		_listen;
 	unsigned long				_clientMaxBodySize;
 	std::map<int, std::string>	_errorPages;
 	std::vector<std::string>	_indexFiles;
@@ -15,7 +15,7 @@ class ServerBlock {
 	void		_parse(std::string const&);
 	void		_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
 	void		_parseDirective(std::string&, std::vector<std::string>&, bool);
-	IpPortPair	_parseIpPortPair(std::string const&);
+	HostPortPair	_parseHostPortPair(std::string const&);
 
 	public:
 
@@ -29,7 +29,7 @@ class ServerBlock {
 		LocationBlock const&	getBestLocationForPath(std::string const&);
 
 		std::string const&					getRoot() const;
-		std::set<IpPortPair> const&			getListen() const;
+		std::set<HostPortPair> const&			getListen() const;
 		unsigned long						getClientMaxBodySize() const;
 		std::map<int, std::string> const&	getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;

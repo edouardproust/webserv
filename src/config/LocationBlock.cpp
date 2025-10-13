@@ -128,6 +128,10 @@ void	LocationBlock::validate() const {
 		throw std::runtime_error("Duplicate index file in location " + _path);
 }
 
+bool	LocationBlock::isCgiLocation() const {
+	return !_cgi.empty();
+}
+
 ServerBlock*	LocationBlock::getServer() const {
 	return _server;
 }
@@ -172,6 +176,13 @@ std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
 	if (!_indexFiles.empty())
 		return _indexFiles;
 	return _server->getIndexFiles();
+}
+
+std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
+	CgiDirective::const_iterator it = _cgi.find(extension);
+	if (it != _cgi.end())
+		return it->second;
+	return "";
 }
 
 void LocationBlock::setServer(ServerBlock* server) {

@@ -15,12 +15,17 @@ class Router
 	Router(Router const&);
 	Router&	operator=(Router const&);
 
+	ServerBlock const& _findMatchingServer(std::string const& host, int port) const;
+	LocationBlock const& _findMatchingLocation(ServerBlock const& server, std::string const& path) const;
+	std::string _resolveScriptPath(std::string const& requestPath, LocationBlock const& location) const;
+	std::string _resolveFilePath(std::string const& requestPath, LocationBlock const& location) const;
+
 	public:
 
 		Router(Request const&, std::vector<ServerBlock> const&);
 		~Router();
 
-		void	resolve() const;
+		void	dispatchRequest() const;
 
 		Request const&					getRequest() const;
 		std::vector<ServerBlock> const&	getServers() const;

@@ -33,6 +33,7 @@ class LocationBlock {
 		~LocationBlock();
 
 		void	validate() const;
+		bool	isCgiLocation() const;
 
 		ServerBlock*						getServer() const;
 		std::string const&					getPath() const;
@@ -44,6 +45,7 @@ class LocationBlock {
 		unsigned long						getClientMaxBodySize() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		CgiDirective const&					getCgi() const;
+		std::string const					getCgiExecutor(std::string const& extension) const;
 
 		void setServer(ServerBlock* server);
 

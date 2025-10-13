@@ -66,7 +66,7 @@ void	Config::_validate() const {
 		throw std::runtime_error("No server blocks defined");
 
 	// Servers content validation
-	std::vector<IpPortPair> allListen = utils::getAllListenPorts(_servers);
+	std::vector<HostPortPair> allListen = utils::getAllListenPorts(_servers);
 	if (!utils::hasVectorUniqEntries(allListen)) {
 		throw std::runtime_error("Duplicate listen ip:port pairs over servers");
 	}
