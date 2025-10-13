@@ -1,4 +1,4 @@
-#include "Socket.hpp"
+#include "network/Socket.hpp"
 
 Socket::Socket(const t_server_config &server) : _server(server), _servinfo(0), _sock(-1)
 {

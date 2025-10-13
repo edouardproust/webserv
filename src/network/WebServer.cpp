@@ -1,10 +1,4 @@
-#include "WebServer.hpp"
-#include <unistd.h>
-#include <cstring>
-#include <fcntl.h>
-#include <cerrno>
-#include <sstream>
-
+#include "network/WebServer.hpp"
 
 WebServer::WebServer(const std::vector<t_server_config> &confs)
 {

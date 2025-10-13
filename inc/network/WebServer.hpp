@@ -10,12 +10,10 @@
 #include <string>
 #include <iostream>
 
-namespace ft
-{
-    class WebServer {
+class WebServer {
     private:
         int _epoll;
-        std::vector<ft::Socket*> _connections;
+        std::vector<Socket*> _connections;
         std::map<int, std::string> _request_list;  // fd -> accumulated request
         std::map<int, std::string> _response_list; // fd -> remaining response to send
 
@@ -35,6 +33,6 @@ namespace ft
         int get_expected_length(const std::string &buf);
         std::string build_simple_response(const std::string &request);
     };
-}
+
 
 #endif

@@ -12,14 +12,12 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace ft
-{
-    struct t_server_config {
+struct t_server_config {
         std::string port;
         std::vector<std::string> server_names;
-    };
+};
 
-    class Socket {
+class Socket {
     private:
         int                 _sock;
         struct addrinfo     _hints;
@@ -37,7 +35,6 @@ namespace ft
         void    listenSocket(void);
         int     acceptConnection(void);
         int     getSock(void) const;
-    };
-}
+};
 
 #endif
