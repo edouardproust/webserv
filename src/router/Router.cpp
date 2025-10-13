@@ -46,7 +46,29 @@ void Router::dispatchRequest() const {
     }
 }
 
+ServerBlock const&	Router::_findMatchingServer(std::string const& host, int port) const {
+	//TODO
+	return _servers[0];
+	(void)host; (void)port; // to silence unused parameter warning
+}
 
+LocationBlock const&	Router::_findMatchingLocation(ServerBlock const& server, std::string const& path) const {
+	//TODO
+	return server.getLocations()[0];
+	(void)path; // to silence unused parameter warning
+}
+
+std::string	Router::_resolveScriptPath(std::string const& requestPath, LocationBlock const& location) const {
+	// TODO
+	return "/var/www/cgi-bin" + requestPath.substr(location.getPath().length());
+	(void)requestPath; (void)location; // to silence unused parameter warning
+}
+
+std::string	Router::_resolveFilePath(std::string const& requestPath, LocationBlock const& location) const {
+	// TODO
+	return location.getRoot() + requestPath;
+	(void)requestPath; (void)location; // to silence unused parameter warning
+}
 
 Request const&	Router::getRequest() const {
 	return _request;

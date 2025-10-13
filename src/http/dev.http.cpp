@@ -12,10 +12,6 @@ std::string	dev::parseStatusToString(ParseStatus status) {
 			return ("PARSE_ERR_BAD_REQUEST");
 		case PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED:
 			return ("PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED");
-		case PARSE_ERR_HEADER_NAME_EMPTY:
-			return ("PARSE_ERR_HEADER_NAME_EMPTY");
-		case PARSE_ERR_HEADER_SYNTAX_ERROR:
-			return ("PARSE_ERR_HEADER_SYNTAX_ERROR");
 		default:
 			return ("UNKNOWN");
 	}
@@ -68,9 +64,10 @@ void dev::runParserTests() {
 
 	for (int i = 0; i < numTests; i++) {
 		Request request;
-		::ParseStatus result = parser.parseRequest(request, rawRequests[i]);
+		parser.parseRequest(request, rawRequests[i]);
+		ParseStatus status = request.getStatus();
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
-			<< (result == PARSE_SUCCESS ? "PASS" : "FAIL")
-			<< " (" << parseStatusToString(result) << ")" << std::endl;
+			<< (status == PARSE_SUCCESS ? "PASS" : "FAIL")
+			<< " (" << parseStatusToString(status) << ")" << std::endl;
 	}
 }

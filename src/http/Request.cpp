@@ -10,8 +10,8 @@ Request::Request() :
 	body(""),
 	host("localhost"),
 	port(80),
-	queryString(""),
-	contentType("")
+	queryString("q=webserv&category=42"),
+	contentType("text/html")
 {}
 
 Request::Request(const Request& other) {

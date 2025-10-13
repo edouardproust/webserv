@@ -1,5 +1,6 @@
 #include "cgi/CGIHandler.hpp"
 #include "utils/utils.hpp"
+#include <iostream> //DEBUG
 
 void CGIHandler::handleRequest(const std::string& scriptPath,
 	const std::string& executor,
@@ -23,10 +24,10 @@ void CGIHandler::handleRequest(const std::string& scriptPath,
 	setenv("SERVER_SOFTWARE", "webserv/42", 1);
 
 	// Conversion of HTTP headers into env. variables (CGI standard)
-	for (const auto& header : headers) {
-		std::string envVar = "HTTP_" + _headerToEnvVar(header.first);
-		setenv(envVar.c_str(), header.second.c_str(), 1);
-	}
+	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+        std::string envVar = "HTTP_" + _headerToEnvVar(it->first);
+        setenv(envVar.c_str(), it->second.c_str(), 1);
+    }
 
 	// 4. Gestion of the request body for POST/PUT methods
 	if (method == "POST" || method == "PUT") {
@@ -35,4 +36,27 @@ void CGIHandler::handleRequest(const std::string& scriptPath,
 
 	// 5. Execute script
 	_executeScript(executor, scriptPath);
+}
+
+std::string	CGIHandler::_headerToEnvVar(const std::string& header) {
+	std::string envVar;
+	for (size_t i = 0; i < header.length(); ++i) {
+		char c = header[i];
+		if (c == '-')
+			envVar += '_';
+		else
+			envVar += std::toupper(c);
+	}
+	return envVar;
+}
+
+void	CGIHandler::_writeBodyToStdin(const std::string& body) {
+	std::cout << "[TODO: Writing body to CGI stdin]" << body << std::endl;
+	(void)body; // to silence unused parameter warning
+}
+
+void	CGIHandler::_executeScript(const std::string& executor, const std::string& scriptPath) {
+	std::cout << "[TODO: Executing CGI script]" << std::endl;
+	std::cout << "Executor: " << executor << std::endl;
+	std::cout << "Script Path: " << scriptPath << std::endl;
 }
