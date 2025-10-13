@@ -17,7 +17,8 @@ class Request
 	std::string	version;
 	std::map<std::string, std::string> headers;
 	std::string	body;
-	// Extra fields for easier routing
+
+	// TODO Extra fields for easier routing
 	std::string	host; // extracted from "Host" header
 	int			port; // extracted from "Host" header
 	std::string	queryString; // extracted from path if any
