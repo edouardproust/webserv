@@ -101,7 +101,7 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 	std::map<std::string, std::string> headers = request.getHeaders();
 	if (headers.find("host") == headers.end())
 		return PARSE_ERR_BAD_REQUEST;
-	if (request.getMethod() == "POST" && hasBody)
+	if (hasBody)
 	{
 		if (headers.find("content-length") == headers.end())
 			return PARSE_ERR_LENGTH_REQUIRED;
@@ -138,13 +138,9 @@ ParseStatus	RequestParser::_validateBody(const Request& request)
 		std::istringstream contentLengthStream(contentLengthStr);
 		if (!(contentLengthStream >> contentLength))
 			return PARSE_ERR_BAD_REQUEST;
-		if (contentLength > MAX_CLIENT_BODY_SIZE)
-			return PARSE_ERR_BODY_TOO_LARGE;
 		if (request.getBody().length() != contentLength)
 			return PARSE_ERR_BAD_REQUEST;
 	}
-	if (request.getBody().length() > MAX_CLIENT_BODY_SIZE)
-		return PARSE_ERR_BAD_REQUEST;
 	return PARSE_SUCCESS;
 }
 

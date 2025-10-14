@@ -8,7 +8,7 @@
 
 namespace dev {
 
-	Request const&	parseRequest(std::string const&);
+	Request const&	parseRequest(std::string const& rawRequest);
 	std::string		parseStatusToString(ParseStatus);
 	void			runParserTests();
 	void 			runResponseTests();

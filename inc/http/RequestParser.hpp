@@ -11,7 +11,7 @@ enum ParseStatus
 	PARSE_ERR_BAD_REQUEST = 400,
 	PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED = 505,
 	PARSE_ERR_LENGTH_REQUIRED = 411, // eg POST request missing Content-Length
-	PARSE_ERR_BODY_TOO_LARGE = 413 // Body exceeds server's max size limit
+	PARSE_ERR_BODY_TOO_LARGE = 413 // Body exceeds config's max size limit
 };
 
 class RequestParser

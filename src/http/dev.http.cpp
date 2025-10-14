@@ -11,7 +11,6 @@ Request const&	dev::parseRequest(std::string const& rawRequest) {
 	return (request);
 }
 
-
 std::string	dev::parseStatusToString(ParseStatus status) {
 	switch (status) {
 		case PARSE_SUCCESS:
@@ -48,17 +47,16 @@ void dev::runParserTests() {
 		"Extra spaces after version - Valid", //only whitespaces valid-everything else invalid even tabs
 		"Empty line after request line - Invalid", //here strictly following RFC, nginx allows it but doesn't make sense
 		"Two empty lines after headers - Valid",   //Extra lines considered as body
-		"Spaces after header name - Invalid",
+		"Spaces after header name (before colon)- Invalid",
 		"Spaces after headers - Valid",
 		"HTTP 1.1 without host header - Invalid",
-		"POST with no body and without content-length header - Valid",
+		"POST with no body and without content-length header - Valid", //since there is no body, content-length header is not required
 		"POST with body but wrong content-length header value - Invalid",
-		"POST with body but NO content-length header at all - Invalid",
-		"No spaces after colon - Valid",
+		"POST with body but NO content-length header at all - Invalid"
 	};
 
 	const char* rawRequests[] = {
-		"GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\nhost: value\twith\ttabs\r\n\r\nHello world",
+		"GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 11\r\nhost: value\twith\ttabs\r\n\r\nHello world",
 		"     GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n",
 		"GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n",
 		"get /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
@@ -67,23 +65,21 @@ void dev::runParserTests() {
 		"GET HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
 		"GET/index.htmlHTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
 		"GET /index.html HTTP/4.0\r\nHost: localhost:8080\r\n\r\n",
-		"GET    /index.html    HTTP/1.1\r\nHost: localhost\r\n\r\n",
-		"GET\t/index.html\tHTTP/1.1\r\nHost: localhost\r\n\r\n",
-		"GET /index123&.html HTTP/1.1\r\nHost: localhost\r\n\r\n",
-		"GET /index.html HTTP/1.1   \r\nHost: localhost\r\n\r\n",
-		"GET /index.html HTTP/1.1\r\n\r\nHost: localhost\r\n\r\n",
-		"POST /index.html HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n\r\n",
-		"POST /index.html HTTP/1.1\r\nHost\t   : localhost\r\nContent-Length: 0\r\n\r\n",
-		"POST /index.html HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0   \r\n\r\n",
+		"GET    /index.html    HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET\t/index.html\tHTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET /index123&.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET /index.html HTTP/1.1   \r\nHost: localhost:8080\r\n\r\n",
+		"GET /index.html HTTP/1.1\r\n\r\nHost: localhost:8080\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 2\r\n\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost\t   : localhost:8080\r\nContent-Length: 0\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 0   \r\n\r\n",
 		"POST /index.html HTTP/1.1\r\n\r\nContent-Length: 0\r\n\r\n",
-		"POST /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n",
-		"POST /index.html HTTP/1.1\r\nHost: localhost\r\nContent-Length: 7\r\n\r\nHello",
-		"POST /index.html HTTP/1.1\r\nHost: localhost\r\n\r\nHello",
-		"POST /index.html HTTP/1.1\r\nHost:localhost\r\nContent-Length:5\r\n\r\nHello"
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 7\r\n\r\nHello",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\nHello"
 	};
 
 	const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
-
 	for (int i = 0; i < numTests; i++) {
 		Request request;
 		::ParseStatus result = parser.parseRequest(request, rawRequests[i]);
