@@ -20,7 +20,7 @@ class Response
 	Response& operator=(const Response& other);
 	~Response();
 
-	std::string	buildResponse(int statusCode, const std::map<std::string, std::string>& headers);
+	std::string	buildResponse(int statusCode, const std::map<std::string, std::string>& headers, const std::string& body);
 	std::string	buildErrorResponse(int statusCode);
 
 };

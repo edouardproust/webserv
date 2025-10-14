@@ -122,6 +122,7 @@ ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string&
 		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidHeaderName(name))
 		return PARSE_ERR_BAD_REQUEST;
+	value = _trimOWS(value);
 	std::string normalizedName = _normalizeHeaderName(name);
 	request.addHeader(normalizedName, value);
 	return PARSE_SUCCESS;
@@ -196,6 +197,18 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 			return false;
 	}
 	return true;
+}
+
+std::string	 RequestParser::_trimOWS(const std::string& str)
+{
+	size_t start = 0;
+	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
+		start++;
+
+	size_t end = str.size();
+	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
+		end--;
+	return str.substr(start, end - start);
 }
 
 bool RequestParser::_hasBody(const std::string& rawRequest, size_t headersEnd) const

@@ -21,8 +21,6 @@ std::string	dev::parseStatusToString(ParseStatus status) {
 			return "PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED";
 		case PARSE_ERR_LENGTH_REQUIRED:
 			return "PARSE_ERR_LENGTH_REQUIRED";
-		case PARSE_ERR_BODY_TOO_LARGE:
-			return "PARSE_ERR_BODY_TOO_LARGE";
 		default:
 			return ("UNKNOWN");
 	}
@@ -93,22 +91,28 @@ void dev::runResponseTests()
 {
     Response response;
     
+	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
     std::map<std::string, std::string> headers1;
     headers1["Content-Type"] = "text/html";
-    headers1["Content-Length"] = "123";
-    std::string response200 = response.buildResponse(200, headers1);
+	std::string body1 = "<html><body><h1>Hello World</h1></body></html>";
+    std::string response200 = response.buildResponse(200, headers1, body1);
     std::cout << response200 << std::endl;
     
+	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
     std::map<std::string, std::string> headers2;
     headers2["Content-Type"] = "text/html";
-    headers2["Content-Length"] = "0";
-    std::string response404 = response.buildResponse(404, headers2);
+	std::string body2 = "<html><body><h1>404 Not Found</h1></body></html>";
+    std::string response404 = response.buildResponse(404, headers2, body2);
     std::cout << response404 << std::endl;
-    
-    std::cout << "Test 3 - Various Error Codes:" << std::endl;
-    std::map<std::string, std::string> emptyHeaders;
-    std::cout << response.buildResponse(400, emptyHeaders) << std::endl;
-    std::cout << response.buildResponse(405, emptyHeaders) << std::endl;
-    std::cout << response.buildResponse(500, emptyHeaders) << std::endl;
-    std::cout << response.buildResponse(505, emptyHeaders) << std::endl;
+
+	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
+	std::map<std::string, std::string> headers3;
+	headers3["Content-Type"] = "text/plain";
+	std::string emptyBody = "";
+	std::cout << response.buildResponse(200, headers3, emptyBody) << std::endl;
+
+	std::cout << "\n---Test 4: 500, with no Content-Type header---" << std::endl << std::endl ;
+	std::map<std::string, std::string> noheaders;
+	std::string testBody = "This is a test body";
+	std::cout << response.buildResponse(500, noheaders, testBody) << std::endl;
 }

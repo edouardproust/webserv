@@ -16,7 +16,8 @@ Response& Response::operator=(const Response& other)
 
 Response::~Response() {}
 
-std::string	Response::buildResponse(int statusCode, const std::map<std::string, std::string>& headers)
+std::string	Response::buildResponse(int statusCode, const std::map<std::string, std::string>& headers,
+					const std::string& body)
 {
 	std::stringstream response;
 	std::string reasonPhrase = _getReasonPhrase(statusCode);
@@ -26,9 +27,16 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 		allHeaders["Server"] = "webserv";
 	if (allHeaders.find("Date") == allHeaders.end())
 		allHeaders["Date"] = _getCurrentDate();
+	if (allHeaders.find("Content-Length") == allHeaders.end())
+	{
+		std::stringstream lengthStream;
+		lengthStream << body.length();
+		allHeaders["Content-Length"] = lengthStream.str();
+	}	
 	response << _buildHeaders(allHeaders);
 	response << "\r\n";
-	//body implementation here
+	if (!body.empty())
+		response << body;
 	return response.str();
 }
 
@@ -52,12 +60,10 @@ std::string Response::_buildHeaders(const std::map<std::string, std::string>& he
 		headerStream << "Content-Type: text/html\r\n";
 	if (headers.find("Content-Length") != headers.end())
 	 	 headerStream << "Content-Length: " << headers.find("Content-Length")->second << "\r\n";
-	else
-		headerStream << "Content-Length: 0\r\n"; //for now it will always be this until body is implemented
 	if (headers.find("Connection") != headers.end())
 		headerStream << "Connection: " << headers.find("Connection")->second << "\r\n";
 	else
-		headerStream << "Connection: close\r\n"; //for now it will always be close for HTTP 1.0
+		headerStream << "Connection: close\r\n";
 	return headerStream.str();
 }
 
@@ -74,13 +80,14 @@ std::string Response::_getReasonPhrase(int statusCode) const
 		case 405:
 			return "Method Not Allowed";
 		case 411:
-			return "Length Required"; //For missing body-mandatory in HTPP 1.1 for POST
+			return "Length Required";
 		case 413:
-			return "Content Too Large"; //For bigger body than MAX_CLIENT_BODY_SIZE
+			return "Content Too Large";
 		case 500:
 			return "Internal Server Error";
 		case 505:
 			return "HTTP Version Not Supported";
+		//more status codes to be added accordingly!!
 		default:
 			return "Unknown";
 	}	
