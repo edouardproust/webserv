@@ -108,6 +108,7 @@ void dev::runResponseTests()
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
 	std::map<std::string, std::string> headers3;
 	headers3["Content-Type"] = "text/plain";
+	headers3["Content-Length"] = "100";
 	std::string emptyBody = "";
 	std::cout << response.buildResponse(200, headers3, emptyBody) << std::endl;
 
@@ -115,4 +116,10 @@ void dev::runResponseTests()
 	std::map<std::string, std::string> noheaders;
 	std::string testBody = "This is a test body";
 	std::cout << response.buildResponse(500, noheaders, testBody) << std::endl;
+
+	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
+	std::map<std::string, std::string> randomHeader;
+	randomHeader["Random-Header"] = "Random value";
+	std::string body3 = "Our Webserv is OP";
+	std::cout << response.buildResponse(200, randomHeader, body3) << std::endl;
 }

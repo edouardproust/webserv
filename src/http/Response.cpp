@@ -23,16 +23,15 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 	std::string reasonPhrase = _getReasonPhrase(statusCode);
 	response << _buildStatusLine(statusCode, reasonPhrase);
 	std::map<std::string, std::string> allHeaders = headers;
-	if (allHeaders.find("Server") == allHeaders.end())
-		allHeaders["Server"] = "webserv";
-	if (allHeaders.find("Date") == allHeaders.end())
-		allHeaders["Date"] = _getCurrentDate();
-	if (allHeaders.find("Content-Length") == allHeaders.end())
-	{
-		std::stringstream lengthStream;
-		lengthStream << body.length();
-		allHeaders["Content-Length"] = lengthStream.str();
-	}	
+	allHeaders["Server"] = "webserv";
+	allHeaders["Date"] = _getCurrentDate();
+	if (allHeaders.find("Content-Type") == allHeaders.end())
+		allHeaders["Content-Type"] = "text/html"; //set text/html as default only if it's not provided in the request
+	std::stringstream lengthStream;
+	lengthStream << body.length();
+	allHeaders["Content-Length"] = lengthStream.str();
+	if (allHeaders.find("Connection") == allHeaders.end())
+		allHeaders["Connection"] = "keep-alive";
 	response << _buildHeaders(allHeaders);
 	response << "\r\n";
 	if (!body.empty())
@@ -50,20 +49,11 @@ std::string Response::_buildStatusLine(int statusCode, const std::string& reason
 std::string Response::_buildHeaders(const std::map<std::string, std::string>& headers) const
 {
 	std::stringstream headerStream;
-	if (headers.find("Server") != headers.end())
-		headerStream << "Server: " << headers.find("Server")->second << "\r\n";
-	if (headers.find("Date") != headers.end())
-		headerStream << "Date: " << headers.find("Date")->second << "\r\n";
-	if (headers.find("Content-Type") != headers.end())
-		headerStream << "Content-Type: " << headers.find("Content-Type")->second << "\r\n";
-	else
-		headerStream << "Content-Type: text/html\r\n";
-	if (headers.find("Content-Length") != headers.end())
-	 	 headerStream << "Content-Length: " << headers.find("Content-Length")->second << "\r\n";
-	if (headers.find("Connection") != headers.end())
-		headerStream << "Connection: " << headers.find("Connection")->second << "\r\n";
-	else
-		headerStream << "Connection: close\r\n";
+	headerStream << "Server: " << headers.find("Server")->second << "\r\n";
+	headerStream << "Date: " << headers.find("Date")->second << "\r\n";
+	headerStream << "Content-Type: " << headers.find("Content-Type")->second << "\r\n";
+	headerStream << "Content-Length: " << headers.find("Content-Length")->second << "\r\n";
+	headerStream << "Connection: " << headers.find("Connection")->second << "\r\n";
 	return headerStream.str();
 }
 

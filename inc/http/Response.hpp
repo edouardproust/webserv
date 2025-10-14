@@ -21,7 +21,7 @@ class Response
 	~Response();
 
 	std::string	buildResponse(int statusCode, const std::map<std::string, std::string>& headers, const std::string& body);
-	std::string	buildErrorResponse(int statusCode);
+	std::string	buildErrorResponse(int statusCode); //for later
 
 };
 
