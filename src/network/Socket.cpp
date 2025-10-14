@@ -1,6 +1,8 @@
 #include "network/Socket.hpp"
-
-Socket::Socket(const t_server_config &server) : _server(server), _servinfo(0), _sock(-1)
+#include <errno.h>
+#include <cstring>
+#include <sstream>
+Socket::Socket(const t_server_config &server) : _sock(-1), _servinfo(0),_server(server)
 {
     std::cout << FT_SETUP << "Setting up " << FT_HIGH_LIGHT_COLOR << this->_server.server_names[0] << RESET_COLOR
               << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;

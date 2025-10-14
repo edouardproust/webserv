@@ -1,10 +1,13 @@
-#include "network/WebServer.hpp"
+#include <network/Network.hpp>
+#include <errno.h>
+#include <cstring>
+#include <sstream>
 
-WebServer::WebServer(const std::vector<t_server_config> &confs)
+Network::Network(const std::vector<t_server_config> &confs)
 {
     for (std::vector<t_server_config>::const_iterator it = confs.begin(); it != confs.end(); ++it)
     {
-        ft::Socket* s = new ft::Socket(*it);
+        Socket* s = new Socket(*it);
         s->bindSocket();
         s->listenSocket();
         _connections.push_back(s);
@@ -13,16 +16,16 @@ WebServer::WebServer(const std::vector<t_server_config> &confs)
     std::cout << FT_SETUP << "WebServer configured with " << _connections.size() << " socket(s)." << std::endl;
 }
 
-WebServer::~WebServer()
+Network::~Network()
 {
-    for (std::vector<ft::Socket*>::iterator it = _connections.begin(); it != _connections.end(); ++it)
+    for (std::vector<Socket*>::iterator it = _connections.begin(); it != _connections.end(); ++it)
         delete *it;
     if (_epoll >= 0)
         close(_epoll);
     std::cout << FT_CLOSE << "WebServer stopped." << std::endl;
 }
 
-void WebServer::epollInit()
+void Network::epollInit()
 {
     _epoll = ::epoll_create(1);
     if (_epoll < 0)
@@ -30,10 +33,10 @@ void WebServer::epollInit()
     std::cout << FT_OK << "Epoll created." << std::endl;
 }
 
-void WebServer::epollAddServers()
+void Network::epollAddServers()
 {
     struct epoll_event ev;
-    for (std::vector<ft::Socket*>::iterator it = _connections.begin(); it != _connections.end(); ++it)
+    for (std::vector<Socket*>::iterator it = _connections.begin(); it != _connections.end(); ++it)
     {
         ev.events = EPOLLIN;
         ev.data.fd = (*it)->getSock();
@@ -44,7 +47,7 @@ void WebServer::epollAddServers()
 }
 
 /* helper: check if headers end and if Content-Length satisfied */
-bool WebServer::is_request_complete(const std::string &buf)
+bool Network::is_request_complete(const std::string &buf)
 {
     size_t header_end = buf.find("\r\n\r\n");
     if (header_end == std::string::npos)
@@ -58,7 +61,7 @@ bool WebServer::is_request_complete(const std::string &buf)
     return (int)body_len >= content_len;
 }
 
-int WebServer::get_expected_length(const std::string &buf)
+int Network::get_expected_length(const std::string &buf)
 {
     size_t pos = buf.find("Content-Length:");
     if (pos == std::string::npos)
@@ -80,7 +83,7 @@ int WebServer::get_expected_length(const std::string &buf)
     return length;
 }
 
-std::string WebServer::build_simple_response(const std::string &request)
+std::string Network::build_simple_response(const std::string &request)
 {
     (void)request;
     std::string body = "Hello World\n";
@@ -94,8 +97,9 @@ std::string WebServer::build_simple_response(const std::string &request)
     return oss.str();
 }
 
-void WebServer::handle_recv(int client_fd, struct epoll_event &event)
-{
+void Network::handle_recv(int client_fd, struct epoll_event &event)
+{   
+    (void)event;
     char buffer[4096];
     while (1)
     {
@@ -148,7 +152,7 @@ void WebServer::handle_recv(int client_fd, struct epoll_event &event)
     }
 }
 
-void WebServer::handle_send(int client_fd, struct epoll_event &event)
+void Network::handle_send(int client_fd, struct epoll_event &event)
 {
     (void)event;
     std::map<int, std::string>::iterator it = _response_list.find(client_fd);
@@ -195,7 +199,7 @@ void WebServer::handle_send(int client_fd, struct epoll_event &event)
     }
 }
 
-void WebServer::start()
+void Network::start()
 {
     epollInit();
     epollAddServers();
@@ -217,7 +221,7 @@ void WebServer::start()
             int fd = events[i].data.fd;
 
             bool is_server_socket = false;
-            for (std::vector<ft::Socket*>::iterator it = _connections.begin(); it != _connections.end(); ++it)
+            for (std::vector<Socket*>::iterator it = _connections.begin(); it != _connections.end(); ++it)
             {
                 if (fd == (*it)->getSock())
                 {

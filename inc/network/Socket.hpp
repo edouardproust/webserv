@@ -20,9 +20,9 @@ struct t_server_config {
 class Socket {
     private:
         int                 _sock;
-        struct addrinfo     _hints;
         struct addrinfo*    _servinfo;
         t_server_config     _server;
+        struct addrinfo     _hints;
 
     public:
         Socket(const t_server_config &server);

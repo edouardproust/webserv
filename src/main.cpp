@@ -1,8 +1,8 @@
 #include <config/Config.hpp>
 #include "http/RequestParser.hpp"
 #include <iostream>
-#include "server/WebServer.hpp"
-#include <server/Socket.hpp>
+#include <network/Network.hpp>
+#include <network/Socket.hpp>
 
 const char* parseStatusToString(ParseStatus status)
 {
@@ -102,8 +102,9 @@ int main(int argc, char** argv) {
 	// 	std::cerr << "Error: " << e.what() << std::endl;
 	// 	return 1;
 	// }
+    (void)argv;
+    (void)argc;
 
-        
     std::vector<t_server_config> configs;
     t_server_config cfg;
     cfg.port = "8080";
@@ -112,7 +113,7 @@ int main(int argc, char** argv) {
 
     try
     {
-        WebServer server(configs);
+        Network server(configs);
         server.start();
     }
     catch (const std::exception &e)

@@ -13,6 +13,8 @@ SRC_FILES = main.cpp \
 	config/ServerBlock.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
+	network/Network.cpp \
+	network/Socket.cpp \
 
 SRC_DIR = src
 

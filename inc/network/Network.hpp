@@ -10,7 +10,7 @@
 #include <string>
 #include <iostream>
 
-class WebServer {
+class Network {
     private:
         int _epoll;
         std::vector<Socket*> _connections;
@@ -18,8 +18,8 @@ class WebServer {
         std::map<int, std::string> _response_list; // fd -> remaining response to send
 
     public:
-        WebServer(const std::vector<t_server_config> &confs);
-        ~WebServer();
+        Network(const std::vector<t_server_config> &confs);
+        ~Network();
 
         void epollInit();
         void epollAddServers();
