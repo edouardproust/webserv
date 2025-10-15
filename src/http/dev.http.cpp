@@ -6,24 +6,9 @@ Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static Request request;
 	ParseStatus result = parser.parseRequest(request, rawRequest);
 	if (result != PARSE_SUCCESS) {
-		throw std::runtime_error("Error parsing request: " + parseStatusToString(result));
+		throw std::runtime_error("Error parsing request: " + result);
 	}
 	return (request);
-}
-
-std::string	dev::parseStatusToString(ParseStatus status) {
-	switch (status) {
-		case PARSE_SUCCESS:
-			return "OK";
-		case PARSE_ERR_BAD_REQUEST:
-			return "PARSE_ERR_BAD_REQUEST";
-		case PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED:
-			return "PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED";
-		case PARSE_ERR_LENGTH_REQUIRED:
-			return "PARSE_ERR_LENGTH_REQUIRED";
-		default:
-			return ("UNKNOWN");
-	}
 }
 
 void dev::runParserValidationTests()
@@ -86,7 +71,7 @@ void dev::runParserValidationTests()
 		::ParseStatus result = parser.parseRequest(request, rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
 			<< (result == PARSE_SUCCESS ? "PASS" : "FAIL")
-			<< " (" << parseStatusToString(result) << ")" << std::endl;
+			<< " (" << result << ")" << std::endl;
 	}
 }
 
@@ -127,7 +112,7 @@ void dev::runParsedContentTests()
         Request request;
         ParseStatus result = parser.parseRequest(request, tests[i].rawRequest);
         
-        std::cout << "Parse status: " << parseStatusToString(result) << std::endl;
+        std::cout << "Parse status: " << result << std::endl;
         
         if (result == PARSE_SUCCESS)
 		{
@@ -181,4 +166,10 @@ void dev::runResponseTests()
 	connHeader["Connection"] = "Random";
 	std::string body4 = "Connection is either keep-alive or close, else keep-alive by default";
 	std::cout << response.buildResponse(200, connHeader, body4) << std::endl;
+
+	std::cout << "\n---Test 6: 200 OK, random server---" << std::endl << std::endl ;
+	std::map<std::string, std::string> servHeader;
+	servHeader["Server"] = "Nginx";
+	std::string body5 = "It must always be webserv!";
+	std::cout << response.buildResponse(200, servHeader, body5) << std::endl;
 }
