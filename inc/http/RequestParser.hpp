@@ -18,7 +18,7 @@ class RequestParser
 	private :
 
 	ParseStatus	_parseRequestLine(Request& request, const std::string& line);
-	void 		_parsePathAndQuery(Request& request, const std::string& _path) const;
+	void 		_parseRequestTarget(Request& request, const std::string& _requestTarget) const;
 	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
 	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
 	ParseStatus	_validateBody(const Request& request);

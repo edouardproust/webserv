@@ -60,8 +60,8 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 			return PARSE_ERR_BAD_REQUEST;
 	}
 	std::istringstream	requestLineStream(line);
-	std::string	methodStr, _path, _version;
-	if (!(requestLineStream >> methodStr >> _path >> _version))
+	std::string	methodStr, _requestTarget, _version;
+	if (!(requestLineStream >> methodStr >> _requestTarget >> _version))
 		return PARSE_ERR_BAD_REQUEST;
 	char c;
 	while (requestLineStream.get(c))
@@ -69,10 +69,10 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 		if (c != ' ')
 			 return PARSE_ERR_BAD_REQUEST;
 	}
-	_parsePathAndQuery(request, _path);
+	_parseRequestTarget(request, _requestTarget);
 	if (!_isValidMethod(methodStr))
 		return PARSE_ERR_BAD_REQUEST;
-	if (!_isValidPath(_path))
+	if (!_isValidPath(request.getPath()))
 		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidVersion(_version))
 		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
@@ -81,18 +81,18 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 	return PARSE_SUCCESS;
 }
 
-void 	RequestParser::_parsePathAndQuery(Request& request, const std::string& _path) const
+void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget) const
 {
-	size_t queryPos = _path.find('?');
-
+	request.setRequestTarget(_requestTarget);
+	size_t queryPos = _requestTarget.find('?');
 	if (queryPos != std::string::npos)
 	{
-		request.setPath(_path.substr(0, queryPos));
-		request.setQueryString(_path.substr(queryPos + 1));
+		request.setPath(_requestTarget.substr(0, queryPos));
+		request.setQueryString(_requestTarget.substr(queryPos + 1));
 	}
 	else
 	{
-		request.setPath(_path);
+		request.setPath(_requestTarget);
 		request.setQueryString("");
 	}
 }
@@ -217,6 +217,7 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 std::string	 RequestParser::_trimOWS(const std::string& str)
 {
 	size_t start = 0;
+
 	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
 		start++;
 

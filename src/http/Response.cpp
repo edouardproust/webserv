@@ -24,20 +24,20 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 	std::string reasonPhrase = _getReasonPhrase(statusCode);
 	response << _buildStatusLine(statusCode, reasonPhrase);
 	std::map<std::string, std::string> allHeaders = headers;
-	allHeaders["Server"] = "webserv";
-	allHeaders["Date"] = _getCurrentDate();
-	if (allHeaders.find("Content-Type") == allHeaders.end() && !body.empty())
-		allHeaders["Content-Type"] = "text/html"; //set text/html as default only if it's not provided in the request
+	allHeaders["server"] = "webserv";
+	allHeaders["date"] = _getCurrentDate();
+	if (allHeaders.find("content-type") == allHeaders.end() && !body.empty())
+		allHeaders["content-type"] = "text/html"; //set text/html as default only if it's not provided in the request
 	std::stringstream lengthStream;
 	lengthStream << body.length();
-	allHeaders["Content-Length"] = lengthStream.str();
-	if (allHeaders.find("Connection") == allHeaders.end())
-		allHeaders["Connection"] = "keep-alive";
+	allHeaders["content-length"] = lengthStream.str();
+	if (allHeaders.find("connection") == allHeaders.end())
+		allHeaders["connection"] = "keep-alive";
 	else
 	{
-		std::string normalizedConn = utils::toLowerCase(allHeaders["Connection"]);
+		std::string normalizedConn = utils::toLowerCase(allHeaders["connection"]);
 		if (normalizedConn != "keep-alive" && normalizedConn != "close")
-			allHeaders["Connection"] = "keep-alive";
+			allHeaders["connection"] = "keep-alive";
 	}
 	response << _buildHeaders(allHeaders);
 	response << "\r\n";
@@ -56,12 +56,12 @@ std::string Response::_buildStatusLine(int statusCode, const std::string& reason
 std::string Response::_buildHeaders(const std::map<std::string, std::string>& headers) const
 {
 	std::stringstream headerStream;
-	headerStream << "Server: " << headers.find("Server")->second << "\r\n";
-	headerStream << "Date: " << headers.find("Date")->second << "\r\n";
-	if (headers.find("Content-Type") != headers.end())
-		headerStream << "Content-Type: " << headers.find("Content-Type")->second << "\r\n";
-	headerStream << "Content-Length: " << headers.find("Content-Length")->second << "\r\n";
-	headerStream << "Connection: " << headers.find("Connection")->second << "\r\n";
+	headerStream << "Server: " << headers.find("server")->second << "\r\n";
+	headerStream << "Date: " << headers.find("date")->second << "\r\n";
+	if (headers.find("content-type") != headers.end())
+		headerStream << "Content-Type: " << headers.find("content-type")->second << "\r\n";
+	headerStream << "Content-Length: " << headers.find("content-length")->second << "\r\n";
+	headerStream << "Connection: " << headers.find("connection")->second << "\r\n";
 	return headerStream.str();
 }
 
