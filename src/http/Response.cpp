@@ -49,7 +49,7 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 std::string Response::buildErrorResponse(int statusCode)
 {
 	std::map<std::string, std::string> headers;
-	headers["Content-Type"] = "text/html";
+	headers["content-type"] = "text/html";
 	std::string body = _generateErrorPage(statusCode);
 	return buildResponse(statusCode, headers, body);
 }
@@ -72,6 +72,14 @@ std::string Response::_buildHeaders(const std::map<std::string, std::string>& he
 		headerStream << "Content-Type: " << headers.find("content-type")->second << "\r\n";
 	headerStream << "Content-Length: " << headers.find("content-length")->second << "\r\n";
 	headerStream << "Connection: " << headers.find("connection")->second << "\r\n";
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+		it != headers.end(); ++it)
+		{
+			const std::string& key = it->first;
+			if (key != "server" && key != "date" && key != "content-type" &&
+				key != "content-length" && key != "connection")
+					headerStream << key << ": " << it->second << "\r\n";
+		}
 	return headerStream.str();
 }
 
