@@ -12,6 +12,7 @@ class Response
 	std::string	_buildHeaders(const std::map<std::string, std::string>& headers) const;
 	std::string	_getReasonPhrase(int statusCode) const;
 	std::string	_getCurrentDate() const;
+	std::string _generateErrorPage(int statusCode) const;
 
 	public:
 

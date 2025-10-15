@@ -24,7 +24,7 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 	std::string reasonPhrase = _getReasonPhrase(statusCode);
 	response << _buildStatusLine(statusCode, reasonPhrase);
 	std::map<std::string, std::string> allHeaders = headers;
-	allHeaders["server"] = "webserv";
+	allHeaders["server"] = "webserv/1.0";
 	allHeaders["date"] = _getCurrentDate();
 	if (allHeaders.find("content-type") == allHeaders.end() && !body.empty())
 		allHeaders["content-type"] = "text/html"; //set text/html as default only if it's not provided in the request
@@ -46,9 +46,18 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 	return response.str();
 }
 
+std::string Response::buildErrorResponse(int statusCode)
+{
+	std::map<std::string, std::string> headers;
+	headers["Content-Type"] = "text/html";
+	std::string body = _generateErrorPage(statusCode);
+	return buildResponse(statusCode, headers, body);
+}
+
 std::string Response::_buildStatusLine(int statusCode, const std::string& reasonPhrase) const
 {
 	std::stringstream statusLine;
+
 	statusLine << "HTTP/1.1 " << statusCode << " " << reasonPhrase << "\r\n";
 	return statusLine.str();
 }
@@ -56,6 +65,7 @@ std::string Response::_buildStatusLine(int statusCode, const std::string& reason
 std::string Response::_buildHeaders(const std::map<std::string, std::string>& headers) const
 {
 	std::stringstream headerStream;
+
 	headerStream << "Server: " << headers.find("server")->second << "\r\n";
 	headerStream << "Date: " << headers.find("date")->second << "\r\n";
 	if (headers.find("content-type") != headers.end())
@@ -98,4 +108,21 @@ std::string Response::_getCurrentDate() const
 	char buffer[80];
 	strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	return buffer;
+}
+
+std::string Response::_generateErrorPage(int statusCode) const
+{
+	std::stringstream html;
+	std::string reasonPhrase = _getReasonPhrase(statusCode);
+
+	html << "<html>\n"
+		 << "  <head>\n"
+		 << "    <title>" << statusCode << " " << reasonPhrase << "</title>\n"
+		 << "  </head>\n"
+		 << "  <body>\n"
+		 << "    <center><h1>" << statusCode << " " << reasonPhrase << "</h1></center>\n"
+		 << "    <hr><center>webserv/1.0</center>\n"
+		 << "  </body>\n"
+		 << "</html>";
+	return html.str();
 }

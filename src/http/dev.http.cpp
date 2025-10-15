@@ -140,7 +140,7 @@ void dev::runResponseTests()
     std::map<std::string, std::string> headers2;
     headers2["Content-Type"] = "text/html";
 	std::string body2 = "<html><body><h1>404 Not Found</h1></body></html>";
-    std::string response404 = response.buildResponse(404, headers2, body2);
+    std::string response404 = response.buildErrorResponse(404);
     std::cout << response404 << std::endl;
 
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
@@ -153,7 +153,7 @@ void dev::runResponseTests()
 	std::cout << "\n---Test 4: 500, with no Content-Type header---" << std::endl << std::endl ;
 	std::map<std::string, std::string> noheaders;
 	std::string testBody = "This is a test body";
-	std::cout << response.buildResponse(500, noheaders, testBody) << std::endl;
+	std::cout << response.buildErrorResponse(500) << std::endl;
 
 	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
 	std::map<std::string, std::string> randomHeader;
