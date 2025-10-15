@@ -79,10 +79,23 @@ std::string Response::_getReasonPhrase(int statusCode) const
 {
 	switch(statusCode)
 	{
+		//Success
 		case 200:
 			return "OK";
+		case 201:
+			return "Created";
+		case 204:
+			return "No Content";
+		 // Redirection (for CGI/location blocks)
+		case 301:
+			return "Moved Permanently";
+		case 302:
+			return "Found";
+		// Client Errors
 		case 400:
 			return "Bad Request";
+		case 403:
+			return "Forbidden";
 		case 404:
 			return "Not Found";
 		case 405:
@@ -91,8 +104,13 @@ std::string Response::_getReasonPhrase(int statusCode) const
 			return "Length Required";
 		case 413:
 			return "Content Too Large";
+		// Server Errors
 		case 500:
 			return "Internal Server Error";
+		case 501:
+			return "Not Implemented";
+		case 502:
+			return "Bad Gateway";
 		case 505:
 			return "HTTP Version Not Supported";
 		//more status codes to be added accordingly!!
