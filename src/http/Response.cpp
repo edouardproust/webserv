@@ -1,4 +1,5 @@
 #include "http/Response.hpp"
+#include "utils/Utils.hpp"
 #include <ctime>
 
 Response::Response() {}
@@ -25,13 +26,19 @@ std::string	Response::buildResponse(int statusCode, const std::map<std::string, 
 	std::map<std::string, std::string> allHeaders = headers;
 	allHeaders["Server"] = "webserv";
 	allHeaders["Date"] = _getCurrentDate();
-	if (allHeaders.find("Content-Type") == allHeaders.end())
+	if (allHeaders.find("Content-Type") == allHeaders.end() && !body.empty())
 		allHeaders["Content-Type"] = "text/html"; //set text/html as default only if it's not provided in the request
 	std::stringstream lengthStream;
 	lengthStream << body.length();
 	allHeaders["Content-Length"] = lengthStream.str();
 	if (allHeaders.find("Connection") == allHeaders.end())
 		allHeaders["Connection"] = "keep-alive";
+	else
+	{
+		std::string normalizedConn = utils::toLowerCase(allHeaders["Connection"]);
+		if (normalizedConn != "keep-alive" && normalizedConn != "close")
+			allHeaders["Connection"] = "keep-alive";
+	}
 	response << _buildHeaders(allHeaders);
 	response << "\r\n";
 	if (!body.empty())
@@ -51,7 +58,8 @@ std::string Response::_buildHeaders(const std::map<std::string, std::string>& he
 	std::stringstream headerStream;
 	headerStream << "Server: " << headers.find("Server")->second << "\r\n";
 	headerStream << "Date: " << headers.find("Date")->second << "\r\n";
-	headerStream << "Content-Type: " << headers.find("Content-Type")->second << "\r\n";
+	if (headers.find("Content-Type") != headers.end())
+		headerStream << "Content-Type: " << headers.find("Content-Type")->second << "\r\n";
 	headerStream << "Content-Length: " << headers.find("Content-Length")->second << "\r\n";
 	headerStream << "Connection: " << headers.find("Connection")->second << "\r\n";
 	return headerStream.str();

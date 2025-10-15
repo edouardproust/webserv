@@ -20,9 +20,10 @@ namespace utils {
 
 	unsigned long	parseSize(std::string const&);
 	std::string&	normalizePath(std::string& path);
+	std::string		toLowerCase(const std::string& str);
 
 }
 
-#include "../src/utils/utils.tpp"
+#include "../src/utils/Utils.tpp"
 
 #endif

@@ -1,6 +1,6 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
-#include "utils/utils.hpp"
+#include "utils/Utils.hpp"
 #include "http/Request.hpp"
 #include "Constants.hpp"
 #include <stdexcept>

@@ -122,4 +122,10 @@ void dev::runResponseTests()
 	randomHeader["Random-Header"] = "Random value";
 	std::string body3 = "Our Webserv is OP";
 	std::cout << response.buildResponse(200, randomHeader, body3) << std::endl;
+
+	std::cout << "\n---Test 6: 200 OK, random connection---" << std::endl << std::endl ;
+	std::map<std::string, std::string> connHeader;
+	connHeader["Connection"] = "Random";
+	std::string body4 = "Connection is either keep-alive or close, else keep-alive by default";
+	std::cout << response.buildResponse(200, connHeader, body4) << std::endl;
 }

@@ -1,5 +1,5 @@
 #include "http/RequestParser.hpp"
-#include "Constants.hpp"
+#include "utils/Utils.hpp"
 #include <iostream>
 
 RequestParser::RequestParser() {}
@@ -216,10 +216,7 @@ bool RequestParser::_hasBody(const std::string& rawRequest, size_t headersEnd) c
 	return headersEnd + 4 < rawRequest.length();
 }
 
-std::string	RequestParser::_normalizeHeaderName(const std::string& name) const
+std::string RequestParser::_normalizeHeaderName(const std::string& name) const
 {
-	std::string normalized = name;
-	for (size_t i = 0; i < normalized.length(); ++i)
-		normalized[i] = std::tolower(normalized[i]);
-	return normalized;
+	return utils::toLowerCase(name);
 }
