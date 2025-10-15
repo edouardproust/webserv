@@ -13,8 +13,9 @@ int main(int argc, char** argv) {
 		Config cfg(argv[1]);
 		if (DEVMODE) {
 			//cfg.print();
-			//dev::runParserTests();
-			dev::runResponseTests();
+			dev::runParserValidationTests();
+			//dev::runParsedContentTests();
+			//dev::runResponseTests();
 			//Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
 			//Router router(request, cfg.getServers());
 			//router.print();

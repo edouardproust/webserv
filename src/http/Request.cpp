@@ -2,7 +2,7 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() : _method(""), _path(""), _version(""), _body("") {}
+Request::Request() : _method(""), _path(""), _version(""), _body(""), _queryString("") {}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -17,6 +17,7 @@ Request& Request::operator=(const Request& other)
 		this->_version = other._version;
 		this->_headers = other._headers;
 		this->_body = other._body;
+		this->_queryString = other._queryString;
 	}
 	return (*this);
 }
@@ -58,6 +59,11 @@ std::string const& Request::getBody() const
 	return this->_body;
 }
 
+std::string const& Request::getQueryString() const
+{
+	return this->_queryString;
+}
+
 void	Request::setMethod(std::string const& _method)
 {
 	this->_method = _method;
@@ -81,4 +87,9 @@ void	Request::addHeader(const std::string& name, const std::string& value)
 void	Request::setBody(const std::string& _body)
 {
 	this->_body = _body;
+}
+
+void	Request::setQueryString(const std::string& _queryString)
+{
+	this->_queryString = _queryString;
 }

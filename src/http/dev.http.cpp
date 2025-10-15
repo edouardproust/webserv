@@ -26,7 +26,8 @@ std::string	dev::parseStatusToString(ParseStatus status) {
 	}
 }
 
-void dev::runParserTests() {
+void dev::runParserValidationTests()
+{
 	RequestParser parser;
 
 	const char* descriptions[] = {
@@ -50,7 +51,8 @@ void dev::runParserTests() {
 		"HTTP 1.1 without host header - Invalid",
 		"POST with no body and without content-length header - Valid", //since there is no body, content-length header is not required
 		"POST with body but wrong content-length header value - Invalid",
-		"POST with body but NO content-length header at all - Invalid"
+		"POST with body but NO content-length header at all - Invalid",
+		"Empty header value - Valid"
 	};
 
 	const char* rawRequests[] = {
@@ -74,7 +76,8 @@ void dev::runParserTests() {
 		"POST /index.html HTTP/1.1\r\n\r\nContent-Length: 0\r\n\r\n",
 		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
 		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 7\r\n\r\nHello",
-		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\nHello"
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\nHello",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n Test: \r\n\r\nHello",
 	};
 
 	const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
@@ -85,6 +88,70 @@ void dev::runParserTests() {
 			<< (result == PARSE_SUCCESS ? "PASS" : "FAIL")
 			<< " (" << parseStatusToString(result) << ")" << std::endl;
 	}
+}
+
+void dev::runParsedContentTests() {
+    RequestParser parser;
+    
+    struct ContentTest {
+        const char* description;
+        const char* rawRequest;
+    };
+
+    ContentTest tests[] = {
+        {"Basic GET with query", "GET /search?q=hello&lang=fr HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"Multiple query params", "GET /api/users?id=123&name=john&age=30 HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"POST with body", "POST /submit HTTP/1.1\r\nHost: localhost\r\nContent-Length: 11\r\nContent-Type: application/json\r\n\r\nHello World"},
+        {"Header normalization", "GET / HTTP/1.1\r\nHOST: example.com\r\nCONTENT-TYPE: text/html\r\nUser-Agent: Test\r\n\r\n"},
+        {"Mixed case headers", "GET /test HTTP/1.1\r\nHost: localhost\r\nX-Custom-Header: value\r\nX-ANOTHER-HEADER: anotherValue\r\n\r\n"},
+        {"Path with special chars", "GET /files/123-abc_test.html HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"Empty query", "GET /search? HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"Complex URL", "GET /path/to/file?param1=value1&param2=value2&flag=true HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n"},
+        // OWS Trimming Tests
+        {"OWS around header value - spaces", "GET / HTTP/1.1\r\nHost:   localhost  \r\nContent-Type:  text/html  \r\n\r\n"},
+        {"OWS around header value - tabs", "GET / HTTP/1.1\r\nHost:\tlocalhost\t\r\nUser-Agent:\t\tTest\t\r\n\r\n"},
+        {"OWS around header value - mixed", "GET / HTTP/1.1\r\nHost: \t localhost \t \r\nContent-Length:  11  \r\n\r\n"},
+        {"Header with only OWS value", "GET / HTTP/1.1\r\nEmpty-Header:   \t  \r\nNormal-Header: value\r\n\r\n"}
+    };
+
+    const int numTests = sizeof(tests) / sizeof(tests[0]);
+    
+    for (int i = 0; i < numTests; i++) {
+        std::cout << "\n=== Test " << (i + 1) << ": " << tests[i].description << " ===" << std::endl;
+        std::cout << "Raw request: " << tests[i].rawRequest << std::endl;
+        
+        Request request;
+        ParseStatus result = parser.parseRequest(request, tests[i].rawRequest);
+        
+        std::cout << "Parse status: " << parseStatusToString(result) << std::endl;
+        
+        if (result == PARSE_SUCCESS) {
+            std::cout << "--- PARSED CONTENT ---" << std::endl;
+            std::cout << "Request Line: " << request.getMethod() << " " << request.getPath();
+            if (!request.getQueryString().empty()) {
+                std::cout << "?" << request.getQueryString();
+            }
+            std::cout << " " << request.getVersion() << std::endl;
+            
+            std::cout << "Method: " << request.getMethod() << std::endl;
+            std::cout << "Path: " << request.getPath() << std::endl;
+            std::cout << "Query String: " << request.getQueryString() << std::endl;
+            std::cout << "Version: " << request.getVersion() << std::endl;
+            
+            std::cout << "Headers:" << std::endl;
+            const std::map<std::string, std::string>& headers = request.getHeaders();
+            for (std::map<std::string, std::string>::const_iterator it = headers.begin(); 
+                 it != headers.end(); ++it) {
+                std::cout << "  " << it->first << ": " << it->second << std::endl;
+            }
+            
+            std::cout << "Body: " << request.getBody() << std::endl;
+            std::cout << "Body Length: " << request.getBody().length() << std::endl;
+        } else {
+            std::cout << "--- PARSE FAILED ---" << std::endl;
+        }
+        std::cout << "======================" << std::endl;
+    }
 }
 
 void dev::runResponseTests()

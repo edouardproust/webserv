@@ -54,7 +54,6 @@ ParseStatus	RequestParser::parseRequest(Request& request, const std::string& raw
 
 ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
 {
-
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
@@ -70,6 +69,7 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 		if (c != ' ')
 			 return PARSE_ERR_BAD_REQUEST;
 	}
+	_parsePathAndQuery(request, _path);
 	if (!_isValidMethod(methodStr))
 		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidPath(_path))
@@ -77,9 +77,24 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 	if (!_isValidVersion(_version))
 		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
 	request.setMethod(methodStr);
-	request.setPath(_path);
 	request.setVersion(_version);
 	return PARSE_SUCCESS;
+}
+
+void 	RequestParser::_parsePathAndQuery(Request& request, const std::string& _path) const
+{
+	size_t queryPos = _path.find('?');
+
+	if (queryPos != std::string::npos)
+	{
+		request.setPath(_path.substr(0, queryPos));
+		request.setQueryString(_path.substr(queryPos + 1));
+	}
+	else
+	{
+		request.setPath(_path);
+		request.setQueryString("");
+	}
 }
 
 ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)

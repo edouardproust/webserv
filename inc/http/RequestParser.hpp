@@ -10,7 +10,7 @@ enum ParseStatus
 	PARSE_SUCCESS = 200,
 	PARSE_ERR_BAD_REQUEST = 400,
 	PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED = 505,
-	PARSE_ERR_LENGTH_REQUIRED = 411, // eg POST request missing Content-Length
+	PARSE_ERR_LENGTH_REQUIRED = 411
 };
 
 class RequestParser
@@ -18,6 +18,7 @@ class RequestParser
 	private :
 
 	ParseStatus	_parseRequestLine(Request& request, const std::string& line);
+	void 		_parsePathAndQuery(Request& request, const std::string& _path) const;
 	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
 	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
 	ParseStatus	_validateBody(const Request& request);
