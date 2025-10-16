@@ -13,16 +13,23 @@ class LocationBlock {
 	std::string					_autoindex;				// optional
 	std::set<std::string>		_limitExcept;			// optional (if empty, all methods are allowed)
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
-	unsigned long				_clientMaxBodySize; 	// optional, overrides server limit
+	size_t						_clientMaxBodySize; 	// optional, overrides server limit
 	bool 						_clientMaxBodySizeSet;  // true if clientMaxBodySize is set in this location
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
 
+	LocationBlock(); // not used
+
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
-	void	_addCgiDirective(std::string extension, std::string executable);
 
-	LocationBlock(); // not used
+	void	_setRoot(Tokens const& tokens);
+	void	_setAutoindex(Tokens const& tokens);
+	void	_setLimitExcept(Tokens const& tokens);
+	void	_setReturn(Tokens const& tokens);
+	void	_setClientMaxBodySize(Tokens const& tokens);
+	void	_setIndexFiles(Tokens const& tokens);
+	void	_setCgi(Tokens const& tokens);
 
 	public:
 
@@ -32,14 +39,14 @@ class LocationBlock {
 		LocationBlock&	operator=(LocationBlock const&);
 		~LocationBlock();
 
-		void	validate() const;
+		void	crossDirectivesValidation() const;
 		bool	isCgiLocation() const;
 		bool	isRedirectionLocation() const;
 
 		ServerBlock*						getServer() const;
 		std::string const&					getPath() const;
 		std::string const					getRoot() const;
-		std::string const&					getAutoindex() const;
+		std::string const					getAutoindex() const;
 		std::set<std::string> const&		getLimitExcept() const;
 		std::pair<int, std::string>	const&	getReturn() const;
 		bool								getClientMaxBodySizeSet() const;
@@ -49,7 +56,6 @@ class LocationBlock {
 		std::string const					getCgiExecutor(std::string const& extension) const;
 
 		void setServer(ServerBlock* server);
-		void setReturn(Tokens const& tokens);
 
 };
 

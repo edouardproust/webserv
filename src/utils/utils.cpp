@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <climits>
+#include <cerrno>
 
 bool	utils::isInt(std::string const& str)
 {
@@ -11,9 +12,7 @@ bool	utils::isInt(std::string const& str)
 	char* endptr = NULL;
 	errno = 0;
 	long value = std::strtol(str.c_str(), &endptr, 10);
-	if (*endptr != '\0')
-		return false;
-	if ((errno == ERANGE) || (value > INT_MAX) || (value < INT_MIN))
+	if (*endptr != '\0' || errno == ERANGE || value > INT_MAX || value < INT_MIN)
 		return false;
 	return true;
 }
@@ -34,36 +33,23 @@ bool	utils::isAccessibleDirectory(std::string const& path) {
 	return true;
 }
 
-
 bool	utils::isAbsolutePath(std::string const& path) {
 	if (path.empty() || path[0] != '/')
 		return false;
     return true;
 }
 
-unsigned long	utils::parseSize(std::string const& value)
+/**
+ * May throw an runtime_error() exception in case of int overflow
+ */
+int	utils::toInt(std::string const& str)
 {
-	if (value.empty())
-		return 0;
-	char unit = value[value.size() - 1];
-	unsigned long multiplier = 1;
-	static const std::string units = "KkMmGg";
-	std::string numberStr =
-		(units.find(unit) != std::string::npos)
-			? value.substr(0, value.size() - 1)
-			: value;
-	if (!isInt(numberStr)) {
-		throw std::runtime_error("Invalid size value: " + value);
-	}
-	unsigned long number = std::strtoul(numberStr.c_str(), NULL, 10);
-	if (unit == 'K' || unit == 'k') {
-		multiplier = 1024;
-	} else if (unit == 'M' || unit == 'm') {
-		multiplier = 1024 * 1024;
-	} else if (unit == 'G' || unit == 'g') {
-		multiplier = 1024 * 1024 * 1024;
-	}
-	return number * multiplier;
+	char* endptr = NULL;
+	errno = 0;
+	long value = std::strtol(str.c_str(), &endptr, 10);
+	if (*endptr != '\0' || errno == ERANGE || value > INT_MAX || value < INT_MIN)
+		throw std::runtime_error("Invalid integer: " + str);
+	return static_cast<int>(value);
 }
 
 std::string& utils::normalizePath(std::string& path) {

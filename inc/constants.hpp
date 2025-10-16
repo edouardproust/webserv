@@ -1,11 +1,14 @@
 #ifndef CONSTANTS_HPP
 #define CONSTANTS_HPP
 
+#include <limits>
+
 #ifndef DEVMODE
 # define DEVMODE 0
 #endif
 
-unsigned long const	MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
+size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)
+size_t const	MAX_CLIENT_BODY_SIZE = std::numeric_limits<int>::max(); // ~2GB
 
 enum ParseStatus
 {

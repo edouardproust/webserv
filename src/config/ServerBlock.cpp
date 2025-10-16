@@ -6,21 +6,29 @@
 #include <iostream>
 #include <cstdlib>
 
+/**
+ * May throw an std exception.
+ */
 ServerBlock::ServerBlock()
-: _clientMaxBodySize(utils::parseSize("1M")), _defaultLocation(LocationBlock(this)) {}
+: _clientMaxBodySize(DEFAULT_MAX_CLIENT_BODY_SIZE),
+  _defaultLocation(LocationBlock(this))
+{}
 
 /**
+ * May throw a std exception.
  * If no listen directive in the server block: add "listen 0.0.0.0:80;"
  */
 ServerBlock::ServerBlock(std::string const& blockContent)
-: _clientMaxBodySize(utils::parseSize("1M")), _defaultLocation(LocationBlock(this)) {
+: _clientMaxBodySize(DEFAULT_MAX_CLIENT_BODY_SIZE),
+  _defaultLocation(LocationBlock(this)) {
 	_parse(blockContent);
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0", 80));
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other)
-: _clientMaxBodySize(utils::parseSize("1M")), _defaultLocation(this) {
+: _clientMaxBodySize(DEFAULT_MAX_CLIENT_BODY_SIZE),
+  _defaultLocation(this) {
 	*this = other;
 }
 
