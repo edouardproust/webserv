@@ -8,8 +8,6 @@ Request::Request() :
 	path(""),
 	version(""),
 	body(""),
-	host("localhost"),
-	port(80),
 	queryString("q=webserv&category=42"),
 	contentType("text/html")
 {}
@@ -106,14 +104,6 @@ void	Request::addHeader(const std::string& name, const std::string& value)
 void	Request::setBody(const std::string& body)
 {
 	this->body = body;
-}
-
-std::string const& Request::getHost() const {
-	return host;
-}
-
-int Request::getPort() const {
-	return port;
 }
 
 std::string const& Request::getQueryString() const {

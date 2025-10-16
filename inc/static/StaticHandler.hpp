@@ -20,9 +20,7 @@ class StaticHandler {
 		static void	sendStaticContent(
 			std::string const& filePath,
 			std::string const& method,
-			std::map<std::string, std::string> const& headers,
-			std::string const& root,
-			std::vector<std::string> const& indexFiles
+			std::map<std::string, std::string> const& headers
 		);
 
 };

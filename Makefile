@@ -11,6 +11,7 @@ BASE_SRC_FILES = \
 	utils/utils.cpp \
 	config/Config.cpp \
 	config/LocationBlock.cpp \
+	config/HostPortPair.cpp \
 	config/ServerBlock.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \

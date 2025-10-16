@@ -9,26 +9,31 @@ class Router
 {
 	Request const&					_request;
 	std::vector<ServerBlock> const&	_servers;
+	HostPortPair const&				_listeningOn;
+	LocationBlock const*			_matchingLocation;
+
+	void		_setMatchingLocation(std::vector<LocationBlock> const&, std::string const&);
+	std::string	_resolveScriptPath(std::string const&, LocationBlock const*) const;
+	std::string _resolveFilePath(std::string const&, LocationBlock const*) const;
 
 	// Not used
 	Router();
 	Router(Router const&);
 	Router&	operator=(Router const&);
 
-	ServerBlock const& _findMatchingServer(std::string const& host, int port) const;
-	LocationBlock const& _findMatchingLocation(ServerBlock const& server, std::string const& path) const;
-	std::string _resolveScriptPath(std::string const& requestPath, LocationBlock const& location) const;
-	std::string _resolveFilePath(std::string const& requestPath, LocationBlock const& location) const;
-
 	public:
 
-		Router(Request const&, std::vector<ServerBlock> const&);
+		Router(Request const&, std::vector<ServerBlock> const&, HostPortPair const&);
 		~Router();
 
-		void	dispatchRequest() const;
+	ServerBlock const& _findMatchingServer() const;
+
+		void	dispatchRequest();
 
 		Request const&					getRequest() const;
 		std::vector<ServerBlock> const&	getServers() const;
+		HostPortPair const&				getListeningOn() const;
+		LocationBlock const*			getMatchingLocation() const;
 
 };
 

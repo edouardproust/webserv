@@ -19,12 +19,9 @@ class Request
 	std::string	body;
 
 	// TODO Extra fields for easier routing
-	std::string	host; // extracted from "Host" header
-	int			port; // extracted from "Host" header
 	std::string	queryString; // extracted from path if any
 	std::string	contentType; // extracted from "Content-Type" header if any
 
-	void	_extractHostAndPort(); //TODO
 	void	_extractQueryString(); //TODO
 	void	_extractContentType(); //TODO
 
@@ -45,8 +42,6 @@ class Request
 	std::string	const&	getVersion() const;
 	std::map<std::string, std::string> const&	getHeaders() const;
 	std::string const&	getBody() const;
-	std::string const&	getHost() const;
-	int					getPort() const;
 	std::string const&	getQueryString() const;
 	std::string const&	getContentType() const;
 

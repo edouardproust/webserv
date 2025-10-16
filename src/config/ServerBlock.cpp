@@ -7,16 +7,20 @@
 #include <cstdlib>
 
 ServerBlock::ServerBlock()
-: _clientMaxBodySize(utils::parseSize("1M")) {}
+: _clientMaxBodySize(utils::parseSize("1M")), _defaultLocation(LocationBlock(this)) {}
 
+/**
+ * If no listen directive in the server block: add "listen 0.0.0.0:80;"
+ */
 ServerBlock::ServerBlock(std::string const& blockContent)
-: _clientMaxBodySize(utils::parseSize("1M")) {
+: _clientMaxBodySize(utils::parseSize("1M")), _defaultLocation(LocationBlock(this)) {
 	_parse(blockContent);
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0", 80));
 }
 
-ServerBlock::ServerBlock(const ServerBlock &other) {
+ServerBlock::ServerBlock(const ServerBlock &other)
+: _clientMaxBodySize(utils::parseSize("1M")), _defaultLocation(this) {
 	*this = other;
 }
 
@@ -33,6 +37,8 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
             _locations.push_back(other._locations[i]);
             _locations.back().setServer(this);
         }
+		_defaultLocation = other._defaultLocation;
+        _defaultLocation.setServer(this);
     }
     return *this;
 }
@@ -47,13 +53,13 @@ void	ServerBlock::_parse(std::string const& content) {
 	int braceDepth = 0;
 	for (size_t i = 0; i < content.size(); ++i) {
 		if (content[i] == '#') {
-			Config::_skipComment(content, i);
+			Config::skipComment(content, i);
 		} else if (content[i] == '{') {
 			_parseBlock(tokens, content, i, braceDepth, inQuotes);
 		} else if (content[i] == ';') {
 			_parseDirective(token, tokens, inQuotes);
 		} else if (isspace(content[i]) && !inQuotes) {
-			Config::_addTokenIf(token, tokens);
+			Config::addTokenIf(token, tokens);
 		} else if (content[i] == '"') {
 			inQuotes = !inQuotes;
 		} else {
@@ -70,7 +76,7 @@ void	ServerBlock::_parseBlock(std::vector<std::string>& tokens, std::string cons
 			throw std::runtime_error("Unexpected '{' in quoted string");
 		++braceDepth;
 		if (tokens[0] == "location" && tokens.size() == 2) {
-			std::string blockContent = Config::_getBlockContent(content, i, braceDepth);
+			std::string blockContent = Config::getBlockContent(content, i, braceDepth);
 			LocationBlock lb(this, utils::normalizePath(tokens[1]), blockContent);
 			_locations.push_back(lb);
 		} else {
@@ -81,7 +87,7 @@ void	ServerBlock::_parseBlock(std::vector<std::string>& tokens, std::string cons
 }
 
 void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& tokens, bool inQuotes) {
-	Config::_addTokenIf(token, tokens);
+	Config::addTokenIf(token, tokens);
 	if (tokens.size() <= 0) {
 		throw std::runtime_error("Unexpected ';'");
 	} else if (inQuotes) {
@@ -117,28 +123,41 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 	tokens.clear();
 }
 
+/**
+ * Accepted syntax examples:
+ * - listen 127.0.0.1:8080 → pair = "127.0.0.1:8080"
+ * - no listen directive → pair = "0.0.0.0:80" (default set in constructor)
+ * - listen 8080 → pair = "0.0.0.0:8080" (default host is 0.0.0.0)
+ * - listen localhost:8080 → pair = "0.0.0.0:8080" ('localhost' is converted to default)
+ * Refused syntax examples (throw runtime_error):
+ * - listen	127.0.1:8080   → host IP bad syntax
+ * - listen 256.0.0.1:8080 → host IP out of range
+ * - listen any_string_other_than_localhost:8080 → host IP bad syntax
+ * - listen any_string → port invalid number, 'listen localhost' not supported without port
+ * - listen 70000 → port out of range
+ * - listen :8080 → missing host
+ */
 HostPortPair ServerBlock::_parseHostPortPair(std::string const& token) {
-	std::string host = "0.0.0.0"; // default if no host specified
-	int port = 80; // default HTTP port
-	std::string::size_type colonPos = token.find(':');
+	std::string host;
+	int port = -1;
+	std::string::size_type colonPos = token.rfind(':');
 	if (colonPos != std::string::npos) {
 		// Case: "IP:PORT"
 		host = token.substr(0, colonPos);
 		std::string portStr = token.substr(colonPos + 1);
 		if (portStr.empty())
-			throw std::runtime_error("Invalid listen directive: missing port after ':' -> " + token);
+			throw std::runtime_error("Missing host in listen directive: " + token);
 		std::istringstream iss(portStr);
         if (!(iss >> port))
-			throw std::runtime_error("Invalid listen directive: bad port value -> " + token);
+			throw std::runtime_error("Invalid listen port value: " + token);
 	} else {
-		// Case: only a port number
+		// Case: only a port is given
 		std::istringstream iss(token);
-        if (!(iss >> port))
-			throw std::runtime_error("Invalid listen directive: expected port number -> " + token);
+        if (iss >> port) // this is a numeric port
+			host = "0.0.0.0";
+		else // this is a host name
+			host = token;
 	}
-	// Check port validity
-	if (port < 1 || port > 65535)
-		throw std::runtime_error("Invalid listen port (must be between 1 and 65535): " + token);
 	return HostPortPair(host, port);
 }
 
@@ -173,26 +192,6 @@ void	ServerBlock::validate() const {
 		throw std::runtime_error("Duplicate path across location blocks");
 }
 
-/**
- * Router module is dealing with case _location.empty() -> location "/"
- */
-LocationBlock const&	ServerBlock::getBestLocationForPath(std::string const& path) {
-	const LocationBlock* best = NULL;
-	size_t longest = 0;
-	for (size_t i = 0; i < _locations.size(); ++i) {
-		const std::string& locPath = _locations[i].getPath();
-		if (path.compare(0, locPath.size(), locPath) == 0) { // prefix match
-			if (locPath.size() > longest) {
-				longest = locPath.size();
-				best = &_locations[i];
-			}
-		}
-	}
-	if (!best)
-		throw std::runtime_error("No matching location for path: " + path);
-	return *best;
-}
-
 std::string const&	ServerBlock::getRoot() const {
 	return _root;
 }
@@ -217,14 +216,17 @@ std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
 	return _locations;
 }
 
+LocationBlock const&	ServerBlock::getDefaultLocation() const {
+	return _defaultLocation;
+}
+
 std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
-	os << "Server:\n";
 	os << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
 
 	std::set<HostPortPair> const& listen = rhs.getListen();
 	os << "- listen: " << listen.size() << "\n";
 	for (std::set<HostPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
-		os << "  - " << it->first << " -> " << it->second << "\n";
+		os << "  - " << it->getHost() << " -> " << it->getPort() << "\n";
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 
@@ -241,7 +243,7 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	std::vector<LocationBlock> const& locations = rhs.getLocations();
 	os << "- locations: " << locations.size() << "\n";
 	for (size_t i = 0; i < locations.size(); ++i)
-		os << locations[i];
+		os << "  Location " << i << ":\n" << locations[i];
 
 	return os;
 }

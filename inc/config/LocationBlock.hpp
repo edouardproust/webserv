@@ -23,10 +23,11 @@ class LocationBlock {
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
 	void	_addCgiDirective(std::string extension, std::string executable);
 
-	LocationBlock(); // Not used
+	LocationBlock(); // not used
 
 	public:
 
+		LocationBlock(ServerBlock*); // Default location block (path = "/")
 		LocationBlock(ServerBlock*, std::string const&, std::string const&);
 		LocationBlock(LocationBlock const&);
 		LocationBlock&	operator=(LocationBlock const&);

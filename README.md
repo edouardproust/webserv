@@ -7,8 +7,9 @@ Subject: [click here](subject/en.subject.pdf)
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
 ## TODO
-
-- Remove the virtual host form config parsing if not virtual host resolution is not implemented late on in the logic: remove `server_name` attribute and all the logic related in `ServerBlock`.
+- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
+- COnfig parsing: check that the cgi executable is valid: `access(path, X_OK)`
+- Config parsing: check if `clientMaxBodySize` is well formated ?
 
 ## How to use
 

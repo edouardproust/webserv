@@ -11,11 +11,9 @@ void StaticHandler::sendErrorPageContent(ParseStatus status) {
 void StaticHandler::sendStaticContent(
 	std::string const& filePath,
 	std::string const& method,
-	std::map<std::string, std::string> const& headers,
-	std::string const& root,
-	std::vector<std::string> const& indexFiles
+	std::map<std::string, std::string> const& headers
 ) {
-	(void)method; (void)headers; (void)root; (void)indexFiles; // to silence unused parameter warnings
+	(void)method; (void)headers;; // to silence unused parameter warnings
 	// Implementation to send static content based on the filePath and other parameters
 	// This is a placeholder implementation
 	std::string staticContent = "<html><body><h1>Static Content from " + filePath + "</h1></body></html>";

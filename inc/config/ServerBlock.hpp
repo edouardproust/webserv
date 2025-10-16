@@ -2,6 +2,7 @@
 #define SERVER_BLOCK_HPP
 
 #include "config/LocationBlock.hpp"
+#include "config/HostPortPair.hpp"
 
 class ServerBlock {
 
@@ -11,10 +12,12 @@ class ServerBlock {
 	std::map<int, std::string>	_errorPages;
 	std::vector<std::string>	_indexFiles;
 	std::vector<LocationBlock>	_locations;
+	LocationBlock				_defaultLocation;
 
-	void		_parse(std::string const&);
-	void		_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
-	void		_parseDirective(std::string&, std::vector<std::string>&, bool);
+
+	void			_parse(std::string const&);
+	void			_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&, bool);
+	void			_parseDirective(std::string&, std::vector<std::string>&, bool);
 	HostPortPair	_parseHostPortPair(std::string const&);
 
 	public:
@@ -25,15 +28,15 @@ class ServerBlock {
 		ServerBlock& operator=(ServerBlock const&);
 		~ServerBlock();
 
-		void					validate() const;
-		LocationBlock const&	getBestLocationForPath(std::string const&);
+		void	validate() const;
 
 		std::string const&					getRoot() const;
-		std::set<HostPortPair> const&			getListen() const;
+		std::set<HostPortPair> const&		getListen() const;
 		unsigned long						getClientMaxBodySize() const;
 		std::map<int, std::string> const&	getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		std::vector<LocationBlock> const&	getLocations() const;
+		LocationBlock const&				getDefaultLocation() const;
 
 };
 

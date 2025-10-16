@@ -24,9 +24,11 @@ class Config {
 		Config(std::string const&);
 		~Config();
 
-		static void			_addTokenIf(std::string&, std::vector<std::string>&);
-		static std::string	_getBlockContent(std::string const&, size_t&, int&);
-		static void			_skipComment(std::string const&, size_t&);
+		std::vector<HostPortPair>	getAllListenPorts() const;
+
+		static void			addTokenIf(std::string&, std::vector<std::string>&);
+		static std::string	getBlockContent(std::string const&, size_t&, int&);
+		static void			skipComment(std::string const&, size_t&);
 
 		std::vector<ServerBlock> const&	getServers() const;
 };

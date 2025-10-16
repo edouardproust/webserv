@@ -33,11 +33,11 @@ void	Config::_parse(std::string const& content) {
 	int braceDepth = 0;
 	for (size_t i = 0; i < content.size(); ++i) {
 		if (content[i] == '#') {
-			_skipComment(content, i);
+			skipComment(content, i);
 		} else if(content[i] == '{') {
 			_parseBlock(tokens, content, i, braceDepth);
 		} else if (isspace(content[i])) {
-			_addTokenIf(token, tokens);
+			addTokenIf(token, tokens);
 		} else {
 			token += content[i];
 		}
@@ -50,7 +50,7 @@ void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& co
 		throw std::runtime_error("Unexpected '{'");
 	++braceDepth;
 	if (tokens[0] == "server" && tokens.size() == 1) {
-		std::string blockContent = _getBlockContent(content, i, braceDepth);
+		std::string blockContent = getBlockContent(content, i, braceDepth);
 		ServerBlock sb(blockContent);
 		_servers.push_back(sb);
 	if (tokens.size() <= 0)
@@ -66,7 +66,7 @@ void	Config::_validate() const {
 		throw std::runtime_error("No server blocks defined");
 
 	// Servers content validation
-	std::vector<HostPortPair> allListen = utils::getAllListenPorts(_servers);
+	std::vector<HostPortPair> allListen = getAllListenPorts();
 	if (!utils::hasVectorUniqEntries(allListen)) {
 		throw std::runtime_error("Duplicate listen ip:port pairs over servers");
 	}
@@ -75,14 +75,23 @@ void	Config::_validate() const {
 	}
 }
 
-void	Config::_addTokenIf(std::string& token, std::vector<std::string>& tokens) {
+std::vector<HostPortPair>	Config::getAllListenPorts() const {
+	std::vector<HostPortPair> all;
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		std::set<HostPortPair> const& listen = _servers[i].getListen();
+		all.insert(all.end(), listen.begin(), listen.end());
+	}
+	return all;
+}
+
+void	Config::addTokenIf(std::string& token, std::vector<std::string>& tokens) {
 	if (!token.empty()) {
 		tokens.push_back(token);
 		token.clear();
 	}
 }
 
-std::string	Config::_getBlockContent(std::string const& content, size_t& index, int& braceDepth) {
+std::string	Config::getBlockContent(std::string const& content, size_t& index, int& braceDepth) {
 	std::string	blockContent = "";
 	index++; // skip the '{'
 	while (index < content.size() && braceDepth > 0) {
@@ -103,7 +112,7 @@ std::string	Config::_getBlockContent(std::string const& content, size_t& index, 
 	return blockContent;
 }
 
-void	Config::_skipComment(std::string const& content, size_t& index) {
+void	Config::skipComment(std::string const& content, size_t& index) {
 	while (index < content.size() && content[index] != '\n')
 		++index;
 }
@@ -115,7 +124,7 @@ std::vector<ServerBlock> const&	Config::getServers() const {
 std::ostream&	operator<<(std::ostream& os, Config const& rhs) {
 	std::vector<ServerBlock> servers = rhs.getServers();
 	for (size_t i = 0; i < servers.size(); ++i) {
-		os << servers[i];
+		os << "Server " << i << ":\n" << servers[i];
 	}
 	return os;
 }

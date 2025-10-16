@@ -7,14 +7,27 @@
 #include <iostream>
 #include <cstdlib>
 
+LocationBlock::LocationBlock(ServerBlock* server)
+: _server(server), _path("/"), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false)
+{}
+
 LocationBlock::LocationBlock(ServerBlock* server, std::string const& path, std::string const& blockContent)
 : _server(server), _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
 	_parse(blockContent);
 }
 
-LocationBlock::LocationBlock(const LocationBlock &other) {
-    *this = other;
-}
+LocationBlock::LocationBlock(const LocationBlock &other)
+: _server(other._server),
+  _path(other._path),
+  _root(other._root),
+  _autoindex(other._autoindex),
+  _limitExcept(other._limitExcept),
+  _return(other._return),
+  _clientMaxBodySize(other._clientMaxBodySize),
+  _clientMaxBodySizeSet(other._clientMaxBodySizeSet),
+  _indexFiles(other._indexFiles),
+  _cgi(other._cgi)
+{}
 
 LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 	if (this != &other) {
@@ -29,6 +42,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_indexFiles = other._indexFiles;
 		_cgi = other._cgi;
 	}
+	std::cerr << "operator= LocationBlock(" << _path << ") created, server=" << _server << std::endl; //DEBUG
 	return *this;
 }
 
@@ -40,13 +54,13 @@ void	LocationBlock::_parse(std::string const& content) {
 	bool inQuotes = false;
 	for (size_t i = 0; i < content.size(); ++i) {
 		if (content[i] == '#') {
-			Config::_skipComment(content, i);
+			Config::skipComment(content, i);
 		} else if (content[i] == '{') {
 			throw std::runtime_error("Unexpected '{' in location block");
 		} else if (content[i] == ';') {
 			_parseDirective(token, tokens, inQuotes);
 		} else if (isspace(content[i]) && !inQuotes) {
-			Config::_addTokenIf(token, tokens);
+			Config::addTokenIf(token, tokens);
 		} else if (content[i] == '"') {
 			inQuotes = !inQuotes;
 		} else {
@@ -56,7 +70,7 @@ void	LocationBlock::_parse(std::string const& content) {
 }
 
 void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>& tokens, bool inQuotes) {
-Config::_addTokenIf(token, tokens);
+Config::addTokenIf(token, tokens);
 	if (tokens.size() <= 0) {
 		throw std::runtime_error("Unexpected ';'");
 	} else if (inQuotes) {
@@ -147,6 +161,8 @@ std::string const	LocationBlock::getRoot() const {
 }
 
 std::string const&	LocationBlock::getAutoindex() const {
+	if (_autoindex.empty())
+		return "on";
 	return _autoindex;
 }
 
@@ -190,8 +206,7 @@ void LocationBlock::setServer(ServerBlock* server) {
 }
 
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
-	std::string const in = "   "; // indentation
-	os << in << "Location:\n";
+	std::string const in = "  "; // indentation
 	os << in << "- path: " << rhs.getPath() << "\n";
 	os << in << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
 	os << in << "- autoindex: " << (rhs.getAutoindex().empty() ? "[empty]" : rhs.getAutoindex()) << "\n";
