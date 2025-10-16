@@ -2,15 +2,19 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <climits>
 
-bool	utils::isNumeric(std::string const& str)
+bool	utils::isInt(std::string const& str)
 {
 	if (str.empty())
 		return false;
-	for (size_t i = 0; i < str.size(); ++i) {
-		if (!isdigit(str[i]))
-			return false;
-	}
+	char* endptr = NULL;
+	errno = 0;
+	long value = std::strtol(str.c_str(), &endptr, 10);
+	if (*endptr != '\0')
+		return false;
+	if ((errno == ERANGE) || (value > INT_MAX) || (value < INT_MIN))
+		return false;
 	return true;
 }
 
@@ -48,7 +52,7 @@ unsigned long	utils::parseSize(std::string const& value)
 		(units.find(unit) != std::string::npos)
 			? value.substr(0, value.size() - 1)
 			: value;
-	if (!isNumeric(numberStr)) {
+	if (!isInt(numberStr)) {
 		throw std::runtime_error("Invalid size value: " + value);
 	}
 	unsigned long number = std::strtoul(numberStr.c_str(), NULL, 10);

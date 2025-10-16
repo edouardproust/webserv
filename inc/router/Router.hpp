@@ -10,11 +10,13 @@ class Router
 	Request const&					_request;
 	std::vector<ServerBlock> const&	_servers;
 	HostPortPair const&				_listeningOn;
-	LocationBlock const*			_matchingLocation;
+	LocationBlock const*			_location; // matching LocationBlock based on Request + Config
 
 	void		_setMatchingLocation(std::vector<LocationBlock> const&, std::string const&);
 	std::string	_resolveScriptPath(std::string const&, LocationBlock const*) const;
 	std::string _resolveFilePath(std::string const&, LocationBlock const*) const;
+
+	bool		_isRedirectionLocation() const;
 
 	// Not used
 	Router();

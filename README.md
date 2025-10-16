@@ -7,9 +7,12 @@ Subject: [click here](subject/en.subject.pdf)
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
 ## TODO
-- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
-- COnfig parsing: check that the cgi executable is valid: `access(path, X_OK)`
-- Config parsing: check if `clientMaxBodySize` is well formated ?
+- Config parsing:
+	- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
+	- check that the cgi executable is valid: `access(path, X_OK)`
+	- check if `clientMaxBodySize` is well formated ?
+- CGI:
+	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
 
 ## How to use
 

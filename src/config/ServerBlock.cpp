@@ -48,7 +48,7 @@ ServerBlock::~ServerBlock() {}
 
 void	ServerBlock::_parse(std::string const& content) {
 	std::string token = "";
-	std::vector<std::string> tokens;
+	Tokens tokens;
 	bool inQuotes = false;
 	int braceDepth = 0;
 	for (size_t i = 0; i < content.size(); ++i) {

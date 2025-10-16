@@ -3,7 +3,6 @@
 
 class ServerBlock;
 #include "typedefs.hpp"
-#include <vector>
 #include <set>
 
 class LocationBlock {
@@ -35,6 +34,7 @@ class LocationBlock {
 
 		void	validate() const;
 		bool	isCgiLocation() const;
+		bool	isRedirectionLocation() const;
 
 		ServerBlock*						getServer() const;
 		std::string const&					getPath() const;
@@ -49,6 +49,7 @@ class LocationBlock {
 		std::string const					getCgiExecutor(std::string const& extension) const;
 
 		void setServer(ServerBlock* server);
+		void setReturn(Tokens const& tokens);
 
 };
 

@@ -15,7 +15,7 @@ namespace utils {
 	template <typename T>
 	bool	hasVectorUniqEntries(const std::vector<T> &vec);
 
-	bool	isNumeric(std::string const&);
+	bool	isInt(std::string const&);
 	bool	isAccessibleDirectory(std::string const& path); //TODO Unused yet but will be useful for static and cgi modules
 	bool	isAbsolutePath(std::string const& path);
 

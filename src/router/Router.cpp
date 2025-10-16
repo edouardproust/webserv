@@ -6,7 +6,7 @@
 #include <iostream>
 
 Router::Router(Request const& request, std::vector<ServerBlock> const& servers, HostPortPair const& listeningOn)
-: _request(request), _servers(servers), _listeningOn(listeningOn), _matchingLocation(NULL) {}
+: _request(request), _servers(servers), _listeningOn(listeningOn), _location(NULL) {}
 
 Router::~Router() {}
 
@@ -18,11 +18,13 @@ void Router::dispatchRequest() {
     }
     ServerBlock const& server = _findMatchingServer();
     _setMatchingLocation(server.getLocations(), _request.getPath());
-	if (!_matchingLocation)
-		_matchingLocation = &server.getDefaultLocation();
+	if (!_location)
+		_location = &server.getDefaultLocation();
+
+	//if (_location->isRedirectionLocation())
+
 
 	/* Checks
-
 	Resume:
 	return → rediriger si présent.
 	1. limit_except → si méthode non autorisée → 405 (avec Allow).
@@ -33,17 +35,17 @@ void Router::dispatchRequest() {
 	6. CGIHandler s’occupe du fork/exec, et doit renvoyer 500 si execve échoue.
 
 	// 1. Redirection
-	if (!_matchingLocation.getReturn().empty())
+	if (!_location.getReturn().empty())
 		sentResponse(3xx with Location: (status and target));
 
 	// 2. Unauthorized Method
-	std::set<std::string> limitExcept = _matchingLocation.getLimitExcept();
+	std::set<std::string> limitExcept = _location.getLimitExcept();
 	if (!limitExcept.empty() && !limitExcept.find(reauest.getMethod()))
 		sendRespose(405 Method Not Allowed + header Allow: <liste>);
 
 	// 3. File too large
 		Taille du body (client_max_body_size)
-		- Si Request a une Content-Length (ou le parser sait la longueur effective) et que length > limit → 413 Payload Too Large.
+		- if Request::contentLength != -1 and length > limit → 413 Payload Too Large.
 		- Si Transfer-Encoding: chunked géré par le parser, vérifier la taille totale pendant la lecture si possible et appliquer la même limite.
 
 	// 4. Path normalization & sécurité
@@ -53,6 +55,7 @@ void Router::dispatchRequest() {
 		- Vérifier que le chemin canonique commence par le chemin canonique du root
 		- Attention aux symlinks
 		- Si résolution mène hors root → 403 Forbidden.
+		- If request path ends by / or if stat(request.path) == S_ISDIR -> Search config.indexFiles in order: filePath + "/" + indexFiles[i]. if not found and "autoindex on -> generate listing, else -> else response 403
 
 	// 5. Autoindex
 		- Si pas d'index et `autoindex:on` Produire page de listing des fichiers
@@ -66,12 +69,12 @@ void Router::dispatchRequest() {
 
 	// 6. CGI
     std::string executor;
-    if (_matchingLocation->isCgiLocation()) { // the request path matches a CGI location
-        executor = _matchingLocation->getCgiExecutor(utils::getFileExtension(_request.getPath()));
+    if (_location->isCgiLocation()) { // the request path matches a CGI location
+        executor = _location->getCgiExecutor(utils::getFileExtension(_request.getPath()));
     }
 	if (!executor.empty()) { // the file extension is handled by the CGI config of this location
-        std::string scriptPath = _resolveScriptPath(_request.getPath(), _matchingLocation);
-        std::string executor = _matchingLocation->getCgiExecutor(utils::getFileExtension(_request.getPath()));
+        std::string scriptPath = _resolveScriptPath(_request.getPath(), _location);
+        std::string executor = _location->getCgiExecutor(utils::getFileExtension(_request.getPath()));
         CGIHandler::handleRequest(
             scriptPath,
             executor,
@@ -84,7 +87,7 @@ void Router::dispatchRequest() {
     } else { // not a CGI request or file extension not handled by this location
 		std::cout << "DEBUGG" << std::endl;
 
-        std::string filePath = _resolveFilePath(_request.getPath(), _matchingLocation);
+        std::string filePath = _resolveFilePath(_request.getPath(), _location);
         StaticHandler::sendStaticContent(
             filePath,
             _request.getMethod(),
@@ -143,8 +146,7 @@ void	Router::_setMatchingLocation(std::vector<LocationBlock> const& locations, s
 			}
 		}
 	}
-	// TODO filter by Request::method + LocationBlock->getLimitExcept()
-	_matchingLocation = best;
+	_location = best;
 }
 
 std::string	Router::_resolveScriptPath(std::string const& requestPath, LocationBlock const* location) const {
@@ -172,7 +174,7 @@ HostPortPair const&	Router::getListeningOn() const {
 }
 
 LocationBlock const* Router::getMatchingLocation() const {
-	return _matchingLocation;
+	return _location;
 }
 
 std::ostream&	operator<<(std::ostream& os, Router const& rhs) {

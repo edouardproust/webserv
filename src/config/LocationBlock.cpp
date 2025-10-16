@@ -42,7 +42,6 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_indexFiles = other._indexFiles;
 		_cgi = other._cgi;
 	}
-	std::cerr << "operator= LocationBlock(" << _path << ") created, server=" << _server << std::endl; //DEBUG
 	return *this;
 }
 
@@ -50,7 +49,7 @@ LocationBlock::~LocationBlock() {}
 
 void	LocationBlock::_parse(std::string const& content) {
 	std::string token = "";
-	std::vector<std::string> tokens;
+	Tokens tokens;
 	bool inQuotes = false;
 	for (size_t i = 0; i < content.size(); ++i) {
 		if (content[i] == '#') {
@@ -82,15 +81,8 @@ Config::addTokenIf(token, tokens);
 	} else if (tokens[0] == "limit_except" && tokens.size() >= 2) {
 		for (size_t j = 1; j < tokens.size(); ++j)
 			_limitExcept.insert(tokens[j]);
-	} else if (tokens[0] == "return" && tokens.size() == 3) {
-		if (_return.first != -1)
-			throw std::runtime_error("Duplicate return directive in location");
-		try {
-			_return.first = std::atoi(tokens[1].c_str());
-			_return.second = tokens[2];
-		} catch (std::exception& e) {
-			throw std::runtime_error("Invalid return code: " + tokens[1]);
-		}
+	} else if (tokens[0] == "return") {
+		setReturn(tokens);
 	} else if (tokens[0] == "client_max_body_size" && tokens.size() == 2) {
 		try {
 			_clientMaxBodySizeSet = true;
@@ -144,6 +136,10 @@ void	LocationBlock::validate() const {
 
 bool	LocationBlock::isCgiLocation() const {
 	return !_cgi.empty();
+}
+
+bool	LocationBlock::isRedirectionLocation() const {
+	return !_return.first != -1 && !_return.second.empty();
 }
 
 ServerBlock*	LocationBlock::getServer() const {
@@ -203,6 +199,22 @@ std::string const	LocationBlock::getCgiExecutor(std::string const& extension) co
 
 void LocationBlock::setServer(ServerBlock* server) {
 	_server = server;
+}
+
+/**
+ * May throw a runtime_error() exception
+ */
+void LocationBlock::setReturn(Tokens const& tokens) {
+if (_return.first != -1)
+		throw std::runtime_error("Duplicate return directive in location: " + _path);
+if (tokens.size() < 2 || tokens.size() > 3)
+		throw std::runtime_error("Invalid syntax for 'return' directive in location:" + _path);
+
+		_return.first = std::atoi(tokens[1].c_str());
+		_return.second = tokens[2];
+	} catch (std::exception& e) {
+		throw std::runtime_error("Invalid return code: " + tokens[1]);
+	}
 }
 
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
