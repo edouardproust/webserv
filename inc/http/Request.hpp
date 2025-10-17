@@ -28,13 +28,13 @@ class Request
 
 	static bool	isSupportedMethod(std::string const& method);
 
-	std::string const&	getMethod() const;
-	std::string	const&	getRequestTarget() const;
-	std::string	const&	getPath() const;
-	std::string	const&	getVersion() const;
-	std::map<std::string, std::string> const&	getHeaders() const;
-	std::string const&	getBody() const;
-	std::string const&	getQueryString() const;
+	const std::string&	getMethod() const;
+	const std::string&	getRequestTarget() const;
+	const std::string&	getPath() const;
+	const std::string&	getVersion() const;
+	const std::map<std::string, std::string>&	getHeaders() const;
+	const std::string&	getBody() const;
+	const std::string&	getQueryString() const;
 
 	void	setMethod(std::string const& method);
     void	setRequestTarget(std::string const& requestTarget);

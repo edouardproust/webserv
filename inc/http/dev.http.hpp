@@ -1,7 +1,7 @@
 #ifndef DEV_HTTP_HPP
 #define DEV_HTTP_HPP
 
-#include "Constants.hpp"
+#include "constants.hpp"
 #include "http/Request.hpp"
 #include "http/RequestParser.hpp"
 #include "http/Response.hpp"

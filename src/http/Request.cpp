@@ -35,37 +35,37 @@ bool	Request::isSupportedMethod(std::string const& method) {
 	return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-std::string const& Request::getMethod() const
+const std::string& Request::getMethod() const
 {
 	return this->_method;
 }
 
-std::string const& Request::getRequestTarget() const
+const std::string& Request::getRequestTarget() const
 {
 	return this->_requestTarget;
 }
 
-std::string const& Request::getPath() const
+const std::string& Request::getPath() const
 {
 	return this->_path;
 }
 
-std::string const& Request::getQueryString() const
+const std::string& Request::getQueryString() const
 {
 	return this->_queryString;
 }
 
-std::string const& Request::getVersion() const
+const std::string& Request::getVersion() const
 {
 	return this->_version;
 }
 
-std::map<std::string, std::string> const& Request::getHeaders() const
+const std::map<std::string, std::string>& Request::getHeaders() const
 {
 	return this->_headers;
 }
 
-std::string const& Request::getBody() const
+const std::string& Request::getBody() const
 {
 	return this->_body;
 }

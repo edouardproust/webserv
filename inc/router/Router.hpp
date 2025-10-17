@@ -3,7 +3,7 @@
 
 #include "http/Request.hpp"
 #include "config/ServerBlock.hpp"
-#include "Typedefs.hpp"
+#include "typedefs.hpp"
 
 class Router
 {

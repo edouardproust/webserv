@@ -1,8 +1,8 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
-#include "utils/Utils.hpp"
+#include "utils/utils.hpp"
 #include "http/Request.hpp"
-#include "Constants.hpp"
+#include "constants.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <cstdlib>

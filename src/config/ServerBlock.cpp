@@ -1,7 +1,7 @@
 #include "config/ServerBlock.hpp"
 #include "config/Config.hpp"
-#include "utils/Utils.hpp"
-#include "Constants.hpp"
+#include "utils/utils.hpp"
+#include "constants.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <cstdlib>

@@ -2,7 +2,7 @@
 #define LOCATION_BLOCK_HPP
 
 class ServerBlock;
-#include "Typedefs.hpp"
+#include "typedefs.hpp"
 #include <vector>
 #include <set>
 
