@@ -14,7 +14,7 @@ class LocationBlock {
 	std::set<std::string>		_limitExcept;			// optional (if empty, all methods are allowed)
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
 	size_t						_clientMaxBodySize; 	// optional, overrides server limit.
-	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location. false if _clientBodySize is set on 0
+	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location.
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
 
@@ -23,7 +23,7 @@ class LocationBlock {
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
 
-	void	_setPath(std::string const& path);
+	void	_setPath(std::string& path);
 	void	_setRoot(Tokens const& tokens);
 	void	_setAutoindex(Tokens const& tokens);
 	void	_setLimitExcept(Tokens const& tokens);
@@ -35,12 +35,11 @@ class LocationBlock {
 	public:
 
 		LocationBlock(ServerBlock*); // Default location block (path = "/")
-		LocationBlock(ServerBlock*, std::string const&, std::string const&);
+		LocationBlock(ServerBlock*, std::string&, std::string const&);
 		LocationBlock(LocationBlock const&);
 		LocationBlock&	operator=(LocationBlock const&);
 		~LocationBlock();
 
-		void	crossDirectivesValidation() const;
 		bool	isCgiLocation() const;
 		bool	isRedirectionLocation() const;
 

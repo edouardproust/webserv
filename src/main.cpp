@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 			std::cout << cfg << std::endl;
 			Request request;
 			request.parse("GET /images/test.jpg HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
-			Router router(request, cfg.getServers(), HostPortPair(cfg.getServers()[0].getListen().begin()->getHost(), cfg.getServers()[0].getListen().begin()->getPort())); // DEBUG using default ip:port pair until `network` module is done
+			Router router(request, cfg.getServers(), HostPortPair("0.0.0.0:80")); // DEBUG using default ip:port pair until `network` module is done
 			router.dispatchRequest();
 			std::cout << router << std::endl;
 		}

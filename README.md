@@ -11,8 +11,11 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
 	- [DONE -> tests needed]: check that the cgi executable is valid: `access(path, X_OK)`
 	- check if `clientMaxBodySize` is well formated ?
+	- Support IPv6 ?
 - CGI:
 	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
+- Network:
+	- What socket(s) to open if only "0.0.0.0" is defined as an open port in config file ?
 
 ## How to use
 

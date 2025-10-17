@@ -14,7 +14,7 @@ LocationBlock::LocationBlock(ServerBlock* server)
 /**
  * May throw a runtime_error() exception.
  */
-LocationBlock::LocationBlock(ServerBlock* server, std::string const& path, std::string const& blockContent)
+LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string const& blockContent)
 : _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false) {
 	_setPath(path);
 	_parse(blockContent);
@@ -59,19 +59,18 @@ void	LocationBlock::_parse(std::string const& content) {
 	Tokens tokens;
 	bool inQuotes = false;
 	for (size_t i = 0; i < content.size(); ++i) {
-		if (content[i] == '#') {
+		if (content[i] == '#')
 			Config::skipComment(content, i);
-		} else if (content[i] == '{') {
+		else if (content[i] == '{')
 			throw std::runtime_error("Unexpected '{'");
-		} else if (content[i] == ';') {
+		else if (content[i] == ';')
 			_parseDirective(token, tokens, inQuotes);
-		} else if (isspace(content[i]) && !inQuotes) {
+		else if (isspace(content[i]) && !inQuotes)
 			Config::addTokenIf(token, tokens);
-		} else if (content[i] == '"') {
+		else if (content[i] == '"')
 			inQuotes = !inQuotes;
-		} else {
+		else
 			token += content[i];
-		}
 	}
 }
 
@@ -84,6 +83,7 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 		throw std::runtime_error("Unexpected ';'");
 	else if (inQuotes)
 		throw std::runtime_error("Unclosed quoted string");
+
 	std::string directiveName = tokens[0];
 	try {
 		if (directiveName == "root")
@@ -100,19 +100,20 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 			_setIndexFiles(tokens);
 		else if (directiveName == "cgi")
 			_setCgi(tokens);
-		// Additional directives can be added here
+		// -- additional directives can be added here --
 		else
 			throw std::runtime_error("Unsupported directive");
 	} catch (std::exception& e) {
 		throw std::runtime_error(directiveName + ": " + e.what()); // wrap error msg with the directive name
 	}
+
 	tokens.clear();
 }
 
-void	LocationBlock::_setPath(std::string const& path) {
-	if (!utils::isAbsolutePath(_path))
-		throw std::runtime_error("Not an absolute path: " + _path);
-	_path = utils::normalizePath(_path);
+void	LocationBlock::_setPath(std::string& path) {
+	if (!utils::isAbsolutePath(path))
+		throw std::runtime_error("Not an absolute path: '" + path + "'");
+	_path = utils::normalizePath(path);
 }
 
 void	LocationBlock::setServer(ServerBlock* server) {
@@ -123,13 +124,13 @@ void	LocationBlock::setServer(ServerBlock* server) {
  * May throw a runtime_error() exception.
  */
 void	LocationBlock::_setRoot(Tokens const& tokens) {
-	std::string root = tokens[1];
 	if (tokens.size() != 2)
-		throw std::runtime_error("Invalid number of arguments");
+		throw std::runtime_error("Should have 2 arguments");
+	std::string root = tokens[1];
 	if (root.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (!utils::isAbsolutePath(_root))
-		throw std::runtime_error("Not an absolute path " + root);
+	if (!utils::isAbsolutePath(root))
+		throw std::runtime_error("Not an absolute path: '" + root + "'");
 	_root = root;
 }
 
@@ -138,7 +139,7 @@ void	LocationBlock::_setRoot(Tokens const& tokens) {
  */
 void	LocationBlock::_setAutoindex(Tokens const& tokens) {
 	if (tokens.size() != 2)
-		throw std::runtime_error("Invalid number of arguments");
+		throw std::runtime_error("Should have 2 arguments");
 	if (tokens[1].empty())
 		throw std::runtime_error("Value is an empty string");
 	if (_autoindex != "on" && _autoindex != "off")
@@ -150,8 +151,8 @@ void	LocationBlock::_setAutoindex(Tokens const& tokens) {
  * May throw a runtime_error() exception.
  */
 void	LocationBlock::_setLimitExcept(Tokens const& tokens) {
-	if (tokens.size() != 2)
-		throw std::runtime_error("Invalid number of arguments");
+	if (tokens.size() < 2)
+		throw std::runtime_error("Should have at least 2 arguments");
 	if (tokens[1].empty())
 		throw std::runtime_error("Value is an empty string");
 	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
@@ -168,10 +169,8 @@ void LocationBlock::_setReturn(Tokens const& tokens) {
 	if (_return.first != -1)
 			throw std::runtime_error("Duplicate directive");
 	if (tokens.size() < 2 || tokens.size() > 3)
-			throw std::runtime_error("Invalid number of arguments");
-	if (tokens[1].empty())
-		throw std::runtime_error("First value is an empty string");
-	int code = utils::toSizeT(tokens[1]);
+			throw std::runtime_error("Should have 2 or 3 arguments");
+	int code = utils::toSizeT(tokens[1]); // throw exception if empty, etc.
 	std::string target;
 	if (tokens.size() == 3) {
 		if (tokens[2].empty())
@@ -193,10 +192,10 @@ void LocationBlock::_setReturn(Tokens const& tokens) {
  */
 void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
 	if (tokens.size() != 2)
-		throw std::runtime_error("Invalid number of arguments");
+		throw std::runtime_error("Should have 2 arguments");
 	size_t result = Config::parseSize(tokens[1]); // throw exception if empty, wrong syntax or overflow
 	if (result == 0)
-		throw std::runtime_error("Number is 0:" + tokens[1]);
+		throw std::runtime_error("Must be more than 0 bytes:" + tokens[1]); // Size cannot be 0
     _clientMaxBodySize = result;
     _isSetClientMaxBodySize = true;
 }
@@ -206,7 +205,7 @@ void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
  */
 void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 	if (tokens.size() < 2)
-		throw std::runtime_error("Invalid number of arguments");
+		throw std::runtime_error("Should have 2 or more arguments");
 	for (size_t j = 1; j < tokens.size(); ++j) {
 		if (tokens[j].empty())
 			throw std::runtime_error("An index value is an empty string");
@@ -222,12 +221,11 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
  */
 void	LocationBlock::_setCgi(Tokens const& tokens) {
 	if (tokens.size() != 3)
-		throw std::runtime_error("Invalid number of arguments");
+		throw std::runtime_error("Should have 3 arguments");
 	if (tokens[1].empty())
 		throw std::runtime_error("Extension is an empty string");
 	if (tokens[2].empty())
 		throw std::runtime_error("Executable is an empty string");
-
 	std::string extension = tokens[1], executable = tokens[2];
 	if (extension.empty() || executable.empty())
 		throw std::runtime_error("Extension is an empty string");

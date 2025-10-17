@@ -12,7 +12,8 @@ bool	utils::isInt(std::string const& str)
 	char* endptr = NULL;
 	errno = 0;
 	long value = std::strtol(str.c_str(), &endptr, 10);
-	if (*endptr != '\0' || errno == ERANGE || value > MAX_SIZE_T || value < MIN_SIZE_T)
+	if (*endptr != '\0' || errno == ERANGE
+		|| value > static_cast<long>(MAX_SIZE_T) || value < static_cast<long>(MIN_SIZE_T))
 		return false;
 	return true;
 }
@@ -33,6 +34,9 @@ bool	utils::isAccessibleDirectory(std::string const& path) {
 	return true;
 }
 
+/**
+ * Only checking for Linux distros (path starting by '/')
+ */
 bool	utils::isAbsolutePath(std::string const& path) {
 	if (path.empty() || path[0] != '/')
 		return false;
@@ -40,19 +44,22 @@ bool	utils::isAbsolutePath(std::string const& path) {
 }
 
 /**
- * Convert a string into an int only if the string
+ * Convert a string into an unsigned int only if the string
  * contains digits or start with + or -.
  *
- * May throw an runtime_error() exception in case of int overflow
+ * Throw a runtime_error exception if empty str, invalid number or int overflow
  */
 size_t	utils::toSizeT(std::string const& str)
 {
+	if (str.empty())
+		throw std::runtime_error("Numeric value is an empty string");
 	char* endptr = NULL;
 	errno = 0;
 	long value = std::strtol(str.c_str(), &endptr, 10);
 	if (*endptr != '\0')
 		throw std::runtime_error("Invalid numeric value: " + str);
-	if (errno == ERANGE || value > MAX_SIZE_T || value < MIN_SIZE_T)
+	if (errno == ERANGE || value > static_cast<long>(MAX_SIZE_T)
+		|| value < static_cast<long>(MIN_SIZE_T))
 		throw std::runtime_error("Numeric value out of range: " + str);
 	return static_cast<size_t>(value);
 }

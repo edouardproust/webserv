@@ -32,33 +32,43 @@ void	Config::_parse(std::string const& content) {
 	std::vector<std::string> tokens;
 	int braceDepth = 0;
 	for (size_t i = 0; i < content.size(); ++i) {
-		if (content[i] == '#') {
+		if (content[i] == '#')
 			skipComment(content, i);
-		} else if(content[i] == '{') {
+		else if(content[i] == '{')
 			_parseBlock(tokens, content, i, braceDepth);
-		} else if (isspace(content[i])) {
+		else if (isspace(content[i]))
 			addTokenIf(token, tokens);
-		} else {
+		else
 			token += content[i];
-		}
 	}
 }
 
-void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& content,
-	size_t& i, int& braceDepth) {
-	if (tokens.size() <= 0)
+void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& content, size_t& i, int& braceDepth) {
+	if (tokens.empty())
 		throw std::runtime_error("Unexpected '{'");
 	++braceDepth;
-	if (tokens[0] == "server" && tokens.size() == 1) {
-		std::string blockContent = getBlockContent(content, i, braceDepth);
-		ServerBlock sb(blockContent);
-		_servers.push_back(sb);
-	if (tokens.size() <= 0)
-		throw std::runtime_error("Unexpected '{'");
-	} else {
-		throw std::runtime_error("Invalid block: " + tokens[0]);
+	std::string blockName = tokens[0];
+	try {
+		if (tokens[0] == "server")
+			_addServer(tokens, content, i, braceDepth);
+		// -- additional supported blocks can be added here --
+		else
+			throw std::runtime_error("Invalid block: " + tokens[0]);
+	} catch (std::exception& e) {
+		throw std::runtime_error(blockName + ": " + e.what()); // wrap error msg with the block name
 	}
 	tokens.clear();
+}
+
+/**
+ * May throw an exception
+ */
+void	Config::_addServer(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth) {
+	if (tokens.size() != 1)
+		throw std::runtime_error("Invalid block declaration (should be 'server {...}')");
+	std::string blockContent = getBlockContent(content, i, braceDepth);
+	ServerBlock sb(blockContent);
+	_servers.push_back(sb);
 }
 
 void	Config::_validate() const {
@@ -69,9 +79,6 @@ void	Config::_validate() const {
 	std::vector<HostPortPair> allListen = getAllListenPorts();
 	if (!utils::hasVectorUniqEntries(allListen)) {
 		throw std::runtime_error("Duplicate listen ip:port pairs over servers");
-	}
-	for (size_t i = 0; i < _servers.size(); ++i) {
-		_servers[i].validate(); // validate this server block individually
 	}
 }
 
@@ -144,7 +151,7 @@ size_t	Config::parseSize(std::string const& sizeStr) {
 			throw std::runtime_error("Missing numeric value before unit");
 	}
 
-	size_t number = utils::toSizeT(numberStr); // throw exception if non-digit or overflow
+	size_t number = utils::toSizeT(numberStr); // throw exception if empty, invalid number or overflow
 	if (number > (MAX_SIZE_T / multiplier)) // this calculation is overflow-safe
 		throw std::runtime_error("Too large number: "
 			+ sizeStr + " (max is " + utils::toString(MAX_SIZE_T) + " bytes)");

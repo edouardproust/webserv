@@ -2,6 +2,7 @@
 #define CONSTANTS_HPP
 
 #include <limits>
+#include <cstddef>
 
 // global
 

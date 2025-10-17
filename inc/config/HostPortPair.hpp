@@ -7,19 +7,30 @@
 class HostPortPair {
 
 	std::string	_host;
-	int			_port;
+	size_t		_port;
 
-	static bool	_isValidIP(std::string const& ip);
+	
+	void	_parseHostPort(std::string const&);
+
+	void	_setHost(std::string const&);
+	void	_setPort(std::string const&);
+
+	static bool	_isValidIP(std::string const&);
+
+	HostPortPair(); // not used
 
 	public:
 
-		HostPortPair(const std::string& host, int port);
+		HostPortPair(std::string const&);
+		HostPortPair(HostPortPair const&);
+		HostPortPair& operator=(HostPortPair const&);
+		~HostPortPair();
 
 		const std::string&	getHost() const;
-		int					getPort() const;
+		size_t				getPort() const;
 
-		bool	operator==(const HostPortPair& other) const;
-		bool	operator<(const HostPortPair& other) const;
+		bool	operator==(const HostPortPair&) const;
+		bool	operator<(const HostPortPair&) const;
 
 };
 
