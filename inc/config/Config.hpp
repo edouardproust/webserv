@@ -29,6 +29,7 @@ class Config {
 		static void			addTokenIf(std::string&, std::vector<std::string>&);
 		static std::string	getBlockContent(std::string const&, size_t&, int&);
 		static void			skipComment(std::string const&, size_t&);
+		static size_t		parseSize(std::string const&);
 
 		std::vector<ServerBlock> const&	getServers() const;
 };

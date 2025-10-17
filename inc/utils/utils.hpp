@@ -20,10 +20,10 @@ namespace utils {
 	// others
 
 	bool	isInt(std::string const&);
-	bool	isAccessibleDirectory(std::string const& path); //TODO Unused yet but will be useful for static and cgi modules
+	bool	isAccessibleDirectory(std::string const& path);
 	bool	isAbsolutePath(std::string const& path);
 
-	int		toInt(std::string const&);
+	size_t	toSizeT(std::string const&);
 
 	std::string&	normalizePath(std::string& path);
 	std::string		getFileExtension(std::string const& path);

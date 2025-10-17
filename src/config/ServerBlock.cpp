@@ -10,16 +10,17 @@
  * May throw an std exception.
  */
 ServerBlock::ServerBlock()
-: _clientMaxBodySize(DEFAULT_MAX_CLIENT_BODY_SIZE),
+: _isSetClientBodySize(false),
   _defaultLocation(LocationBlock(this))
 {}
 
 /**
  * May throw a std exception.
+ *
  * If no listen directive in the server block: add "listen 0.0.0.0:80;"
  */
 ServerBlock::ServerBlock(std::string const& blockContent)
-: _clientMaxBodySize(DEFAULT_MAX_CLIENT_BODY_SIZE),
+: _isSetClientBodySize(false),
   _defaultLocation(LocationBlock(this)) {
 	_parse(blockContent);
 	if (_listen.empty())
@@ -27,7 +28,7 @@ ServerBlock::ServerBlock(std::string const& blockContent)
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other)
-: _clientMaxBodySize(DEFAULT_MAX_CLIENT_BODY_SIZE),
+: _isSetClientBodySize(false),
   _defaultLocation(this) {
 	*this = other;
 }
@@ -54,6 +55,9 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
 
 ServerBlock::~ServerBlock() {}
 
+/**
+ * May throw a std exception.
+ */
 void	ServerBlock::_parse(std::string const& content) {
 	std::string token = "";
 	Tokens tokens;
@@ -76,27 +80,34 @@ void	ServerBlock::_parse(std::string const& content) {
 	}
 }
 
-void	ServerBlock::_parseBlock(std::vector<std::string>& tokens, std::string const& content,
-	size_t& i, int& braceDepth, bool inQuotes) {
-		if (tokens.size() <= 0)
-			throw std::runtime_error("Unexpected '{'");
-		else if (inQuotes)
-			throw std::runtime_error("Unexpected '{' in quoted string");
-		++braceDepth;
-		if (tokens[0] == "location" && tokens.size() == 2) {
-			std::string blockContent = Config::getBlockContent(content, i, braceDepth);
-			LocationBlock lb(this, utils::normalizePath(tokens[1]), blockContent);
-			_locations.push_back(lb);
-		} else {
-			throw std::runtime_error("Invalid block: " + tokens[0]);
-		}
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t& i, int& braceDepth, bool inQuotes) {
+	if (tokens.empty())
+		throw std::runtime_error("Unexpected '{'");
+	else if (inQuotes)
+		throw std::runtime_error("Unexpected '{' in quoted string");
+	++braceDepth; // skip '{'
+	std::string blockName = tokens[0];
+	try {
+		if (blockName == "location")
+			_setLocations(tokens, content, i, braceDepth);
 		// Additional blocks can be added here
-		tokens.clear();
+		else
+			throw std::runtime_error("Unsupported block: " + tokens[0]);
+	} catch (std::exception& e) {
+		throw std::runtime_error(blockName + ": " + e.what()); // wrap error msg with the block name
+	}
+	tokens.clear();
 }
 
-void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& tokens, bool inQuotes) {
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuotes) {
 	Config::addTokenIf(token, tokens);
-	if (tokens.size() <= 0) {
+	if (tokens.empty()) {
 		throw std::runtime_error("Unexpected ';'");
 	} else if (inQuotes) {
 		throw std::runtime_error("Unclosed quoted string in server block");
@@ -119,7 +130,7 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 				_indexFiles.push_back(tokens[j]);
 		} else if (tokens[0] == "client_max_body_size" && tokens.size() == 2) {
 			try {
-				_clientMaxBodySize = utils::parseSize(tokens[1]);
+				_clientMaxBodySize = Config::parseSize(tokens[1]); // throw if empty, invalid syntax or overflow
 			} catch (std::exception& e) {
 				throw std::runtime_error("Invalid client_max_body_size: " + tokens[1]);
 			}
@@ -132,6 +143,8 @@ void	ServerBlock::_parseDirective(std::string& token, std::vector<std::string>& 
 }
 
 /**
+ * May throw a std::runtime_error() exception.
+ *
  * Accepted syntax examples:
  * - listen 127.0.0.1:8080 → pair = "127.0.0.1:8080"
  * - no listen directive → pair = "0.0.0.0:80" (default set in constructor)
@@ -169,10 +182,59 @@ HostPortPair ServerBlock::_parseHostPortPair(std::string const& token) {
 	return HostPortPair(host, port);
 }
 
-void	ServerBlock::validate() const {
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	ServerBlock::_setLocations(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Path is missing");
+	std::string blockContent = Config::getBlockContent(content, i, braceDepth);
+	LocationBlock lb(this, tokens[1], blockContent);
+	_locations.push_back(lb);
+}
+
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	_setRoot(Tokens const& token) {
+
+}
+
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	_setListen(Tokens const& tokens) {
+
+}
+
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	_setClientMaxBodySize(Tokens const& tokens) {
+
+}
+
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	_setErrorPages(Tokens const& tokens) {
+
+}
+
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	_setIndexFiles(Tokens const& tokens) {
+
+}
+
+/**
+ * May throw a std::runtime_error() exception.
+ */
+void	ServerBlock::crossServersValidation() const {
 	if (!utils::isAbsolutePath(_root)) {
 		throw std::runtime_error("Missing or invalid root directive in server");
-	} else if (_clientMaxBodySize > MAX_CLIENT_BODY_SIZE)
+	} else if (_clientMaxBodySize > MAX_SIZE_T)
 		throw std::runtime_error("client_max_body_size is too high in server");
 	for (size_t i = 0; i < _indexFiles.size(); i++) {
 		if (_indexFiles[i].empty()) {
@@ -194,10 +256,18 @@ void	ServerBlock::validate() const {
 		// collect all location paths for global duplicate check
 		allLocationPaths.push_back(_locations[i].getPath());
 		// validate this location individually
-		_locations[i].validate();
+		_locations[i].crossDirectivesValidation();
 	}
 	if (!utils::hasVectorUniqEntries(allLocationPaths))
 		throw std::runtime_error("Duplicate path across location blocks");
+}
+
+std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
+	return _locations;
+}
+
+LocationBlock const&	ServerBlock::getDefaultLocation() const {
+	return _defaultLocation;
 }
 
 std::string const&	ServerBlock::getRoot() const {
@@ -209,6 +279,11 @@ std::set<HostPortPair> const&	ServerBlock::getListen() const {
 }
 
 size_t	ServerBlock::getClientMaxBodySize() const {
+	if (!_isSetClientBodySize) {
+		if (DEFAULT_MAX_CLIENT_BODY_SIZE > MAX_SIZE_T)
+			return MAX_SIZE_T;
+		return DEFAULT_MAX_CLIENT_BODY_SIZE;
+	}
 	return _clientMaxBodySize;
 }
 
@@ -218,14 +293,6 @@ std::map<int, std::string> const&	ServerBlock::getErrorPages() const {
 
 std::vector<std::string> const&	ServerBlock::getIndexFiles() const {
 	return _indexFiles;
-}
-
-std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
-	return _locations;
-}
-
-LocationBlock const&	ServerBlock::getDefaultLocation() const {
-	return _defaultLocation;
 }
 
 std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {

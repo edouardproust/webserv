@@ -1,6 +1,6 @@
 #include "config/Config.hpp"
-#include "config/ServerBlock.hpp"
 #include "utils/utils.hpp"
+#include "constants.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
@@ -115,6 +115,40 @@ std::string	Config::getBlockContent(std::string const& content, size_t& index, i
 void	Config::skipComment(std::string const& content, size_t& index) {
 	while (index < content.size() && content[index] != '\n')
 		++index;
+}
+
+/**
+ * Accepts only size with maximum one unit char of [MmKkGg] at the end of the string,
+ * and only non-float numerics:
+ * - accepted: "100000", "10M", "1k", "5G"
+ * - refused: "10MB", "10Kb", "0.5G", "3X"
+ * - Also checks size_t overflow
+ */
+size_t	Config::parseSize(std::string const& sizeStr) {
+	if (sizeStr.empty())
+		throw std::runtime_error("Empty size string");
+
+	unsigned char unit = sizeStr[sizeStr.size() - 1]; // unit is the last char of sizeStr
+	size_t multiplier = 1;
+	std::string numberStr = sizeStr;
+
+	if (std::isalpha(unit)) {
+		char u = std::tolower(unit);
+		if (u == 'k') multiplier = 1024;
+		else if (u == 'm') multiplier = 1024 * 1024;
+		else if (u == 'g') multiplier = 1024 * 1024 * 1024;
+		else
+			throw std::runtime_error("Invalid unit: " + std::string(1, u));
+		numberStr = sizeStr.substr(0, sizeStr.size() - 1);
+		if (numberStr.empty())
+			throw std::runtime_error("Missing numeric value before unit");
+	}
+
+	size_t number = utils::toSizeT(numberStr); // throw exception if non-digit or overflow
+	if (number > (MAX_SIZE_T / multiplier)) // this calculation is overflow-safe
+		throw std::runtime_error("Too large number: "
+			+ sizeStr + " (max is " + utils::toString(MAX_SIZE_T) + " bytes)");
+	return number * multiplier;
 }
 
 std::vector<ServerBlock> const&	Config::getServers() const {
