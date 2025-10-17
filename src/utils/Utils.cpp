@@ -1,4 +1,4 @@
-#include "utils/utils.hpp"
+#include "utils/Utils.hpp"
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -66,4 +66,12 @@ std::string& utils::normalizePath(std::string& path) {
 	if (path.size() > 1 && path[path.size() - 1] == '/')
 		path.erase(path.size() - 1);
 	return path;
+}
+
+std::string	utils::toLowerCase(const std::string& str)
+{
+	std::string normalized = str;
+	for (size_t i = 0; i < normalized.length(); ++i)
+		normalized[i] = std::tolower(normalized[i]);
+	return normalized;
 }

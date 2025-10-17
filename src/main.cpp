@@ -1,5 +1,5 @@
 #include <config/Config.hpp>
-#include "constants.hpp"
+#include "Constants.hpp"
 #include "http/dev.http.hpp"
 #include "router/Router.hpp"
 #include <iostream>
@@ -12,11 +12,13 @@ int main(int argc, char** argv) {
 	try {
 		Config cfg(argv[1]);
 		if (DEVMODE) {
-			cfg.print();
-			//dev::runParserTests();
-			Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
-			Router router(request, cfg.getServers());
-			router.print();
+			//cfg.print();
+			//dev::runParserValidationTests();
+			//dev::runParsedContentTests();
+			dev::runResponseTests();
+			//Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			//Router router(request, cfg.getServers());
+			//router.print();
 		}
 		//Server server(cfg);
 		//server.run(cfg);

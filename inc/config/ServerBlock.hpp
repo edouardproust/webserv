@@ -2,7 +2,7 @@
 #define SERVER_BLOCK_HPP
 
 #include "config/LocationBlock.hpp"
-#include "typedefs.hpp"
+#include "Typedefs.hpp"
 #include <string>
 #include <vector>
 #include <map>

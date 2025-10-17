@@ -8,12 +8,13 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
 BASE_SRC_FILES = \
 	main.cpp \
-	utils/utils.cpp \
+	utils/Utils.cpp \
 	config/Config.cpp \
 	config/LocationBlock.cpp \
 	config/ServerBlock.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
+	http/Response.cpp \
 	router/Router.cpp
 
 DEV_SRC_FILES = \
