@@ -20,6 +20,7 @@ Request& Request::operator=(const Request& other)
 		this->_queryString = other._queryString;
 		this->_version = other._version;
 		this->_headers = other._headers;
+		this->_contentType = other._contentType;
 		this->_body = other._body;
 	}
 	return (*this);

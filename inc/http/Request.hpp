@@ -37,11 +37,11 @@ class Request
 		const std::string&	getMethod() const;
 		const std::string&	getRequestTarget() const;
 		const std::string&	getPath() const;
+		const std::string&	getQueryString() const;
 		const std::string&	getVersion() const;
 		const std::map<std::string, std::string>&	getHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
-		const std::string&	getQueryString() const;
 
 		void	setStatus(ParseStatus status);
 		void	setMethod(std::string const& method);
