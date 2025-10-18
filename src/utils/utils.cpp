@@ -19,18 +19,34 @@ bool	utils::isInt(std::string const& str)
 }
 
 bool	utils::isAccessibleDirectory(std::string const& path) {
-	// is not empty and starts with '/' ?
+	// not empty and starts with '/'
 	if (path.empty() || path[0] != '/')
 		return false;
-	// is a directory ?
+	// check directory file type
 	struct stat fileinfo;
 	if (stat(path.c_str(), &fileinfo) == -1)
 		return false;
-	if ((fileinfo.st_mode & S_IFDIR) == 0)
+	if (!S_ISDIR(fileinfo.st_mode))
 		return false;
 	// is accessible ?
 	if (access(path.c_str(), R_OK | X_OK) != 0)
     	return false;
+	return true;
+}
+
+bool	utils::isExecutableFile(std::string const& path) {
+	// not empty and starts with '/'
+	if (path.empty() || path[0] != '/')
+		return false;
+	struct stat fileinfo;
+	if (stat(path.c_str(), &fileinfo) == -1)
+		return false;
+	// check regular file type
+	if (!S_ISREG(fileinfo.st_mode))
+		return false;
+	// check execute permission
+	if (access(path.c_str(), X_OK) != 0)
+		return false;
 	return true;
 }
 
@@ -70,9 +86,20 @@ std::string& utils::normalizePath(std::string& path) {
 	return path;
 }
 
+/**
+ * Returns empty string "" in cse of failure.
+ */
 std::string	utils::getFileExtension(std::string const& path) {
 	size_t dotPos = path.rfind('.');
 	if (dotPos == std::string::npos || dotPos == path.length() - 1)
 		return "";
 	return path.substr(dotPos);
+}
+
+std::string	utils::toLowerCase(const std::string& str)
+{
+	std::string normalized = str;
+	for (size_t i = 0; i < normalized.length(); ++i)
+		normalized[i] = std::tolower(normalized[i]);
+	return normalized;
 }

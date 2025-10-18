@@ -21,12 +21,16 @@ namespace utils {
 
 	bool	isInt(std::string const&);
 	bool	isAccessibleDirectory(std::string const& path);
+	bool	isExecutableFile(std::string const& path);
+
+
 	bool	isAbsolutePath(std::string const& path);
 
 	size_t	toSizeT(std::string const&);
 
 	std::string&	normalizePath(std::string& path);
 	std::string		getFileExtension(std::string const& path);
+	std::string		toLowerCase(const std::string& str);
 
 }
 

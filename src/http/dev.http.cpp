@@ -1,23 +1,19 @@
 #include "http/dev.http.hpp"
-#include "http/Request.hpp"
-#include "http/RequestParser.hpp"
-#include "http/dev.http.hpp"
+#include "utils/utils.hpp"
 #include <iostream>
 
-std::string	dev::parseStatusToString(ParseStatus status) {
-	switch (status) {
-		case PARSE_SUCCESS:
-			return ("OK");
-		case PARSE_ERR_BAD_REQUEST:
-			return ("PARSE_ERR_BAD_REQUEST");
-		case PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED:
-			return ("PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED");
-		default:
-			return ("UNKNOWN");
+Request const&	dev::parseRequest(std::string const& rawRequest) {
+	static RequestParser parser;
+	static Request request;
+	parser.parseRequest(request, rawRequest);
+	if (request.getStatus() != PARSE_SUCCESS) {
+		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus()));
 	}
+	return (request);
 }
 
-void dev::runParserTests() {
+void dev::runParserValidationTests()
+{
 	RequestParser parser;
 
 	const char* descriptions[] = {
@@ -36,38 +32,146 @@ void dev::runParserTests() {
 		"Extra spaces after version - Valid", //only whitespaces valid-everything else invalid even tabs
 		"Empty line after request line - Invalid", //here strictly following RFC, nginx allows it but doesn't make sense
 		"Two empty lines after headers - Valid",   //Extra lines considered as body
-		"Spaces after header name - Invalid",
-		"Spaces after headers - Valid"
+		"Spaces after header name (before colon)- Invalid",
+		"Spaces after headers - Valid",
+		"HTTP 1.1 without host header - Invalid",
+		"POST with no body and without content-length header - Valid", //since there is no body, content-length header is not required
+		"POST with body but wrong content-length header value - Invalid",
+		"POST with body but NO content-length header at all - Invalid",
+		"Empty header value - Valid"
 	};
 
 	const char* rawRequests[] = {
-		"GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\nhost: value\twith\ttabs\r\n\r\nHello world",
-		"     GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
-		"GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n",
-		"get /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
-		"GET index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
+		"GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 11\r\nhost: value\twith\ttabs\r\n\r\nHello world",
+		"     GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n",
+		"GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n",
+		"get /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
 		"",
-		"GET HTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
-		"GET/index.htmlHTTP/1.0\r\nHost: localhost:8080\r\n\r\n",
+		"GET HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET/index.htmlHTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
 		"GET /index.html HTTP/4.0\r\nHost: localhost:8080\r\n\r\n",
-		"GET    /index.html    HTTP/1.0\r\nHost: localhost\r\n\r\n",
-		"GET\t/index.html\tHTTP/1.0\r\nHost: localhost\r\n\r\n",
-		"GET /index123&.html HTTP/1.0\r\nHost: localhost\r\n\r\n",
-		"GET /index.html HTTP/1.0   \r\nHost: localhost\r\n\r\n",
-		"GET /index.html HTTP/1.0\r\n\r\nHost: localhost\r\n\r\n",
-		"POST /index.html HTTP/1.0\r\nHost: localhost\r\n\r\n\r\n",
-		"POST /index.html HTTP/1.0\r\nHost\t   : localhost\r\n\r\n",
-		"POST /index.html HTTP/1.0\r\nHost: localhost    \t \v   \r\n\r\n"
+		"GET    /index.html    HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET\t/index.html\tHTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET /index123&.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"GET /index.html HTTP/1.1   \r\nHost: localhost:8080\r\n\r\n",
+		"GET /index.html HTTP/1.1\r\n\r\nHost: localhost:8080\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 2\r\n\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost\t   : localhost:8080\r\nContent-Length: 0\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 0   \r\n\r\n",
+		"POST /index.html HTTP/1.1\r\n\r\nContent-Length: 0\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 7\r\n\r\nHello",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\nHello",
+		"POST /index.html HTTP/1.1\r\nHost: localhost:8080\r\nTest:  \t \r\n\r\n",
 	};
 
 	const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
-
 	for (int i = 0; i < numTests; i++) {
 		Request request;
 		parser.parseRequest(request, rawRequests[i]);
-		ParseStatus status = request.getStatus();
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
-			<< (status == PARSE_SUCCESS ? "PASS" : "FAIL")
-			<< " (" << parseStatusToString(status) << ")" << std::endl;
+			<< (request.getStatus() == PARSE_SUCCESS ? "PASS" : "FAIL")
+			<< " (" << request.getStatus() << ")" << std::endl;
 	}
+}
+
+void dev::runParsedContentTests()
+{
+	RequestParser parser;
+
+	struct ContentTest
+	{
+        const char* description;
+        const char* rawRequest;
+    };
+
+	ContentTest tests[] =
+	{
+        {"Basic GET with query", "GET /search?q=hello&lang=fr HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"Multiple query params", "GET /api/users?id=123&name=john&age=30 HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"POST with body - JSON", "POST /submit HTTP/1.1\r\nHost: localhost\r\nContent-Length: 15\r\nContent-Type: application/json\r\n\r\n{\"key\":\"value\"}"},
+        {"Header normalization", "GET / HTTP/1.1\r\nHOST: example.com\r\nCONTENT-TYPE: text/html\r\nUser-Agent: Test\r\n\r\n"},
+        {"Mixed case headers", "GET /test HTTP/1.1\r\nHost: localhost\r\nX-Custom-Header: value\r\nX-ANOTHER-HEADER: anotherValue\r\n\r\n"},
+        {"Path with special chars", "GET /files/123-abc_test.html HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"Empty query", "GET /search? HTTP/1.1\r\nHost: localhost\r\n\r\n"},
+        {"Complex URL", "GET /path/to/file?param1=value1&param2=value2&flag=true HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n"},
+        // OWS Trimming Tests
+        {"OWS around header value - spaces", "GET / HTTP/1.1\r\nHost:   localhost  \r\nContent-Type:  text/html  \r\n\r\n"},
+        {"OWS around header value - tabs", "GET / HTTP/1.1\r\nHost:\tlocalhost\t\r\nUser-Agent:\t\tTest\t\r\n\r\n"},
+        {"OWS around header value - mixed", "GET / HTTP/1.1\r\nHost: \t localhost \t \r\nContent-Length:  11  \r\n\r\n"},
+        {"Header with only OWS value", "GET / HTTP/1.1\r\nEmpty-Header:   \t  \r\nHost: localhost\r\n\r\n"}
+    };
+
+    const int numTests = sizeof(tests) / sizeof(tests[0]);
+
+    for (int i = 0; i < numTests; i++)
+	{
+        std::cout << "\n=== Test " << (i + 1) << ": " << tests[i].description << " ===" << std::endl;
+        std::cout << "Raw request: " << tests[i].rawRequest << std::endl;
+
+        Request request;
+        parser.parseRequest(request, tests[i].rawRequest);
+
+        std::cout << "Parse status: " << request.getStatus() << std::endl;
+
+        if (request.getStatus() == PARSE_SUCCESS)
+		{
+            std::cout << "--- PARSED CONTENT ---" << std::endl;
+            std::cout << request;
+        }
+		else
+            std::cout << "--- PARSE FAILED ---" << std::endl;
+        std::cout << "======================" << std::endl;
+    }
+}
+
+void dev::runResponseTests()
+{
+
+	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
+    Response response1;
+    response1.setStatusCode(200);
+	response1.setHeader("Content-Type", "text/html");
+	response1.setBody("<html><body><h1>Hello World</h1></body></html>");
+    std::cout << response1.stringify() << std::endl;
+
+	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
+    Response response2;
+	response2.setError(404);
+	std::cout << response2.stringify() << std::endl;
+
+	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
+	Response response3;
+	response3.setStatusCode(200);
+	response3.setHeader("Content-Type", "text/plain");
+	response3.setHeader("Content-Length", "100");
+	response3.setBody("");
+	std::cout << response3.stringify() << std::endl;
+
+	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
+	Response response4;
+	response4.setError(500);
+	std::cout << response4.stringify() << std::endl;
+
+	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
+	Response response5;
+	response5.setStatusCode(200);
+	response5.setHeader("Random-Header", "random value");
+	response5.setBody("Our Webserv is OP");
+	std::cout << response5.stringify() << std::endl;
+
+	std::cout << "\n---Test 6: 200 OK, random connection---" << std::endl << std::endl ;
+	Response response6;
+	response6.setStatusCode(200);
+	response6.setHeader("connection", "Random");
+	response6.setBody("Connection is either keep-alive or close, else keep-alive by default");
+	std::cout << response6.stringify() << std::endl;
+
+	std::cout << "\n---Test 7: 200 OK, random server---" << std::endl << std::endl ;
+	Response response7;
+	response7.setStatusCode(200);
+	response7.setHeader("Server", "Nginx");
+	response7.setBody("It must always be webserv/1.0!");
+	std::cout << response7.stringify() << std::endl;
 }

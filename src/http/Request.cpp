@@ -3,14 +3,7 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() :
-	method(""),
-	path(""),
-	version(""),
-	body(""),
-	queryString("q=webserv&category=42"),
-	contentType("text/html")
-{}
+Request::Request() : _status(NOT_SET), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -20,11 +13,14 @@ Request& Request::operator=(const Request& other)
 {
 	if (this != &other)
 	{
-		this->method = other.method;
-		this->path = other.path;
-		this->version = other.version;
-		this->headers = other.headers;
-		this->body = other.body;
+		this->_status = other._status;
+		this->_method = other._method;
+		this->_requestTarget = other._requestTarget;
+		this->_path = other._path;
+		this->_queryString = other._queryString;
+		this->_version = other._version;
+		this->_headers = other._headers;
+		this->_body = other._body;
 	}
 	return (*this);
 }
@@ -46,34 +42,49 @@ bool	Request::isSupportedMethod(std::string const& method) {
 	return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-ParseStatus const& Request::getStatus() const
+const ParseStatus& Request::getStatus() const
 {
 	return (this->_status);
 }
 
-std::string const& Request::getMethod() const
+const std::string& Request::getMethod() const
 {
-	return (this->method);
+	return this->_method;
 }
 
-std::string const& Request::getPath() const
+const std::string& Request::getRequestTarget() const
 {
-	return (this->path);
+	return this->_requestTarget;
 }
 
-std::string const& Request::getVersion() const
+const std::string& Request::getPath() const
 {
-	return (this->version);
+	return this->_path;
 }
 
-std::map<std::string, std::string> const& Request::getHeaders() const
+const std::string& Request::getQueryString() const
 {
-	return (this->headers);
+	return this->_queryString;
 }
 
-std::string const& Request::getBody() const
+const std::string& Request::getVersion() const
 {
-	return (this->body);
+	return this->_version;
+}
+
+const std::map<std::string, std::string>& Request::getHeaders() const
+{
+	return this->_headers;
+}
+
+const std::string& Request::getContentType() const
+{
+    return _contentType;
+}
+
+const std::string& Request::getBody() const
+{
+	return this->_body;
 }
 
 void	Request::setStatus(ParseStatus status)
@@ -81,35 +92,66 @@ void	Request::setStatus(ParseStatus status)
 	this->_status = status;
 }
 
-void	Request::setMethod(std::string const& method)
+void	Request::setMethod(std::string const& _method)
 {
-	this->method = method;
+	this->_method = _method;
 }
 
-void	Request::setPath(const std::string& path)
+void	Request::setRequestTarget(const std::string& _requestTarget)
 {
-	this->path = path;
+	this->_requestTarget = _requestTarget;
 }
 
-void	Request::setVersion(const std::string& version)
+void	Request::setPath(const std::string& _path)
 {
-	this->version = version;
+	this->_path = _path;
+}
+
+void	Request::setQueryString(const std::string& _queryString)
+{
+	this->_queryString = _queryString;
+}
+
+void	Request::setVersion(const std::string& _version)
+{
+	this->_version = _version;
 }
 
 void	Request::addHeader(const std::string& name, const std::string& value)
 {
-	headers[name] = value;
+	_headers[name] = value;
 }
 
-void	Request::setBody(const std::string& body)
+void Request::setContentType(const std::string& value)
 {
-	this->body = body;
+    _contentType = value;
 }
 
-std::string const& Request::getQueryString() const {
-	return queryString;
+void	Request::setBody(const std::string& _body)
+{
+	this->_body = _body;
 }
 
-std::string const& Request::getContentType() const {
-	return contentType;
+std::ostream& operator<<(std::ostream& os, const Request& request)
+{
+	os << "Request:\n";
+	ParseStatus const& status = request.getStatus();
+	os << "- Status: ";
+	if (status != NOT_SET) os << status << "\n";
+	else os << "[empty]\n";
+	std::string const& method = request.getMethod();
+	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
+	os << "- Request Target: " << request.getRequestTarget() << "\n";
+	os << "- Path: " << request.getPath() << "\n";
+	if (!request.getQueryString().empty())
+		os << "- Query String: " << request.getQueryString() << "\n";
+	os << "- Version: " << request.getVersion() << "\n";
+	os << "- Headers: " << request.getHeaders().size() << "\n";
+	const std::map<std::string, std::string>& headers = request.getHeaders();
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+		it != headers.end(); ++it)
+		os << "  - " << it->first << ": " << it->second << "\n";
+	os << "- Body: '" << request.getBody() << "'\n";
+	os << "- Body Length: " << request.getBody().length() << "\n";
+    return os;
 }

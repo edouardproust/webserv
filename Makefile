@@ -15,6 +15,7 @@ BASE_SRC_FILES = \
 	config/ServerBlock.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
+	http/Response.cpp \
 	router/Router.cpp \
 	static/StaticHandler.cpp \
 	cgi/CGIHandler.cpp

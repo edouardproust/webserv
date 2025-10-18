@@ -9,6 +9,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 ## TODO
 - Config parsing:
 	- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
+	- Accept `ssl` option in `listen` directive ?
 	- [DONE -> tests needed]: check that the cgi executable is valid: `access(path, X_OK)`
 	- check if `clientMaxBodySize` is well formated ?
 	- Support IPv6 ?
@@ -133,3 +134,4 @@ make
 - https://www.rfc-editor.org/rfc/rfc9112.html
 - https://www.rfc-editor.org/rfc/rfc9110
 - https://en.wikipedia.org/wiki/HTTP
+- https://http.dev/400

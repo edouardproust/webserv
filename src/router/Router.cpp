@@ -10,6 +10,14 @@ Router::Router(Request const& request, std::vector<ServerBlock> const& servers, 
 
 Router::~Router() {}
 
+/**
+ * Dispatch the request to corresponding handler by crossing data between Config and Request.
+ *
+ * Notes:
+ * - The Router does not check the validity of the data inside Config and Request objects,
+ *   so the data needs to be 100% correct when passed to the Router. Related parsers are
+ *   responsible for checking the data thoroughly.
+ */
 void Router::dispatchRequest() {
     ParseStatus requestStatus = _request.getStatus();
     if (requestStatus != PARSE_SUCCESS) {
@@ -21,60 +29,14 @@ void Router::dispatchRequest() {
 	if (!_location)
 		_location = &server.getDefaultLocation();
 
-	//if (_location->isRedirectionLocation())
-
-
-	/* Checks
-	Resume:
-	return → rediriger si présent.
-	1. limit_except → si méthode non autorisée → 405 (avec Allow).
-	2. client_max_body_size → si Content-Length connu et > limit → 413. Si chunked → parser gère.
-	3. Path normalization & security → rejeter si resolved path sort du root → 403.
-	4. Décider CGI vs Static (extension mapping) ; si CGI attendu mais executor manquant, 500 ou config-time fail.
-	5. Laisser StaticHandler faire stat, index search, autoindex, permissions et renvoyer 200/404/403 selon cas.
-	6. CGIHandler s’occupe du fork/exec, et doit renvoyer 500 si execve échoue.
-
-	// 1. Redirection
-	if (!_location.getReturn().empty())
-		sentResponse(3xx with Location: (status and target));
-
-	// 2. Unauthorized Method
-	std::set<std::string> limitExcept = _location.getLimitExcept();
-	if (!limitExcept.empty() && !limitExcept.find(reauest.getMethod()))
-		sendRespose(405 Method Not Allowed + header Allow: <liste>);
-
-	// 3. File too large
-		Taille du body (client_max_body_size)
-		- if Request::contentLength != -1 and length > limit → 413 Payload Too Large.
-		- Si Transfer-Encoding: chunked géré par le parser, vérifier la taille totale pendant la lecture si possible et appliquer la même limite.
-
-	// 4. Path normalization & sécurité
-		- Concaténer le root + normalizedPath → candidate.
-		- Obtenir le chemin canonique du candidate
-		- Vérifier que le chemin résolu ne sort pas du root (prévenir .. / path traversal).
-		- Vérifier que le chemin canonique commence par le chemin canonique du root
-		- Attention aux symlinks
-		- Si résolution mène hors root → 403 Forbidden.
-		- If request path ends by / or if stat(request.path) == S_ISDIR -> Search config.indexFiles in order: filePath + "/" + indexFiles[i]. if not found and "autoindex on -> generate listing, else -> else response 403
-
-	// 5. Autoindex
-		- Si pas d'index et `autoindex:on` Produire page de listing des fichiers
-		- Si pas d index et `autoindex:off ou empty: reponse 403/404 (selon config)
-
-	// 6. Existence / permissions de la ressource (optionnel dans Router)
-		- Idéal : le Router ne lit pas les fichiers, laisse StaticHandler faire stat(); mais le Router peut décider
-			- si le path se termine par / → il peut attendre qu’on recherche des index (ou demander StaticHandler de le faire).
-		- Toutefois le Router peut décider d’envoyer directement un code 405/403 avant d’appeler StaticHandler si la méthode est incompatible.
-	*/
-
-	// 6. CGI
-    std::string executor;
-    if (_location->isCgiLocation()) { // the request path matches a CGI location
-        executor = _location->getCgiExecutor(utils::getFileExtension(_request.getPath()));
+    std::string executor = "";
+	std::string const& extension = utils::getFileExtension(_request.getPath());
+    if (_location->isCgiLocation() && !extension.empty()) { // the request path matches a CGI location and has an extension
+        executor = _location->getCgiExecutor(extension); // if no executor found for this extension: executor = ""
     }
 	if (!executor.empty()) { // the file extension is handled by the CGI config of this location
         std::string scriptPath = _resolveScriptPath(_request.getPath(), _location);
-        std::string executor = _location->getCgiExecutor(utils::getFileExtension(_request.getPath()));
+        std::string executor = _location->getCgiExecutor(extension);
         CGIHandler::handleRequest(
             scriptPath,
             executor,
@@ -85,8 +47,6 @@ void Router::dispatchRequest() {
             _request.getContentType()
         );
     } else { // not a CGI request or file extension not handled by this location
-		std::cout << "DEBUGG" << std::endl;
-
         std::string filePath = _resolveFilePath(_request.getPath(), _location);
         StaticHandler::sendStaticContent(
             filePath,
@@ -94,30 +54,6 @@ void Router::dispatchRequest() {
             _request.getHeaders()
         );
     }
-
-	/*
-	Checks to do in CGIHandler:
-	- CGIHandler:
-		- If execve fails (invalid executable path): send back 500 response
-	- StaticHandler:
-		- File size > matchingLocation.getClientMaxBodySize();
-	*/
-
-	/*
-	AVA work:
-	- Verifier que path n est pas trop long (et stocker la valeur de PATH_MAX dans constants.cpp)
-	- Calculer et checker la taille du body de la raw request et la stocker dans Request::_bodySize
-	- Idem si on a "Transfer-Encoding: chunked" ? -> Additionner la taille de chaque chunk
-	- Requête : GET /images/%2e%2e/%2e%2e/etc/passwd (encodage URL) -> il faut décoder et normaliser:
-		- Décoder %xx (URL decode)
-		- Remplacer // par /, résoudre . et .. segments (removal of dot-segments).
-	-  Checker présence/validité de Content-Length
-		- Pour méthodes qui requièrent body (PUT/POST) : si Content-Length absent et pas de chunked → 411 Length Required (ou 400 selon ta politique), mais souvent parser gère ça plus haut.
-	*/
-
-	/* Daniel work:
-	- Checker le cas ou on a un "Transfert-encoding: chuncked": les donnees arrivent de maniere differente: chaque block commence par la taille hexadecimal puis un bloc de taille 0 marque la fin.
-	*/
 }
 
 ServerBlock const&	Router::_findMatchingServer() const {
@@ -190,8 +126,8 @@ std::ostream&	operator<<(std::ostream& os, Router const& rhs) {
 		os << "  - " << it->first << ": '" << it->second << "'\n";
 	}
 	LocationBlock const* matchingLoc = rhs.getMatchingLocation();
-	os << "- Matching location:\n";
-	if (matchingLoc) os << *matchingLoc;
-	else os << "No match";
+	os << "- Matching location:";
+	if (matchingLoc) os << "\n" << *matchingLoc;
+	else os << " [empty]";
 	return os;
 }

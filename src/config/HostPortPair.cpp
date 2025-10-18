@@ -54,7 +54,7 @@ void	HostPortPair::_setHost(std::string const& hostStr) {
 	// -- additional supported host names can be added here --
 
 	if (!_isValidIP(host))
-		throw std::runtime_error("Invalid listen host IP address: " + host);
+		throw std::runtime_error("Invalid host IP: " + host);
 	_host = host;
 }
 

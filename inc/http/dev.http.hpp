@@ -4,12 +4,14 @@
 #include "constants.hpp"
 #include "http/Request.hpp"
 #include "http/RequestParser.hpp"
+#include "http/Response.hpp"
 
 namespace dev {
 
-	std::string		parseStatusToString(ParseStatus);
-	void			runParserTests();
-
+	Request const&	parseRequest(std::string const& rawRequest);
+	void			runParserValidationTests();
+	void			runParsedContentTests();
+	void 			runResponseTests();
 }
 
 #endif

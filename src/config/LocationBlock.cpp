@@ -235,8 +235,9 @@ void	LocationBlock::_setCgi(Tokens const& tokens) {
 		throw std::runtime_error("Extension must start with a dot: " + extension);
     if (_cgi.find(extension) != _cgi.end())
 		throw std::runtime_error("Duplicate extension: " + extension);
-	if (!utils::isAccessibleDirectory(executable)) // TODO test this check works
-		throw std::runtime_error("Executable cannot be accessed on host: " + executable);
+	if (!utils::isExecutableFile(executable))
+		throw std::runtime_error("Executable cannot be accessed on host: " + executable
+			+ "\nPlease review the path or install the missing dependencies");
 	_cgi[extension] = executable;
 }
 
@@ -289,6 +290,8 @@ std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
 }
 
 std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
+	if (extension.empty())
+		return "";
 	CgiDirective::const_iterator it = _cgi.find(extension);
 	if (it != _cgi.end())
 		return it->second;
