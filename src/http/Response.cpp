@@ -1,86 +1,106 @@
 #include "http/Response.hpp"
-#include "utils/Utils.hpp"
+#include "utils/utils.hpp"
 #include <ctime>
 
-Response::Response() {}
+Response::Response() : _statusCode(200), _reasonPhrase("OK")
+{
+	_headers["server"] = "webserv/1.0";
+	_headers["date"] = _getCurrentDate();
+	_headers["connection"] = "keep-alive";
+}
 
 Response::Response(const Response& other)
-{
-	(void)other;
-}
+	: _statusCode(other._statusCode),
+	  _reasonPhrase(other._reasonPhrase),
+	  _headers(other._headers),
+	  _body(other._body) {}
 
 Response& Response::operator=(const Response& other)
 {
-	(void)other;
-	return (*this);
+	if (this != &other)
+	{
+		_statusCode = other._statusCode;
+		_reasonPhrase = other._reasonPhrase;
+		_headers = other._headers;
+		_body = other._body;
+	}
+	return *this;
 }
 
 Response::~Response() {}
 
-std::string	Response::buildResponse(int statusCode, const std::map<std::string, std::string>& headers,
-					const std::string& body)
+std::string	Response::stringify() const
 {
 	std::stringstream response;
-	std::string reasonPhrase = _getReasonPhrase(statusCode);
-	response << _buildStatusLine(statusCode, reasonPhrase);
-	std::map<std::string, std::string> allHeaders = headers;
-	allHeaders["server"] = "webserv/1.0";
-	allHeaders["date"] = _getCurrentDate();
-	if (allHeaders.find("content-type") == allHeaders.end() && !body.empty())
-		allHeaders["content-type"] = "text/html"; //set text/html as default only if it's not provided in the request
-	std::stringstream lengthStream;
-	lengthStream << body.length();
-	allHeaders["content-length"] = lengthStream.str();
-	if (allHeaders.find("connection") == allHeaders.end())
-		allHeaders["connection"] = "keep-alive";
-	else
-	{
-		std::string normalizedConn = utils::toLowerCase(allHeaders["connection"]);
-		if (normalizedConn != "keep-alive" && normalizedConn != "close")
-			allHeaders["connection"] = "keep-alive";
-	}
-	response << _buildHeaders(allHeaders);
+
+	response << _buildStatusLine();
+	response << _buildHeaders();
 	response << "\r\n";
-	if (!body.empty())
-		response << body;
+	if (!_body.empty())
+		response << _body;
 	return response.str();
 }
 
-std::string Response::buildErrorResponse(int statusCode)
+int	Response::getStatusCode() const
 {
-	std::map<std::string, std::string> headers;
-	headers["content-type"] = "text/html";
-	std::string body = _generateErrorPage(statusCode);
-	return buildResponse(statusCode, headers, body);
+	return _statusCode;
 }
 
-std::string Response::_buildStatusLine(int statusCode, const std::string& reasonPhrase) const
+const std::string& Response::getReasonPhrase() const
 {
-	std::stringstream statusLine;
-
-	statusLine << "HTTP/1.1 " << statusCode << " " << reasonPhrase << "\r\n";
-	return statusLine.str();
+	return _reasonPhrase;
 }
 
-std::string Response::_buildHeaders(const std::map<std::string, std::string>& headers) const
+const std::map<std::string, std::string>& Response::getHeaders() const
 {
-	std::stringstream headerStream;
+	return _headers;
+}
 
-	headerStream << "Server: " << headers.find("server")->second << "\r\n";
-	headerStream << "Date: " << headers.find("date")->second << "\r\n";
-	if (headers.find("content-type") != headers.end())
-		headerStream << "Content-Type: " << headers.find("content-type")->second << "\r\n";
-	headerStream << "Content-Length: " << headers.find("content-length")->second << "\r\n";
-	headerStream << "Connection: " << headers.find("connection")->second << "\r\n";
-	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
-		it != headers.end(); ++it)
-		{
-			const std::string& key = it->first;
-			if (key != "server" && key != "date" && key != "content-type" &&
-				key != "content-length" && key != "connection")
-					headerStream << key << ": " << it->second << "\r\n";
-		}
-	return headerStream.str();
+const std::string& Response::getBody() const
+{
+	return _body;
+}
+
+void	Response::setStatusCode(int statusCode)
+{
+	_statusCode = statusCode;
+	_reasonPhrase = _getReasonPhrase(statusCode);
+}
+
+void	Response::setHeader(const std::string& name, const std::string& value)
+{
+	std::string normalizedName = utils::toLowerCase(name);
+
+	if (normalizedName == "connection")
+	{
+		std::string normalizedValue = utils::toLowerCase(value);
+		if (normalizedValue == "keep-alive" || normalizedValue == "close")
+			_headers[normalizedName] = normalizedValue;
+		else
+			_headers[normalizedName] = "keep-alive";
+		return ;
+	}
+	_headers[normalizedName] = value;
+}
+
+void	Response::setBody(const std::string& body)
+{
+	_body = body;
+	std::stringstream lengthStream;
+	lengthStream << body.length();
+	_headers["content-length"] = lengthStream.str();
+	if (_headers.find("content-type") == _headers.end() && !body.empty())
+		_headers["content-type"] = "text/html";
+	if (body.empty())
+		_headers.erase("content-type");
+}
+
+void	Response::setError(int statusCode)
+{
+	setStatusCode(statusCode);
+	setHeader("Content-Type", "text/html");
+	std::string errorBody = _generateErrorPage();
+	setBody(errorBody);
 }
 
 std::string Response::_getReasonPhrase(int statusCode) const
@@ -136,19 +156,65 @@ std::string Response::_getCurrentDate() const
 	return buffer;
 }
 
-std::string Response::_generateErrorPage(int statusCode) const
+std::string Response::_generateErrorPage() const
 {
 	std::stringstream html;
-	std::string reasonPhrase = _getReasonPhrase(statusCode);
+	std::string reasonPhrase = _getReasonPhrase(_statusCode);
 
 	html << "<html>\n"
 		 << "  <head>\n"
-		 << "    <title>" << statusCode << " " << reasonPhrase << "</title>\n"
+		 << "    <title>" << _statusCode << " " << reasonPhrase << "</title>\n"
 		 << "  </head>\n"
 		 << "  <body>\n"
-		 << "    <center><h1>" << statusCode << " " << reasonPhrase << "</h1></center>\n"
+		 << "    <center><h1>" << _statusCode << " " << reasonPhrase << "</h1></center>\n"
 		 << "    <hr><center>webserv/1.0</center>\n"
 		 << "  </body>\n"
 		 << "</html>";
 	return html.str();
+}
+
+std::string Response::_buildStatusLine() const
+{
+	std::stringstream statusLine;
+
+	statusLine << "HTTP/1.1 " << _statusCode << " " << _reasonPhrase << "\r\n";
+	return statusLine.str();
+}
+
+std::string Response::_buildHeaders() const
+{
+	std::stringstream headerStream;
+
+	headerStream << "Server: " << _headers.find("server")->second << "\r\n";
+	headerStream << "Date: " << _headers.find("date")->second << "\r\n";
+	if (_headers.find("content-type") != _headers.end())
+		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
+	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
+	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
+	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
+		it != _headers.end(); ++it)
+		{
+			const std::string& key = it->first;
+			if (key != "server" && key != "date" && key != "content-type" &&
+				key != "content-length" && key != "connection")
+					headerStream << key << ": " << it->second << "\r\n";
+		}
+	return headerStream.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const Response& response)
+{
+	os << "Response:\n";
+	os << "- Status: " << response.getStatusCode() << " " << response.getReasonPhrase() << "\n";
+	os << "- Headers: " << response.getHeaders().size() << "\n";
+	const std::map<std::string, std::string>& headers = response.getHeaders();
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+		it != headers.end(); ++it)
+			os << "  - " << it->first << ": " << it->second << "\n";
+	os << "- Body: '" << response.getBody() << "'\n";
+	os << "- Body Length: " << response.getBody().length() << "\n";
+	os << "- Raw HTTP Response Preview:\n";
+	std::string raw = response.stringify();
+	os << "  " << raw << std::endl ;
+	return os;
 }

@@ -1,5 +1,5 @@
 #include <config/Config.hpp>
-#include "Constants.hpp"
+#include "constants.hpp"
 #include "http/dev.http.hpp"
 #include "router/Router.hpp"
 #include <iostream>

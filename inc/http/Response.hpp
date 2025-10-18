@@ -8,11 +8,16 @@ class Response
 {
 	private:
 
-	std::string	_buildStatusLine(int statusCode, const std::string& reasonPhrase) const;
-	std::string	_buildHeaders(const std::map<std::string, std::string>& headers) const;
+	int	_statusCode;
+	std::string	_reasonPhrase;
+	std::map<std::string, std::string> _headers;
+	std::string _body;
+
 	std::string	_getReasonPhrase(int statusCode) const;
 	std::string	_getCurrentDate() const;
-	std::string _generateErrorPage(int statusCode) const;
+	std::string _generateErrorPage() const;
+	std::string	_buildStatusLine() const;
+	std::string	_buildHeaders() const;
 
 	public:
 
@@ -21,9 +26,19 @@ class Response
 	Response& operator=(const Response& other);
 	~Response();
 
-	std::string	buildResponse(int statusCode, const std::map<std::string, std::string>& headers, const std::string& body);
-	std::string	buildErrorResponse(int statusCode); //for later
+	int	getStatusCode() const;
+	const std::string& getReasonPhrase() const;
+	const std::map<std::string, std::string>& getHeaders() const;
+	const std::string& getBody() const;
 
+	void	setStatusCode(int statusCode);
+	void	setHeader(const std::string& name, const std::string& value);
+	void	setBody(const std::string& body);
+	void	setError(int statusCode);
+
+	std::string	stringify() const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Response& response);
 
 #endif

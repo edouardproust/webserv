@@ -127,49 +127,50 @@ void dev::runParsedContentTests()
 
 void dev::runResponseTests()
 {
-    Response response;
     
 	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
-    std::map<std::string, std::string> headers1;
-    headers1["Content-Type"] = "text/html";
-	std::string body1 = "<html><body><h1>Hello World</h1></body></html>";
-    std::string response200 = response.buildResponse(200, headers1, body1);
-    std::cout << response200 << std::endl;
-    
+    Response response1;
+    response1.setStatusCode(200);
+	response1.setHeader("Content-Type", "text/html");
+	response1.setBody("<html><body><h1>Hello World</h1></body></html>");
+    std::cout << response1.stringify() << std::endl;
+
 	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
-    std::map<std::string, std::string> headers2;
-    headers2["Content-Type"] = "text/html";
-	std::string body2 = "<html><body><h1>404 Not Found</h1></body></html>";
-    std::string response404 = response.buildErrorResponse(404);
-    std::cout << response404 << std::endl;
+    Response response2;
+	response2.setError(404);
+	std::cout << response2.stringify() << std::endl;
 
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
-	std::map<std::string, std::string> headers3;
-	headers3["Content-Type"] = "text/plain";
-	headers3["Content-Length"] = "100";
-	std::string emptyBody = "";
-	std::cout << response.buildResponse(200, headers3, emptyBody) << std::endl;
+	Response response3;
+	response3.setStatusCode(200);
+	response3.setHeader("Content-Type", "text/plain");
+	response3.setHeader("Content-Length", "100");
+	response3.setBody("");
+	std::cout << response3.stringify() << std::endl;
 
-	std::cout << "\n---Test 4: 500, with no Content-Type header---" << std::endl << std::endl ;
-	std::map<std::string, std::string> noheaders;
-	std::string testBody = "This is a test body";
-	std::cout << response.buildErrorResponse(500) << std::endl;
+	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
+	Response response4;
+	response4.setError(500);
+	std::cout << response4.stringify() << std::endl;
 
 	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
-	std::map<std::string, std::string> randomHeader;
-	randomHeader["Random-Header"] = "Random value";
-	std::string body3 = "Our Webserv is OP";
-	std::cout << response.buildResponse(200, randomHeader, body3) << std::endl;
+	Response response5;
+	response5.setStatusCode(200);
+	response5.setHeader("Random-Header", "random value");
+	response5.setBody("Our Webserv is OP");
+	std::cout << response5.stringify() << std::endl;
 
 	std::cout << "\n---Test 6: 200 OK, random connection---" << std::endl << std::endl ;
-	std::map<std::string, std::string> connHeader;
-	connHeader["connection"] = "Random";
-	std::string body4 = "Connection is either keep-alive or close, else keep-alive by default";
-	std::cout << response.buildResponse(200, connHeader, body4) << std::endl;
+	Response response6;
+	response6.setStatusCode(200);
+	response6.setHeader("connection", "Random");
+	response6.setBody("Connection is either keep-alive or close, else keep-alive by default");
+	std::cout << response6.stringify() << std::endl;
 
-	std::cout << "\n---Test 6: 200 OK, random server---" << std::endl << std::endl ;
-	std::map<std::string, std::string> servHeader;
-	servHeader["Server"] = "Nginx";
-	std::string body5 = "It must always be webserv!";
-	std::cout << response.buildResponse(200, servHeader, body5) << std::endl;
+	std::cout << "\n---Test 7: 200 OK, random server---" << std::endl << std::endl ;
+	Response response7;
+	response7.setStatusCode(200);
+	response7.setHeader("Server", "Nginx");
+	response7.setBody("It must always be webserv/1.0!");
+	std::cout << response7.stringify() << std::endl;
 }

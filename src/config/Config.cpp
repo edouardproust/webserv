@@ -1,6 +1,6 @@
 #include "config/Config.hpp"
 #include "config/ServerBlock.hpp"
-#include "utils/Utils.hpp"
+#include "utils/utils.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>

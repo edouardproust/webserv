@@ -8,7 +8,7 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
 BASE_SRC_FILES = \
 	main.cpp \
-	utils/Utils.cpp \
+	utils/utils.cpp \
 	config/Config.cpp \
 	config/LocationBlock.cpp \
 	config/ServerBlock.cpp \
