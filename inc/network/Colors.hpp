@@ -9,5 +9,7 @@
 #define FT_EVENT        "[\033[1;35mEVENT\033[0m] "
 #define FT_STATUS       "[\033[1;36mSTATUS\033[0m] "
 #define FT_HIGH_LIGHT_COLOR "\033[1;36m"
+#define RED "\033[31m"
+#define RESET_COLOR "\033[0m"
 #define FT_ERROR "[" RED " ERROR " RESET_COLOR "] "
 #endif

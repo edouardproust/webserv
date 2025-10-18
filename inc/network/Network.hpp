@@ -11,7 +11,7 @@
 #include <vector>
 #include "config/Config.hpp"
 #include "network/Socket.hpp"
-
+#include "utils/signal_handler.hpp"
 #define FT_DEFAULT_CONFIG_FILE "./configurations/webserv.conf"
 #define FT_DEFAULT_CLIENT_BUFFER_SIZE 1024
 #define FT_MAX_EVENT_SIZE 100
@@ -22,14 +22,12 @@
 		Config _config_file;
 		std::vector<Socket *> _connections;
 		std::map<int, std::string> _request_list;
+		
 		int _epoll;
-		bool _is_sudo;
 
 		void epoll();
 		void epollAddServers();
 		int epoll_wait(struct epoll_event *events);
-
-		void checkSudo();
 
 		int isServerSideEvent(int epoll_fd);
 		void recv(int client_fd, struct epoll_event &events_setup);
@@ -39,7 +37,8 @@
 		std::string getBoundry(std::string request);
 
 	public:
-		Network(const char *configuration_file);
+		Network();
+		Network(Config _config_file);
 		~Network();
 		void start_servers();
 

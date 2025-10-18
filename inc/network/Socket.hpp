@@ -17,26 +17,32 @@
 #include <iostream>
 #include <config/Config.hpp>
 
+	struct t_server_config {
+        std::string port;
+        std::vector<std::string> server_names;
+};
+
+
 	class Socket
 	{
 	private:
 		struct addrinfo _hints;
 		struct addrinfo *_servinfo;
 		int _sock;
-		t_server_config _server;
+		ServerBlock _server;
 
 		void setAddrStruct();
 		void loadAddressInfo();
 		void createSocket();
 
 	public:
-		Socket(const t_server_config &server);
+		Socket(const ServerBlock &server);
 		~Socket();
 		void bind();
 		void listen();
 		int accept();
 
-		t_server_config getServer();
+		ServerBlock getServer();
 		int getSock();
 		std::string getPort();
 		std::vector<std::string> getHosts();

@@ -15,14 +15,14 @@ class Config {
 	void		_validate() const;
 
 	// Not used
-	Config();
-	Config(Config const&);
-	Config&	operator=(Config const&);
+	//Config&	operator=(Config const&);
 
 	public:
-
+		Config();
 		Config(std::string const&);
 		~Config();
+
+		size_t size(void) const;
 
 		void	print() const;
 
@@ -31,6 +31,7 @@ class Config {
 		static void			_skipComment(std::string const&, size_t&);
 
 		std::vector<ServerBlock> const&	getServers() const;
+		ServerBlock getServer(size_t server_id) const;
 };
 
 #endif

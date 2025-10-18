@@ -9,7 +9,7 @@
 #include <utility>
 
 class ServerBlock {
-
+	
 	std::string					_root;
 	std::set<IpPortPair>		_listen;
 	unsigned long				_clientMaxBodySize;

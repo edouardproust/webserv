@@ -15,8 +15,13 @@ Config::Config(std::string const& filePath) {
 		throw std::runtime_error("Config: " + std::string(e.what()));
 	}
 }
-
+Config::Config() {}
 Config::~Config() {}
+
+size_t Config::size(void) const
+{
+	return (_servers.size());
+}
 
 std::string	Config::_extractFileContent(std::string const& filePath) {
 	std::ifstream	file(filePath.c_str());
@@ -119,4 +124,7 @@ void	Config::_skipComment(std::string const& content, size_t& index) {
 
 std::vector<ServerBlock> const&	Config::getServers() const {
 	return _servers;
+}
+ServerBlock	Config::getServer(size_t server_id) const {
+	return this->_servers[server_id];
 }

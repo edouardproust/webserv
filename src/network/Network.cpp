@@ -1,38 +1,23 @@
 #include <network/Network.hpp>
 #include <network/Colors.hpp>
+#include <config/Config.hpp>
 #include <errno.h>
 #include <cstring>
 #include <sstream>
 
-Network::Network(const char *configuration_file)
+Network::Network(Config _config_file)
 {
 	// Initializes Ctrl + C signal handler
 	keep();
 
-	std::string str_configuration_file;
-	if (configuration_file == NULL)
-		str_configuration_file = FT_DEFAULT_CONFIG_FILE;
-	else
-		str_configuration_file = configuration_file;
-
-	if (str_configuration_file == "")
-		str_configuration_file = FT_DEFAULT_CONFIG_FILE;
-
 	std::cout
 		<< FT_SETUP
 		<< "Setting up Web server from "
-		<< FT_HIGH_LIGHT_COLOR << str_configuration_file << RESET_COLOR
+		<< FT_HIGH_LIGHT_COLOR << "meu cu" << RESET_COLOR //TODO
 		<< " file."
 		<< std::endl;
 	std::cout << std::endl;
 
-	_config_file = ConfigFile(str_configuration_file);
-
-	checkSudo();
-	if (_is_sudo == true)
-		std::cout << FT_WARNING << "You can do, what SUDO!" << std::endl;
-	if (_config_file.needSudo() == true && _is_sudo == false)
-		throw needSudoException();
 
 	for (size_t i = 0; keep() && i < _config_file.size(); i++)
 		_connections.push_back(new Socket(_config_file.getServer(i)));
@@ -116,19 +101,6 @@ int Network::epoll_wait(struct epoll_event *events)
 	}
 
 	return (nfds);
-}
-
-void Network::checkSudo()
-{
-	struct stat processStat;
-
-	if (stat("/proc/self", &processStat) != 0)
-		throw cantGetUserInfoException();
-
-	if (processStat.st_uid == 0)
-		_is_sudo = true;
-	else
-		_is_sudo = false;
 }
 
 int Network::isServerSideEvent(int epoll_fd)
@@ -226,6 +198,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 
 	if (bytes == -1)
 		std::cout << FT_WARNING << "Failed to receive full request from client [" << client_fd << "]" << std::endl;
+		
 	else if (total_request.length() > 0)
 	{
 		_request_list[client_fd] = total_request;
@@ -250,7 +223,7 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 	try 
 	{
 		//Request request(_request_list[client_fd]);
-		//Response response(request, _connections);
+		//Response response(request, _connections); //TODO
 		std::string msg = response.getResponse();
 		int ret = ::send(client_fd, msg.data(), msg.length(), 0);
 		if (ret == -1)

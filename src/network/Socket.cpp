@@ -1,25 +1,26 @@
 #include <network/Socket.hpp>
+#include <config/ServerBlock.hpp>
 
-Socket::Socket(const t_server_config &server) : _server(server)
+Socket::Socket(const ServerBlock &server) : _server(server)
 {
-	std::cout << FT_SETUP << "Setting up " << FT_HIGH_LIGHT_COLOR << this->_server.server_names[0] << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;
+	std::cout << FT_SETUP << "Setting up " << FT_HIGH_LIGHT_COLOR << "meu cu"<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;
 
 	loadAddressInfo();
 	createSocket();
 
-	std::cout << FT_OK << FT_HIGH_LIGHT_COLOR << this->_server.server_names[0] << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << " is in a nice." << std::endl;
+	std::cout << FT_OK << FT_HIGH_LIGHT_COLOR << "meu cu" << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << " is in a nice." << std::endl;
 	std::cout << std::endl;
 }
 
 Socket::~Socket()
 {
-	std::cout << FT_CLOSE << "Closing " << FT_HIGH_LIGHT_COLOR << this->_server.server_names[0] << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;
+	std::cout << FT_CLOSE << "Closing " << FT_HIGH_LIGHT_COLOR << "meu cu"<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;
 }
 
 void Socket::setAddrStruct(void)
 {
 	std::memset(&_hints, 0, sizeof(_hints));
-	_hints.ai_family = AF_UNSPEC;	  // IPv4 or IPv6
+	_hints.ai_family = AF_UNSPEC;	  // IPv4  just 4 **** or IPv6 //TODO 
 	_hints.ai_socktype = SOCK_STREAM; // TCP or UDP
 	_hints.ai_flags = AI_PASSIVE;	  // allows bind
 }
@@ -29,7 +30,7 @@ void Socket::loadAddressInfo()
 	std::cout << FT_SETUP << "Loading address info." << std::endl;
 	int status;
 
-	setAddrStruct();
+	setAddrStruct();//TODO trocar o server name para ipportpair sername vai ser o ip e port vai ser a port kkk
 
 	status = getaddrinfo(this->_server.server_names[0].c_str(), this->_server.port.c_str(), &_hints, &_servinfo);
 
@@ -145,7 +146,7 @@ int Socket::accept()
 
 std::string Socket::getPort()
 {
-	return (_server.port);
+	return (_server.port); //TODO , mesma coisa,. trocar o port pra usar somente o IPPORTPAIR
 }
 
 std::vector<std::string> Socket::getHosts()
@@ -164,7 +165,7 @@ std::vector<std::string> Socket::getHosts()
 	return (hosts);
 }
 
-t_server_config Socket::getServer()
+ServerBlock Socket::getServer()
 {
 	return (_server);
 }
