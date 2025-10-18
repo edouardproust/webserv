@@ -1,12 +1,13 @@
 #include "http/dev.http.hpp"
+#include "utils/utils.hpp"
 #include <iostream>
 
 Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static RequestParser parser;
 	static Request request;
-	ParseStatus result = parser.parseRequest(request, rawRequest);
-	if (result != PARSE_SUCCESS) {
-		throw std::runtime_error("Error parsing request: " + result);
+	parser.parseRequest(request, rawRequest);
+	if (request.getStatus() != PARSE_SUCCESS) {
+		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus()));
 	}
 	return (request);
 }
@@ -68,17 +69,17 @@ void dev::runParserValidationTests()
 	const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
 	for (int i = 0; i < numTests; i++) {
 		Request request;
-		::ParseStatus result = parser.parseRequest(request, rawRequests[i]);
+		parser.parseRequest(request, rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
-			<< (result == PARSE_SUCCESS ? "PASS" : "FAIL")
-			<< " (" << result << ")" << std::endl;
+			<< (request.getStatus() == PARSE_SUCCESS ? "PASS" : "FAIL")
+			<< " (" << request.getStatus() << ")" << std::endl;
 	}
 }
 
 void dev::runParsedContentTests()
 {
 	RequestParser parser;
-	
+
 	struct ContentTest
 	{
         const char* description;
@@ -108,13 +109,13 @@ void dev::runParsedContentTests()
 	{
         std::cout << "\n=== Test " << (i + 1) << ": " << tests[i].description << " ===" << std::endl;
         std::cout << "Raw request: " << tests[i].rawRequest << std::endl;
-        
+
         Request request;
-        ParseStatus result = parser.parseRequest(request, tests[i].rawRequest);
-        
-        std::cout << "Parse status: " << result << std::endl;
-        
-        if (result == PARSE_SUCCESS)
+        parser.parseRequest(request, tests[i].rawRequest);
+
+        std::cout << "Parse status: " << request.getStatus() << std::endl;
+
+        if (request.getStatus() == PARSE_SUCCESS)
 		{
             std::cout << "--- PARSED CONTENT ---" << std::endl;
             std::cout << request;
@@ -127,7 +128,7 @@ void dev::runParsedContentTests()
 
 void dev::runResponseTests()
 {
-    
+
 	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
     Response response1;
     response1.setStatusCode(200);

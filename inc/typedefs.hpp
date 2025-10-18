@@ -3,10 +3,14 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <utility>
 
+// http
+typedef std::map<std::string, std::string>	Headers;		// {header_name:header_value, ...}
+
 // config
-typedef	std::pair<std::string, int>			IpPortPair;	// {IP:port}
-typedef std::map<std::string, std::string>	CgiDirective;		// {extension:executable_path, ...}
+typedef std::map<std::string, std::string>	CgiDirective;	// {extension:executable_path, ...}
+typedef std::vector<std::string>			Tokens;
 
 #endif

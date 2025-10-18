@@ -7,8 +7,16 @@ Subject: [click here](subject/en.subject.pdf)
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
 ## TODO
-
-- Remove the virtual host form config parsing if not virtual host resolution is not implemented late on in the logic: remove `server_name` attribute and all the logic related in `ServerBlock`.
+- Config parsing:
+	- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
+	- Accept `ssl` option in `listen` directive ?
+	- [DONE -> tests needed]: check that the cgi executable is valid: `access(path, X_OK)`
+	- check if `clientMaxBodySize` is well formated ?
+	- Support IPv6 ?
+- CGI:
+	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
+- Network:
+	- What socket(s) to open if only "0.0.0.0" is defined as an open port in config file ?
 
 ## How to use
 

@@ -7,24 +7,42 @@
 #include <iostream>
 #include <cstdlib>
 
-LocationBlock::LocationBlock(std::string const& path, std::string const& blockContent)
-: _path(path), _return(std::make_pair(-1, "")), _clientMaxBodySizeSet(false) {
+LocationBlock::LocationBlock(ServerBlock* server)
+: _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)
+{}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string const& blockContent)
+: _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false) {
+	_setPath(path);
 	_parse(blockContent);
 }
 
-LocationBlock::LocationBlock(const LocationBlock &other) {
-    *this = other;
-}
+LocationBlock::LocationBlock(const LocationBlock &other)
+: _server(other._server),
+  _path(other._path),
+  _root(other._root),
+  _autoindex(other._autoindex),
+  _limitExcept(other._limitExcept),
+  _return(other._return),
+  _clientMaxBodySize(other._clientMaxBodySize),
+  _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
+  _indexFiles(other._indexFiles),
+  _cgi(other._cgi)
+{}
 
 LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 	if (this != &other) {
+		_server = other._server;
 		_path = other._path;
 		_root = other._root;
 		_autoindex= other._autoindex;
 		_limitExcept= other._limitExcept;
 		_return = other._return;
 		_clientMaxBodySize = other._clientMaxBodySize;
-		_clientMaxBodySizeSet = other._clientMaxBodySizeSet;
+		_isSetClientMaxBodySize = other._isSetClientMaxBodySize;
 		_indexFiles = other._indexFiles;
 		_cgi = other._cgi;
 	}
@@ -33,140 +51,217 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 
 LocationBlock::~LocationBlock() {}
 
+/**
+ * May throw a runtime_error() exception.
+ */
 void	LocationBlock::_parse(std::string const& content) {
 	std::string token = "";
-	std::vector<std::string> tokens;
+	Tokens tokens;
 	bool inQuotes = false;
 	for (size_t i = 0; i < content.size(); ++i) {
-		if (content[i] == '#') {
-			Config::_skipComment(content, i);
-		} else if (content[i] == '{') {
-			throw std::runtime_error("Unexpected '{' in location block");
-		} else if (content[i] == ';') {
+		if (content[i] == '#')
+			Config::skipComment(content, i);
+		else if (content[i] == '{')
+			throw std::runtime_error("Unexpected '{'");
+		else if (content[i] == ';')
 			_parseDirective(token, tokens, inQuotes);
-		} else if (isspace(content[i]) && !inQuotes) {
-			Config::_addTokenIf(token, tokens);
-		} else if (content[i] == '"') {
+		else if (isspace(content[i]) && !inQuotes)
+			Config::addTokenIf(token, tokens);
+		else if (content[i] == '"')
 			inQuotes = !inQuotes;
-		} else {
+		else
 			token += content[i];
-		}
 	}
 }
 
+/**
+ * May throw a runtime_error() exception.
+ */
 void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>& tokens, bool inQuotes) {
-Config::_addTokenIf(token, tokens);
-	if (tokens.size() <= 0) {
+	Config::addTokenIf(token, tokens);
+	if (tokens.empty())
 		throw std::runtime_error("Unexpected ';'");
-	} else if (inQuotes) {
-		throw std::runtime_error("Unclosed quoted string in location block");
-	} else if (tokens[0] == "root" && tokens.size() == 2) {
-		_root = tokens[1];
-	} else if (tokens[0] == "autoindex" && tokens.size() == 2) {
-		_autoindex = tokens[1];
-	} else if (tokens[0] == "limit_except" && tokens.size() >= 2) {
-		for (size_t j = 1; j < tokens.size(); ++j)
-			_limitExcept.insert(tokens[j]);
-	} else if (tokens[0] == "return" && tokens.size() == 3) {
-		if (_return.first != -1)
-			throw std::runtime_error("Duplicate return directive in location");
-		try {
-			_return.first = std::atoi(tokens[1].c_str());
-			_return.second = tokens[2];
-		} catch (std::exception& e) {
-			throw std::runtime_error("Invalid return code: " + tokens[1]);
-		}
-	} else if (tokens[0] == "client_max_body_size" && tokens.size() == 2) {
-		try {
-			_clientMaxBodySizeSet = true;
-			_clientMaxBodySize = utils::parseSize(tokens[1]);}
-		catch (std::exception& e) {
-			throw std::runtime_error("Invalid client_max_body_size: " + tokens[1]);
-		}
-	} else if (tokens[0] == "cgi" && tokens.size() == 3) {
-		_addCgiDirective(tokens[1], tokens[2]);
-	} else if (tokens[0] == "index" && tokens.size() >= 2) {
-		for (size_t j = 1; j < tokens.size(); ++j)
-			_indexFiles.push_back(tokens[j]);
-	} else {
-		throw std::runtime_error("Unknown or malformed directive in location block: " + tokens[0]);
+	else if (inQuotes)
+		throw std::runtime_error("Unclosed quoted string");
+
+	std::string directiveName = tokens[0];
+	try {
+		if (directiveName == "root")
+			_setRoot(tokens);
+		else if (directiveName == "autoindex")
+			_setAutoindex(tokens);
+		else if (directiveName == "limit_except")
+			_setLimitExcept(tokens);
+		else if (directiveName == "return")
+			_setReturn(tokens);
+		else if (directiveName == "client_max_body_size")
+			_setClientMaxBodySize(tokens);
+		else if (directiveName == "index")
+			_setIndexFiles(tokens);
+		else if (directiveName == "cgi")
+			_setCgi(tokens);
+		// -- additional directives can be added here --
+		else
+			throw std::runtime_error("Unsupported directive");
+	} catch (std::exception& e) {
+		throw std::runtime_error(directiveName + ": " + e.what()); // wrap error msg with the directive name
 	}
-	// Additional directives can be added here
+
 	tokens.clear();
 }
 
+void	LocationBlock::_setPath(std::string& path) {
+	if (!utils::isAbsolutePath(path))
+		throw std::runtime_error("Not an absolute path: '" + path + "'");
+	_path = utils::normalizePath(path);
+}
 
-void	LocationBlock::_addCgiDirective(std::string extension, std::string executable) {
+void	LocationBlock::setServer(ServerBlock* server) {
+	_server = server;
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void	LocationBlock::_setRoot(Tokens const& tokens) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Should have 2 arguments");
+	std::string root = tokens[1];
+	if (root.empty())
+		throw std::runtime_error("Value is an empty string");
+	if (!utils::isAbsolutePath(root))
+		throw std::runtime_error("Not an absolute path: '" + root + "'");
+	_root = root;
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void	LocationBlock::_setAutoindex(Tokens const& tokens) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Should have 2 arguments");
+	if (tokens[1].empty())
+		throw std::runtime_error("Value is an empty string");
+	if (_autoindex != "on" && _autoindex != "off")
+		throw std::runtime_error("Value should be \"on\" or \"off\"");
+	_autoindex = tokens[1];
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void	LocationBlock::_setLimitExcept(Tokens const& tokens) {
+	if (tokens.size() < 2)
+		throw std::runtime_error("Should have at least 2 arguments");
+	if (tokens[1].empty())
+		throw std::runtime_error("Value is an empty string");
+	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
+		if (!Request::isSupportedMethod(*it))
+			throw std::runtime_error("Not supported method: " + *it);
+	}
+	_autoindex = tokens[1];
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void LocationBlock::_setReturn(Tokens const& tokens) {
+	if (_return.first != -1)
+			throw std::runtime_error("Duplicate directive");
+	if (tokens.size() < 2 || tokens.size() > 3)
+			throw std::runtime_error("Should have 2 or 3 arguments");
+	int code = utils::toSizeT(tokens[1]); // throw exception if empty, etc.
+	std::string target;
+	if (tokens.size() == 3) {
+		if (tokens[2].empty())
+			throw std::runtime_error("Target is an empty string");
+		target = tokens[2];
+	}
+	if (code < 100 || code > 599)
+		throw std::runtime_error("Code " + utils::toString(code) + " is out of range 100-599");
+	if (code >= 300 && code < 400 && target.empty())
+		throw std::runtime_error("Target missing for redirection " + utils::toString(code));
+	if (_server->getErrorPages().find(code) != _server->getErrorPages().end())
+        throw std::runtime_error("Return '" + utils::toString(code) + "' conflicts with error_page in server block");
+	_return.first = code;
+	_return.second = target;
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Should have 2 arguments");
+	size_t result = Config::parseSize(tokens[1]); // throw exception if empty, wrong syntax or overflow
+	if (result == 0)
+		throw std::runtime_error("Must be more than 0 bytes:" + tokens[1]); // Size cannot be 0
+    _clientMaxBodySize = result;
+    _isSetClientMaxBodySize = true;
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
+	if (tokens.size() < 2)
+		throw std::runtime_error("Should have 2 or more arguments");
+	for (size_t j = 1; j < tokens.size(); ++j) {
+		if (tokens[j].empty())
+			throw std::runtime_error("An index value is an empty string");
+		// TODO: check that each index file is accessible ?
+		_indexFiles.push_back(tokens[j]);
+	}
+	if (!utils::hasVectorUniqEntries(_indexFiles))
+		throw std::runtime_error("Duplicated index files");
+}
+
+/**
+ * May throw a runtime_error() exception.
+ */
+void	LocationBlock::_setCgi(Tokens const& tokens) {
+	if (tokens.size() != 3)
+		throw std::runtime_error("Should have 3 arguments");
+	if (tokens[1].empty())
+		throw std::runtime_error("Extension is an empty string");
+	if (tokens[2].empty())
+		throw std::runtime_error("Executable is an empty string");
+	std::string extension = tokens[1], executable = tokens[2];
 	if (extension.empty() || executable.empty())
-		throw std::runtime_error("Invalid CGI directive: missing extension or executable");
+		throw std::runtime_error("Extension is an empty string");
+	if (executable.empty())
+		throw std::runtime_error("Executable path is an empty string");
     if (extension[0] != '.')
-		throw std::runtime_error("Invalid CGI extension: must start with '.' -> " + extension);
+		throw std::runtime_error("Extension must start with a dot: " + extension);
     if (_cgi.find(extension) != _cgi.end())
-		throw std::runtime_error("Duplicate CGI extension: " + extension);
+		throw std::runtime_error("Duplicate extension: " + extension);
+	if (!utils::isExecutableFile(executable))
+		throw std::runtime_error("Executable cannot be accessed on host: " + executable
+			+ "\nPlease review the path or install the missing dependencies");
 	_cgi[extension] = executable;
 }
 
-void	LocationBlock::validate(ServerBlock const& server) const {
-	if (!utils::isAbsolutePath(_path))
-		throw std::runtime_error("Invalid location path: " + _path);
-	else if (!_root.empty() && !utils::isAbsolutePath(_root)) {
-		throw std::runtime_error("Invalid root " + _root + " in location " + _path);
-	} else if (!_autoindex.empty() && _autoindex != "on" && _autoindex != "off")
-		throw std::runtime_error("Invalid autoindex value in location " + _path + ": " + _autoindex);
-	if (_return.first != -1 && (_return.first < 100 || _return.first > 599))
-		throw std::runtime_error("Invalid return code in location " + _path + ": " + utils::toString(_return.first));
-	if (server.getErrorPages().find(_return.first) != server.getErrorPages().end())
-        throw std::runtime_error("Conflict: return " + utils::toString(_return.first) + " in location " + _path + " conflicts with error_page in server block");
-	if (_clientMaxBodySizeSet && (_clientMaxBodySize <= 0 || _clientMaxBodySize > MAX_CLIENT_BODY_SIZE))
-		throw std::runtime_error("client_max_body_size is 0 or too high in location " + _path);
-	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
-		if (!Request::isSupportedMethod(*it))
-			throw std::runtime_error("Not allowed limit_except method " + *it + " in location " + _path);
-	}
-	if (!utils::hasVectorUniqEntries(_indexFiles))
-		throw std::runtime_error("Duplicate index file in location " + _path);
-}
-
-void	LocationBlock::print() const {
-	std::cout << "Location:\n"
-		<< "- path: " << _path << "\n"
-		<< "- root: " << (_root.empty() ? "[empty]" : _root) << "\n"
-		<< "- autoindex: " << (_autoindex.empty() ? "[empty]" : _autoindex) << "\n"
-		<< "- limit_except: " << _limitExcept.size() << "\n";
-	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); ++it)
-		std::cout << "  - " << *it << "\n";
-	if (_return.first != -1)
-		std::cout << "- return: " << _return.first << " -> " << (_return.second.empty() ? "[empty]" : _return.second) << "\n";
-	else
-		std::cout << "- return: [empty]\n";
-	if (_clientMaxBodySizeSet)
-		std::cout << "- client_max_body_size: " << _clientMaxBodySize << "\n";
-	else
-		std::cout << "- client_max_body_size: [empty]\n";
-	std::cout << "- index_files: " << _indexFiles.size() << "\n";
-	for (size_t i = 0; i < _indexFiles.size(); ++i)
-		std::cout << "  - " << _indexFiles[i] << "\n";
-	std::cout << "- cgi: " << _cgi.size() << "\n";
-	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); it++) {
-		std::cout << "  - " << it->first << " -> " << it->second << "\n";
-	}
+ServerBlock*	LocationBlock::getServer() const {
+	return _server;
 }
 
 std::string const&	LocationBlock::getPath() const {
 	return _path;
 }
 
-std::string const	LocationBlock::getRoot(ServerBlock const& server) const {
+std::string const	LocationBlock::getRoot() const {
 	if (!_root.empty())
 		return _root;
-	return server.getRoot(); // returns "" if server::_root is not set either
+	return _server->getRoot(); // returns "" if server::_root is not set either
 }
 
-std::string const&	LocationBlock::getAutoindex() const {
+std::string const	LocationBlock::getAutoindex() const {
+	if (_autoindex.empty())
+		return "on";
 	return _autoindex;
 }
 
-std::set<std::string> const&	LocationBlock::getAllowedMethods() const {
+std::set<std::string> const&	LocationBlock::getLimitExcept() const {
 	return _limitExcept;
 }
 
@@ -174,18 +269,76 @@ std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
 	return _return;
 }
 
-unsigned long	LocationBlock::getClientMaxBodySize(ServerBlock const& server) const {
-	if (_clientMaxBodySizeSet)
+unsigned long	LocationBlock::getClientMaxBodySize() const {
+	if (_isSetClientMaxBodySize)
 		return _clientMaxBodySize;
-	return server.getClientMaxBodySize();
+	return _server->getClientMaxBodySize();
+}
+
+bool	LocationBlock::getClientMaxBodySizeSet() const {
+	return _isSetClientMaxBodySize;
 }
 
 CgiDirective const&	LocationBlock::getCgi() const {
 	return _cgi;
 }
 
-std::vector<std::string> const&	LocationBlock::getIndexFiles(ServerBlock const& server) const {
+std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
 	if (!_indexFiles.empty())
 		return _indexFiles;
-	return server.getIndexFiles();
+	return _server->getIndexFiles();
+}
+
+std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
+	if (extension.empty())
+		return "";
+	CgiDirective::const_iterator it = _cgi.find(extension);
+	if (it != _cgi.end())
+		return it->second;
+	return "";
+}
+
+bool	LocationBlock::isCgiLocation() const {
+	return !_cgi.empty();
+}
+
+bool	LocationBlock::isRedirectionLocation() const {
+	return _return.first != -1 && !_return.second.empty();
+}
+
+
+std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
+	std::string const in = "  "; // indentation
+	os << in << "- path: " << rhs.getPath() << "\n";
+	os << in << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
+	os << in << "- autoindex: " << (rhs.getAutoindex().empty() ? "[empty]" : rhs.getAutoindex()) << "\n";
+
+	std::set<std::string> const& limitExcept = rhs.getLimitExcept();
+	os << in << "- limit_except: " << limitExcept.size() << "\n";
+	for (std::set<std::string>::const_iterator it = limitExcept.begin(); it != limitExcept.end(); ++it)
+		os << in << "  - " << *it << "\n";
+
+	std::pair<int, std::string> const& retrn = rhs.getReturn();
+	if (retrn.first != -1)
+		os << in << "- return: " << retrn.first << " -> " << (retrn.second.empty() ? "[empty]" : retrn.second) << "\n";
+	else
+		os << in << "- return: [empty]\n";
+
+	if (rhs.getClientMaxBodySizeSet())
+		os << in << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
+	else
+		os << in << "- client_max_body_size: [empty]\n";
+
+	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();
+	os << in << "- index_files: " << indexFiles.size() << "\n";
+	for (size_t i = 0; i < indexFiles.size(); ++i)
+		os << in << "  - " << indexFiles[i] << "\n";
+
+	CgiDirective const& cgi = rhs.getCgi();
+	os << in << "- cgi: " << cgi.size() << "\n";
+	for (CgiDirective::const_iterator it = cgi.begin(); it != cgi.end(); it++) {
+		os << in << "  - " << it->first << " -> " << it->second << "\n";
+	}
+
+	return os;
 }

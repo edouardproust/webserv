@@ -11,17 +11,31 @@ int main(int argc, char** argv) {
 	}
 	try {
 		Config cfg(argv[1]);
+		/*
+		Server server(cfg);
+		server.run(cfg);
+
+			// Inside server.run(), on each new request:
+			Request request("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
+			int res = request.getHTTPStatus();
+			if (res < 400) {
+				Router router(request, cfg.getServers());
+			} else {
+				std::string const& errorPageContent = static::buildErrorPage(res);
+				Response response(HTTP_VERSION, res, errorPageContent);
+				server.sendResponseToClient(response);
+			}
+		*/
 		if (DEVMODE) {
-			//cfg.print();
-			//dev::runParserValidationTests();
-			//dev::runParsedContentTests();
-			dev::runResponseTests();
-			//Request request = dev::parseRequest("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
-			//Router router(request, cfg.getServers());
-			//router.print();
+			std::cout << cfg << std::endl;
+			Request request;
+			request.parse("GET /images/test.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+			std::cout << request << std::endl;
+			Router router(request, cfg.getServers(), HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
+			router.dispatchRequest();
+			//dev::runResponseTests();
+			std::cout << router << std::endl;
 		}
-		//Server server(cfg);
-		//server.run(cfg);
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;

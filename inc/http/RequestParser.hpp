@@ -2,16 +2,9 @@
 # define REQUESTPARSER_HPP
 
 # include "http/Request.hpp"
+# include "constants.hpp"
 # include <string>
 # include <sstream>
-
-enum ParseStatus
-{
-	PARSE_SUCCESS = 200,
-	PARSE_ERR_BAD_REQUEST = 400,
-	PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED = 505,
-	PARSE_ERR_LENGTH_REQUIRED = 411
-};
 
 class RequestParser
 {
@@ -39,7 +32,7 @@ class RequestParser
 	RequestParser& operator=(const RequestParser& other);
 	~RequestParser();
 
-	ParseStatus	parseRequest(Request& request, const std::string& rawRequest);
+	void	parseRequest(Request& request, const std::string& rawRequest);
 };
 
 #endif

@@ -4,14 +4,16 @@
 #include "config/ServerBlock.hpp"
 #include <vector>
 
+
+
 class Config {
 
 	std::vector<ServerBlock>	_servers;
 
 	std::string	_extractFileContent(std::string const&);
 	void		_parse(std::string const&);
-	void		_parseBlock(std::vector<std::string>&, std::string const& content,
-					size_t&, int&);
+	void		_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&);
+	void		_addServer(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth);
 	void		_validate() const;
 
 	// Not used
@@ -24,13 +26,16 @@ class Config {
 		Config(std::string const&);
 		~Config();
 
-		void	print() const;
+		std::vector<HostPortPair>	getAllListenPorts() const;
 
-		static void			_addTokenIf(std::string&, std::vector<std::string>&);
-		static std::string	_getBlockContent(std::string const&, size_t&, int&);
-		static void			_skipComment(std::string const&, size_t&);
+		static void			addTokenIf(std::string&, std::vector<std::string>&);
+		static std::string	getBlockContent(std::string const&, size_t&, int&);
+		static void			skipComment(std::string const&, size_t&);
+		static size_t		parseSize(std::string const&);
 
 		std::vector<ServerBlock> const&	getServers() const;
 };
+
+std::ostream&	operator<<(std::ostream&, Config const&);
 
 #endif
