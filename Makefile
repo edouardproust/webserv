@@ -30,7 +30,7 @@ PROD_SRCS = $(addprefix $(SRC_DIR)/, $(BASE_SRC_FILES))
 PROD_OBJS = $(addprefix $(PROD_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o))
 PROD_DEPS = $(PROD_OBJS:.o=.d)
 
-DEV_CXXFLAGS := $(CXXFLAGS) -g -DDEVMODE=1 -fsanitize=address
+DEV_CXXFLAGS := $(CXXFLAGS) -DDEVMODE=1
 DEV_OBJ_DIR = $(PROD_OBJ_DIR)/dev
 DEV_TARGET = $(NAME)_dev
 DEV_SRCS = $(addprefix $(SRC_DIR)/, $(BASE_SRC_FILES) $(DEV_SRC_FILES))

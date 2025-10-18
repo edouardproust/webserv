@@ -1,4 +1,5 @@
 #include "http/dev.http.hpp"
+#include "utils/utils.hpp"
 #include <iostream>
 
 Request const&	dev::parseRequest(std::string const& rawRequest) {
@@ -6,7 +7,7 @@ Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static Request request;
 	ParseStatus result = parser.parseRequest(request, rawRequest);
 	if (result != PARSE_SUCCESS) {
-		throw std::runtime_error("Error parsing request: " + result);
+		throw std::runtime_error("Error parsing request: " + utils::toString(result));
 	}
 	return (request);
 }
@@ -78,7 +79,7 @@ void dev::runParserValidationTests()
 void dev::runParsedContentTests()
 {
 	RequestParser parser;
-	
+
 	struct ContentTest
 	{
         const char* description;
@@ -108,12 +109,12 @@ void dev::runParsedContentTests()
 	{
         std::cout << "\n=== Test " << (i + 1) << ": " << tests[i].description << " ===" << std::endl;
         std::cout << "Raw request: " << tests[i].rawRequest << std::endl;
-        
+
         Request request;
         ParseStatus result = parser.parseRequest(request, tests[i].rawRequest);
-        
+
         std::cout << "Parse status: " << result << std::endl;
-        
+
         if (result == PARSE_SUCCESS)
 		{
             std::cout << "--- PARSED CONTENT ---" << std::endl;
@@ -127,7 +128,7 @@ void dev::runParsedContentTests()
 
 void dev::runResponseTests()
 {
-    
+
 	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
     Response response1;
     response1.setStatusCode(200);
