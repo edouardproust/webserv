@@ -21,14 +21,15 @@ Router::~Router() {}
 void Router::dispatchRequest() {
     ParseStatus requestStatus = _request.getStatus();
     if (requestStatus != PARSE_SUCCESS) {
-        StaticHandler::sendErrorPageContent(requestStatus);
+		_sendResponse(StaticHandler::handleError(requestStatus)); // TODO: add checks in Reponse ?
         return;
     }
     ServerBlock const& server = _findMatchingServer();
     _setMatchingLocation(server.getLocations(), _request.getPath());
 	if (!_location)
 		_location = &server.getDefaultLocation();
-
+	if (DEVMODE)
+		std::cout << *this << std::endl;
     std::string executor = "";
 	std::string const& extension = utils::getFileExtension(_request.getPath());
     if (_location->isCgiLocation() && !extension.empty()) { // the request path matches a CGI location and has an extension
@@ -36,23 +37,10 @@ void Router::dispatchRequest() {
     }
 	if (!executor.empty()) { // the file extension is handled by the CGI config of this location
         std::string scriptPath = _resolveScriptPath(_request.getPath(), _location);
-        std::string executor = _location->getCgiExecutor(extension);
-        CGIHandler::handleRequest(
-            scriptPath,
-            executor,
-            _request.getMethod(),
-            _request.getHeaders(),
-            _request.getQueryString(),
-            _request.getBody(),
-            _request.getContentType()
-        );
+		_sendResponse(CGIHandler::handleRequest(scriptPath, executor, _request));
     } else { // not a CGI request or file extension not handled by this location
         std::string filePath = _resolveFilePath(_request.getPath(), _location);
-        StaticHandler::sendStaticContent(
-            filePath,
-            _request.getMethod(),
-            _request.getHeaders()
-        );
+		_sendResponse(StaticHandler::handleRequest(filePath, _request));
     }
 }
 
@@ -95,6 +83,12 @@ std::string	Router::_resolveFilePath(std::string const& requestPath, LocationBlo
 	// TODO
 	return location->getRoot() + requestPath;
 	(void)requestPath; (void)location; // to silence unused parameter warning
+}
+
+void	Router::_sendResponse(Response const& response) const {
+	// TODO
+	std::cout << "-- DEBUG: The router is sending the following response: --\n";
+	std::cout << response << std::endl;
 }
 
 Request const&	Router::getRequest() const {

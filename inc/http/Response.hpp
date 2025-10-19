@@ -14,7 +14,6 @@ class Response
 	std::string _body;
 
 	std::string	_getReasonPhrase(int statusCode) const;
-	std::string	_getCurrentDate() const;
 	std::string _generateErrorPage() const;
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
@@ -30,6 +29,7 @@ class Response
 	const std::string& getReasonPhrase() const;
 	const std::map<std::string, std::string>& getHeaders() const;
 	const std::string& getBody() const;
+	std::string	getCurrentDate() const;
 
 	void	setStatusCode(int statusCode);
 	void	setHeader(const std::string& name, const std::string& value);

@@ -2,6 +2,7 @@
 #define ROUTER_HPP
 
 #include "http/Request.hpp"
+#include "http/Response.hpp"
 #include "config/ServerBlock.hpp"
 #include "typedefs.hpp"
 
@@ -15,8 +16,8 @@ class Router
 	void		_setMatchingLocation(std::vector<LocationBlock> const&, std::string const&);
 	std::string	_resolveScriptPath(std::string const&, LocationBlock const*) const;
 	std::string _resolveFilePath(std::string const&, LocationBlock const*) const;
+	void		_sendResponse(Response const&) const;
 
-	bool		_isRedirectionLocation() const;
 
 	// Not used
 	Router();

@@ -2,6 +2,8 @@
 #define STATIQ_HPP
 
 #include "constants.hpp"
+#include "http/Request.hpp"
+#include "http/Response.hpp"
 #include <string>
 #include <map>
 #include <vector>
@@ -16,12 +18,8 @@ class StaticHandler {
 
 	public:
 
-		static void	sendErrorPageContent(ParseStatus status);
-		static void	sendStaticContent(
-			std::string const& filePath,
-			std::string const& method,
-			std::map<std::string, std::string> const& headers
-		);
+		static Response	handleRequest(std::string const&, Request const&);
+		static Response	handleError(ParseStatus);
 
 };
 

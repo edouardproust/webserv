@@ -29,12 +29,11 @@ int main(int argc, char** argv) {
 		if (DEVMODE) {
 			std::cout << cfg << std::endl;
 			Request request;
-			request.parse("GET /images/test.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+			request.parse("GET /images/hello.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
 			std::cout << request << std::endl;
 			Router router(request, cfg.getServers(), HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
 			router.dispatchRequest();
 			//dev::runResponseTests();
-			std::cout << router << std::endl;
 		}
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
