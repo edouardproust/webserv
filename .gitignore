@@ -7,9 +7,10 @@
 *~
 
 # Specific folders
-obj/
+build/
 .vscode/
 
 # Specitif files
 webserv
 webserv_dev
+log*
