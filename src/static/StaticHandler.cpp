@@ -8,10 +8,8 @@
  */
 Response	StaticHandler::handleRequest(std::string const& filePath, Request const& req) {
 	(void)req; // to silence unused parameter warnings
-	// Implementation to send static content based on the filePath and other parameters
 	// This is a placeholder implementation
 	std::string staticContent = "<html><body><h1>Static Content from " + filePath + "</h1></body></html>";
-	// Send the staticContent to the client via "network" module
 
 	// Build dummy response to allow compilation
 	Response response;
@@ -25,13 +23,11 @@ Response	StaticHandler::handleRequest(std::string const& filePath, Request const
 }
 
 Response	StaticHandler::handleError(ParseStatus status) {
-	// Implementation to send an error page based on the status
 	// This is a placeholder implementation
 	std::string errorPage = "<html><body><h1>Error " + utils::toString(status) + "</h1></body></html>";
-	// Send the errorPage content to the client via "network" module
 
 	// Build dummy response to allow compilation
 	Response response;
-	response.setError(status); // génère aussi _reasonPhrase et _body si tu l’as codé ainsi
+	response.setError(status);
 	return response;
 }
