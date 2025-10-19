@@ -4,6 +4,8 @@
 #include <limits>
 #include <cstddef>
 
+// global
+
 #ifndef DEVMODE
 # define DEVMODE 0
 #endif
@@ -13,7 +15,7 @@ size_t const	MIN_SIZE_T = std::numeric_limits<int>::min(); // ~ -2GB
 
 // config
 
-unsigned long const	MAX_CLIENT_BODY_SIZE = 2UL * 1024UL * 1024UL * 1024UL; // 2Go
+size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)
 
 // static
 
@@ -29,6 +31,5 @@ enum ParseStatus
 	PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED = 505,
 	PARSE_ERR_LENGTH_REQUIRED = 411
 };
-
 
 #endif

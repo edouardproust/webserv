@@ -5,7 +5,7 @@
 Response::Response() : _statusCode(200), _reasonPhrase("OK")
 {
 	_headers["server"] = "webserv/1.0";
-	_headers["date"] = _getCurrentDate();
+	_headers["date"] = getCurrentDate();
 	_headers["connection"] = "keep-alive";
 }
 
@@ -144,10 +144,10 @@ std::string Response::_getReasonPhrase(int statusCode) const
 		//more status codes to be added accordingly!!
 		default:
 			return "Unknown";
-	}	
+	}
 }
 
-std::string Response::_getCurrentDate() const
+std::string Response::getCurrentDate() const
 {
 	time_t now = time(0);
 	struct tm* timeinfo = gmtime(&now);
@@ -215,6 +215,6 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 	os << "- Body Length: " << response.getBody().length() << "\n";
 	os << "- Raw HTTP Response Preview:\n";
 	std::string raw = response.stringify();
-	os << "  " << raw << std::endl ;
+	os << raw << std::endl ;
 	return os;
 }

@@ -1,8 +1,9 @@
 #include "http/Request.hpp"
+#include "http/RequestParser.hpp"
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() : _method(""), _requestTarget(""), _path(""), _queryString("") ,_version(""), _body("") {}
+Request::Request() : _status(NOT_SET), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -12,18 +13,25 @@ Request& Request::operator=(const Request& other)
 {
 	if (this != &other)
 	{
+		this->_status = other._status;
 		this->_method = other._method;
 		this->_requestTarget = other._requestTarget;
 		this->_path = other._path;
 		this->_queryString = other._queryString;
 		this->_version = other._version;
 		this->_headers = other._headers;
+		this->_contentType = other._contentType;
 		this->_body = other._body;
 	}
 	return (*this);
 }
 
 Request::~Request() {}
+
+void	Request::parse(std::string const& rawRequest) {
+	RequestParser parser;
+	parser.parseRequest(*this, rawRequest);
+}
 
 bool	Request::isSupportedMethod(std::string const& method) {
 	if (_supportedMethods.empty()) {
@@ -33,6 +41,11 @@ bool	Request::isSupportedMethod(std::string const& method) {
 		// More supported methods can be added here
 	}
 	return _supportedMethods.find(method) != _supportedMethods.end();
+}
+
+const ParseStatus& Request::getStatus() const
+{
+	return (this->_status);
 }
 
 const std::string& Request::getMethod() const
@@ -65,9 +78,19 @@ const std::map<std::string, std::string>& Request::getHeaders() const
 	return this->_headers;
 }
 
+const std::string& Request::getContentType() const
+{
+    return _contentType;
+}
+
 const std::string& Request::getBody() const
 {
 	return this->_body;
+}
+
+void	Request::setStatus(ParseStatus status)
+{
+	this->_status = status;
 }
 
 void	Request::setMethod(std::string const& _method)
@@ -100,6 +123,11 @@ void	Request::addHeader(const std::string& name, const std::string& value)
 	_headers[name] = value;
 }
 
+void Request::setContentType(const std::string& value)
+{
+    _contentType = value;
+}
+
 void	Request::setBody(const std::string& _body)
 {
 	this->_body = _body;
@@ -108,7 +136,12 @@ void	Request::setBody(const std::string& _body)
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
-	os << "- Method: " << request.getMethod() << "\n";
+	ParseStatus const& status = request.getStatus();
+	os << "- Status: ";
+	if (status != NOT_SET) os << status << "\n";
+	else os << "[empty]\n";
+	std::string const& method = request.getMethod();
+	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
 	os << "- Request Target: " << request.getRequestTarget() << "\n";
 	os << "- Path: " << request.getPath() << "\n";
 	if (!request.getQueryString().empty())

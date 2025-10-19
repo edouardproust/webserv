@@ -17,29 +17,29 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 
 RequestParser::~RequestParser() {}
 
-ParseStatus	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
+void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return PARSE_ERR_BAD_REQUEST;
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	size_t requestStart;
 	if (!_isValidStart(rawRequest, requestStart))
-		return PARSE_ERR_BAD_REQUEST;
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return PARSE_ERR_BAD_REQUEST;
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return PARSE_ERR_BAD_REQUEST;
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
 	ParseStatus	result = _parseRequestLine(request, requestLine);
 	if (result != PARSE_SUCCESS)
-		return result;
+		return request.setStatus(result);
 	bool hasBody = _hasBody(rawRequest, headersEnd);
 	result = _parseHeaders(request, headersPart, hasBody);
 	if (result != PARSE_SUCCESS)
-		return result;
+		return request.setStatus(result);
 	size_t bodyStart = headersEnd + 4;
 	if (hasBody)
 	{
@@ -47,9 +47,9 @@ ParseStatus	RequestParser::parseRequest(Request& request, const std::string& raw
 		request.setBody(body);
 		ParseStatus bodyResult = _validateBody(request);
 		if (bodyResult != PARSE_SUCCESS)
-			return bodyResult;
+			return request.setStatus(bodyResult);
 	}
-	return PARSE_SUCCESS;
+	request.setStatus(PARSE_SUCCESS);
 }
 
 ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
@@ -112,7 +112,7 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 		ParseStatus result = _parseHeaderLine(request, line);
 		if (result != PARSE_SUCCESS)
 			return result;
-	}	
+	}
 	std::map<std::string, std::string> headers = request.getHeaders();
 	if (headers.find("host") == headers.end())
 		return PARSE_ERR_BAD_REQUEST;
@@ -138,8 +138,15 @@ ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string&
 	if (!_isValidHeaderName(name))
 		return PARSE_ERR_BAD_REQUEST;
 	value = _trimOWS(value);
+
 	std::string normalizedName = _normalizeHeaderName(name);
 	request.addHeader(normalizedName, value);
+	if (normalizedName == "content-type") {
+		// TODO AVA: check syntax of the Content-Type header
+    	request.setContentType(value);
+	}
+	// -- additional check/set for specific headers can be added here --
+
 	return PARSE_SUCCESS;
 }
 
