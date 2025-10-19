@@ -163,9 +163,13 @@ std::vector<ServerBlock> const&	Config::getServers() const {
 }
 
 std::ostream&	operator<<(std::ostream& os, Config const& rhs) {
+	os << "Config:\n";
 	std::vector<ServerBlock> servers = rhs.getServers();
-	for (size_t i = 0; i < servers.size(); ++i) {
-		os << "Server " << i << ":\n" << servers[i];
-	}
+	if (!servers.empty()) {
+		for (size_t i = 0; i < servers.size(); ++i) {
+			os << "Server " << i << ":\n" << servers[i];
+		}
+	} else
+		os <<"[empty]" << std::endl;
 	return os;
 }
