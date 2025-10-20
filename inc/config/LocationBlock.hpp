@@ -21,16 +21,16 @@ class LocationBlock {
 	LocationBlock(); // not used
 
 	void	_parse(std::string const&);
-	void	_parseDirective(std::string& token, std::vector<std::string>&, bool);
+	void	_parseDirective(std::string&, std::vector<std::string>&, bool);
 
-	void	_setPath(std::string& path);
-	void	_setRoot(Tokens const& tokens);
-	void	_setAutoindex(Tokens const& tokens);
-	void	_setLimitExcept(Tokens const& tokens);
-	void	_setReturn(Tokens const& tokens);
-	void	_setClientMaxBodySize(Tokens const& tokens);
-	void	_setIndexFiles(Tokens const& tokens);
-	void	_setCgi(Tokens const& tokens);
+	void	_setPath(std::string&);
+	void	_setRoot(Tokens const&);
+	void	_setAutoindex(Tokens const&);
+	void	_setLimitExcept(Tokens const&);
+	void	_setReturn(Tokens const&);
+	void	_setClientMaxBodySize(Tokens const&);
+	void	_setIndexFiles(Tokens const&);
+	void	_setCgi(Tokens const&);
 
 	public:
 
@@ -53,9 +53,9 @@ class LocationBlock {
 		unsigned long						getClientMaxBodySize() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		CgiDirective const&					getCgi() const;
-		std::string const					getCgiExecutor(std::string const& extension) const;
+		std::string const					getCgiExecutor(std::string const&) const;
 
-		void setServer(ServerBlock* server);
+		void setServer(ServerBlock*);
 
 };
 

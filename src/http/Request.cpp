@@ -3,7 +3,7 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() : _status(NOT_SET), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {}
+Request::Request() : _status(PARSE_INTERNAL_SERVER_ERROR), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -138,7 +138,7 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "Request:\n";
 	ParseStatus const& status = request.getStatus();
 	os << "- Status: ";
-	if (status != NOT_SET) os << status << "\n";
+	if (status != PARSE_INTERNAL_SERVER_ERROR) os << status << "\n";
 	else os << "[empty]\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
