@@ -68,9 +68,16 @@ void	HostPortPair::_setPort(std::string const& portStr) {
 	}
 }
 
+std::string const&	HostPortPair::getHost() const {
+	return _host;
+}
+
+size_t	HostPortPair::getPort() const {
+	return _port;
+}
+
 /**
  * Check IPv4 only
- * //TODO implement support of IPv6 ?
  * "localhost" is the only non numeric value accepted for the IP address and is changed into "127.0.0.1"
  */
 bool	HostPortPair::_isValidIP(std::string const& ip) {
@@ -83,12 +90,8 @@ bool	HostPortPair::_isValidIP(std::string const& ip) {
     return ret == 0;
 }
 
-std::string const&	HostPortPair::getHost() const {
-	return _host;
-}
-
-size_t	HostPortPair::getPort() const {
-	return _port;
+bool HostPortPair::isWildcardFor(HostPortPair const& other) const {
+	return _host == "0.0.0.0" && _port == other._port;
 }
 
 bool	HostPortPair::operator==(HostPortPair const& other) const {

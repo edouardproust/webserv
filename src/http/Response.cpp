@@ -7,6 +7,7 @@ Response::Response() : _statusCode(200), _reasonPhrase("OK")
 	_headers["server"] = "webserv/1.0";
 	_headers["date"] = getCurrentDate();
 	_headers["connection"] = "keep-alive";
+	_headers["content-length"] = "0";
 }
 
 Response::Response(const Response& other)
@@ -211,10 +212,9 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 			os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: '" << response.getBody() << "'\n";
+	os << "- Body: '" << response.getBody().empty() << "'\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
 	os << "- Raw HTTP Response Preview:\n";
-	std::string raw = response.stringify();
-	os << "  " << raw << std::endl ;
+	os << "'" << response.stringify() << "'\n";
 	return os;
 }

@@ -19,7 +19,7 @@ class StaticHandler {
 	public:
 
 		static Response	handleRequest(std::string const&, Request const&);
-		static Response	handleError(ParseStatus);
+		static Response	handleError(HttpStatus);
 
 };
 

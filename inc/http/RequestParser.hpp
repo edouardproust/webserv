@@ -10,11 +10,11 @@ class RequestParser
 {
 	private :
 
-	ParseStatus	_parseRequestLine(Request& request, const std::string& line);
+	HttpStatus	_parseRequestLine(Request& request, const std::string& line);
 	void 		_parseRequestTarget(Request& request, const std::string& _requestTarget) const;
-	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
-	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
-	ParseStatus	_validateBody(const Request& request);
+	HttpStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
+	HttpStatus	_parseHeaderLine(Request& request, const std::string& line);
+	HttpStatus	_validateBody(const Request& request);
 
 	bool				_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
 	bool				_isValidMethod(const std::string& _method) const;

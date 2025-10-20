@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cstdlib>
 
-LocationBlock::LocationBlock(ServerBlock* server)
+LocationBlock::LocationBlock(ServerBlock const* server)
 : _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)
 {}
 
@@ -140,26 +140,29 @@ void	LocationBlock::_setRoot(Tokens const& tokens) {
 void	LocationBlock::_setAutoindex(Tokens const& tokens) {
 	if (tokens.size() != 2)
 		throw std::runtime_error("Should have 2 arguments");
-	if (tokens[1].empty())
+	std::string const& autoindex = tokens[1];
+	if (autoindex.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (_autoindex != "on" && _autoindex != "off")
+	if (autoindex != "on" && autoindex != "off")
 		throw std::runtime_error("Value should be \"on\" or \"off\"");
-	_autoindex = tokens[1];
+	_autoindex = autoindex;
 }
 
 /**
  * May throw a runtime_error() exception.
  */
-void	LocationBlock::_setLimitExcept(Tokens const& tokens) {
+void LocationBlock::_setLimitExcept(Tokens const& tokens) {
 	if (tokens.size() < 2)
-		throw std::runtime_error("Should have at least 2 arguments");
-	if (tokens[1].empty())
-		throw std::runtime_error("Value is an empty string");
-	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
-		if (!Request::isSupportedMethod(*it))
-			throw std::runtime_error("Not supported method: " + *it);
+		throw std::runtime_error("Should have at least 1 method");
+	_limitExcept.clear(); // renitialise before filling up
+	for (size_t i = 1; i < tokens.size(); ++i) {
+		const std::string& method = tokens[i];
+		if (method.empty())
+			throw std::runtime_error("Method is an empty string");
+		if (!Request::isSupportedMethod(method))
+			throw std::runtime_error("Not supported method: " + method);
+		_limitExcept.insert(method);
 	}
-	_autoindex = tokens[1];
 }
 
 /**
@@ -241,7 +244,7 @@ void	LocationBlock::_setCgi(Tokens const& tokens) {
 	_cgi[extension] = executable;
 }
 
-ServerBlock*	LocationBlock::getServer() const {
+ServerBlock const*	LocationBlock::getServer() const {
 	return _server;
 }
 
@@ -250,9 +253,9 @@ std::string const&	LocationBlock::getPath() const {
 }
 
 std::string const	LocationBlock::getRoot() const {
-	if (!_root.empty())
-		return _root;
-	return _server->getRoot(); // returns "" if server::_root is not set either
+	if (_root.empty() && _server)
+		return _server->getRoot(); // returns "" if server::_root is not set either
+	return _root;
 }
 
 std::string const	LocationBlock::getAutoindex() const {
@@ -270,9 +273,9 @@ std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
 }
 
 unsigned long	LocationBlock::getClientMaxBodySize() const {
-	if (_isSetClientMaxBodySize)
-		return _clientMaxBodySize;
-	return _server->getClientMaxBodySize();
+	if (!_isSetClientMaxBodySize && _server)
+		return _server->getClientMaxBodySize();
+	return _clientMaxBodySize;
 }
 
 bool	LocationBlock::getClientMaxBodySizeSet() const {
@@ -284,9 +287,9 @@ CgiDirective const&	LocationBlock::getCgi() const {
 }
 
 std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
-	if (!_indexFiles.empty())
-		return _indexFiles;
-	return _server->getIndexFiles();
+	if (_indexFiles.empty() && _server)
+		return _server->getIndexFiles();
+	return _indexFiles;
 }
 
 std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
@@ -298,11 +301,20 @@ std::string const	LocationBlock::getCgiExecutor(std::string const& extension) co
 	return "";
 }
 
-bool	LocationBlock::isCgiLocation() const {
+/**
+ * server can be NULL. The getters are built accordingly (security)
+ */
+LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server) {
+	static LocationBlock defaultLocation(server);
+    return defaultLocation;
+}
+
+
+bool	LocationBlock::isCgi() const {
 	return !_cgi.empty();
 }
 
-bool	LocationBlock::isRedirectionLocation() const {
+bool	LocationBlock::isRedirection() const {
 	return _return.first != -1 && !_return.second.empty();
 }
 

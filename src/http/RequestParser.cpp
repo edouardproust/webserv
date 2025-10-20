@@ -20,65 +20,65 @@ RequestParser::~RequestParser() {}
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HTTP_BAD_REQUEST);
 	size_t requestStart;
 	if (!_isValidStart(rawRequest, requestStart))
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HTTP_BAD_REQUEST);
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HTTP_BAD_REQUEST);
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HTTP_BAD_REQUEST);
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
-	ParseStatus	result = _parseRequestLine(request, requestLine);
-	if (result != PARSE_SUCCESS)
+	HttpStatus	result = _parseRequestLine(request, requestLine);
+	if (result != HTTP_OK)
 		return request.setStatus(result);
 	bool hasBody = _hasBody(rawRequest, headersEnd);
 	result = _parseHeaders(request, headersPart, hasBody);
-	if (result != PARSE_SUCCESS)
+	if (result != HTTP_OK)
 		return request.setStatus(result);
 	size_t bodyStart = headersEnd + 4;
 	if (hasBody)
 	{
 		std::string body = rawRequest.substr(bodyStart);
 		request.setBody(body);
-		ParseStatus bodyResult = _validateBody(request);
-		if (bodyResult != PARSE_SUCCESS)
+		HttpStatus bodyResult = _validateBody(request);
+		if (bodyResult != HTTP_OK)
 			return request.setStatus(bodyResult);
 	}
-	request.setStatus(PARSE_SUCCESS);
+	request.setStatus(HTTP_OK);
 }
 
-ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
 {
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
-			return PARSE_ERR_BAD_REQUEST;
+			return HTTP_BAD_REQUEST;
 	}
 	std::istringstream	requestLineStream(line);
 	std::string	methodStr, _requestTarget, _version;
 	if (!(requestLineStream >> methodStr >> _requestTarget >> _version))
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	char c;
 	while (requestLineStream.get(c))
 	{
 		if (c != ' ')
-			 return PARSE_ERR_BAD_REQUEST;
+			 return HTTP_BAD_REQUEST;
 	}
 	_parseRequestTarget(request, _requestTarget);
 	if (!_isValidMethod(methodStr))
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	if (!_isValidPath(request.getPath()))
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	if (!_isValidVersion(_version))
-		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
+		return HTTP_VERSION_NOT_SUPPORTED;
 	request.setMethod(methodStr);
 	request.setVersion(_version);
-	return PARSE_SUCCESS;
+	return HTTP_OK;
 }
 
 void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget) const
@@ -97,7 +97,7 @@ void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _r
 	}
 }
 
-ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
+HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
@@ -108,35 +108,35 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return PARSE_ERR_BAD_REQUEST;
-		ParseStatus result = _parseHeaderLine(request, line);
-		if (result != PARSE_SUCCESS)
+			return HTTP_BAD_REQUEST;
+		HttpStatus result = _parseHeaderLine(request, line);
+		if (result != HTTP_OK)
 			return result;
 	}
 	std::map<std::string, std::string> headers = request.getHeaders();
 	if (headers.find("host") == headers.end())
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	if (hasBody)
 	{
 		if (headers.find("content-length") == headers.end())
-			return PARSE_ERR_LENGTH_REQUIRED;
+			return HTTP_LENGTH_REQUIRED;
 	}
-	return PARSE_SUCCESS;
+	return HTTP_OK;
 }
 
-ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
 	if (!name.empty() && std::isspace(name[name.length() - 1]))
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	if (name.empty())
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	if (!_isValidHeaderName(name))
-		return PARSE_ERR_BAD_REQUEST;
+		return HTTP_BAD_REQUEST;
 	value = _trimOWS(value);
 
 	std::string normalizedName = _normalizeHeaderName(name);
@@ -147,10 +147,10 @@ ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string&
 	}
 	// -- additional check/set for specific headers can be added here --
 
-	return PARSE_SUCCESS;
+	return HTTP_OK;
 }
 
-ParseStatus	RequestParser::_validateBody(const Request& request)
+HttpStatus	RequestParser::_validateBody(const Request& request)
 {
 	std::map<std::string, std::string> headers = request.getHeaders();
 
@@ -160,11 +160,11 @@ ParseStatus	RequestParser::_validateBody(const Request& request)
 		unsigned long contentLength;
 		std::istringstream contentLengthStream(contentLengthStr);
 		if (!(contentLengthStream >> contentLength))
-			return PARSE_ERR_BAD_REQUEST;
+			return HTTP_BAD_REQUEST;
 		if (request.getBody().length() != contentLength)
-			return PARSE_ERR_BAD_REQUEST;
+			return HTTP_BAD_REQUEST;
 	}
-	return PARSE_SUCCESS;
+	return HTTP_OK;
 }
 
 bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& requestStart) const

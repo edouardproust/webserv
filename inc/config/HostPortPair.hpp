@@ -29,6 +29,9 @@ class HostPortPair {
 		const std::string&	getHost() const;
 		size_t				getPort() const;
 
+		bool	isWildcardFor(HostPortPair const& other) const;
+
+
 		bool	operator==(const HostPortPair&) const;
 		bool	operator<(const HostPortPair&) const;
 

@@ -11,7 +11,7 @@ class Request
 {
 	private :
 
-		ParseStatus	_status;
+		HttpStatus	_status;
 		static std::set<std::string> _supportedMethods;
 		std::string	_method;
 		std::string	_requestTarget;
@@ -22,18 +22,19 @@ class Request
 		std::string	_contentType;
 		std::string	_body;
 
+		// Not used
+		Request();
+
 	public:
 
-		Request();
+		Request(std::string const& rawRequest);
 		Request(const Request& other);
 		Request& operator=(const Request& other);
 		~Request();
 
-		void	parse(std::string const& rawRequest);
-
 		static bool	isSupportedMethod(std::string const& method);
 
-		const ParseStatus&	getStatus() const;
+		const HttpStatus&	getStatus() const;
 		const std::string&	getMethod() const;
 		const std::string&	getRequestTarget() const;
 		const std::string&	getPath() const;
@@ -43,7 +44,7 @@ class Request
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
 
-		void	setStatus(ParseStatus status);
+		void	setStatus(HttpStatus status);
 		void	setMethod(std::string const& method);
 		void	setRequestTarget(std::string const& requestTarget);
 		void	setPath(std::string const& path);

@@ -7,7 +7,7 @@ class ServerBlock;
 
 class LocationBlock {
 
-	ServerBlock*				_server;				// Pointer to parent server block, set during validation
+	ServerBlock const*			_server;				// Pointer to parent server block, set during validation
 	std::string					_path;					// URI prefix (e.g. "/cgi-bin/")
 	std::string					_root;					// optional, overrides server root
 	std::string					_autoindex;				// optional
@@ -34,16 +34,15 @@ class LocationBlock {
 
 	public:
 
-		LocationBlock(ServerBlock*); // Default location block (path = "/")
+		LocationBlock(ServerBlock const*); // Default location block (path = "/")
 		LocationBlock(ServerBlock*, std::string&, std::string const&);
 		LocationBlock(LocationBlock const&);
 		LocationBlock&	operator=(LocationBlock const&);
 		~LocationBlock();
 
-		bool	isCgiLocation() const;
-		bool	isRedirectionLocation() const;
+		void setServer(ServerBlock* server);
 
-		ServerBlock*						getServer() const;
+		ServerBlock const*					getServer() const;
 		std::string const&					getPath() const;
 		std::string const					getRoot() const;
 		std::string const					getAutoindex() const;
@@ -55,7 +54,10 @@ class LocationBlock {
 		CgiDirective const&					getCgi() const;
 		std::string const					getCgiExecutor(std::string const& extension) const;
 
-		void setServer(ServerBlock* server);
+		static LocationBlock const&			getDefaultLocation(ServerBlock const*);
+
+		bool	isCgi() const;
+		bool	isRedirection() const;
 
 };
 

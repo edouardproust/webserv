@@ -9,35 +9,26 @@
 /**
  * May throw an std exception.
  */
-ServerBlock::ServerBlock()
-: _isSetClientBodySize(false),
-  _defaultLocation(LocationBlock(this))
-{}
+ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
 
 /**
  * May throw a std exception.
  *
  * If no listen directive in the server block: add "listen 0.0.0.0:80;"
  */
-ServerBlock::ServerBlock(std::string const& blockContent)
-: _isSetClientBodySize(false),
-  _defaultLocation(LocationBlock(this))
-{
+ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(false) {
 	_parse(blockContent); // throw
 	// set default listen directive if none exist after parsing
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0:80"));
 }
 
-ServerBlock::ServerBlock(const ServerBlock &other)
-: _isSetClientBodySize(false), _defaultLocation(this)
-{
+ServerBlock::ServerBlock(const ServerBlock &other): _isSetClientBodySize(false) {
 	*this = other;
 }
 
 ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
     if (this != &other) {
-        _defaultLocation.setServer(this);
         _root = other._root;
         _listen = other._listen;
         _clientMaxBodySize = other._clientMaxBodySize;
@@ -50,7 +41,6 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
             _locations.push_back(other._locations[i]);
             _locations.back().setServer(this);
         }
-		_defaultLocation = other._defaultLocation;
     }
     return *this;
 }
@@ -253,10 +243,6 @@ void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 
 std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
 	return _locations;
-}
-
-LocationBlock const&	ServerBlock::getDefaultLocation() const {
-	return _defaultLocation;
 }
 
 std::string const&	ServerBlock::getRoot() const {

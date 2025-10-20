@@ -1,12 +1,12 @@
 #include "router/Router.hpp"
+#include "router/RoutingDecision.hpp"
 #include "static/StaticHandler.hpp"
 #include "cgi/CGIHandler.hpp"
 #include "utils/utils.hpp"
 #include "constants.hpp"
 #include <iostream>
 
-Router::Router(Request const& request, std::vector<ServerBlock> const& servers, HostPortPair const& listeningOn)
-: _request(request), _servers(servers), _listeningOn(listeningOn), _location(NULL) {}
+Router::Router() {}
 
 Router::~Router() {}
 
@@ -18,9 +18,13 @@ Router::~Router() {}
  *   so the data needs to be 100% correct when passed to the Router. Related parsers are
  *   responsible for checking the data thoroughly.
  */
-void Router::dispatchRequest() {
-    ParseStatus requestStatus = _request.getStatus();
-    if (requestStatus != PARSE_SUCCESS) {
+Response Router::dispatchRequest(Config const& config, Request const& request, HostPortPair const& listen) {
+	RoutingDecision decision(config, request, listen);
+	if (DEVMODE) std::cout << decision << std::endl;
+	return Response();
+	/*
+    HttpStatus requestStatus = _request.getStatus();
+    if (requestStatus != HTTP_OK) {
 		_sendResponse(StaticHandler::handleError(requestStatus)); // TODO: add checks in Reponse ?
         return;
     }
@@ -42,35 +46,15 @@ void Router::dispatchRequest() {
         std::string filePath = _resolveFilePath(_request.getPath(), _location);
 		_sendResponse(StaticHandler::handleRequest(filePath, _request));
     }
+	*/
 }
 
-ServerBlock const&	Router::_findMatchingServer() const {
-	for (size_t i = 0; i < _servers.size(); ++i) {
-		std::set<HostPortPair> serverListens = _servers[i].getListen();
-		for (std::set<HostPortPair>::const_iterator it = serverListens.begin(); it != serverListens.end(); ++it) {
-			if (*it == _listeningOn)
-				return _servers[i];
-		}
-	}
-	// fallback for security, but should never happen
-	return _servers[0];
-}
-
-void	Router::_setMatchingLocation(std::vector<LocationBlock> const& locations, std::string const& path) {
-	LocationBlock const* best = NULL;
-	size_t longest = 0;
-	for (size_t i = 0; i < locations.size(); ++i) {
-		const std::string& locPath = locations[i].getPath();
-		if (path.compare(0, locPath.size(), locPath) == 0) { // prefix match
-			if (path.size() == locPath.size() || path[locPath.size()] == '/') { // prevents against false positives
-				if (locPath.size() > longest) {
-					longest = locPath.size();
-					best = &locations[i];
-				}
-			}
-		}
-	}
-	_location = best;
+/**
+ * //TODO: Maybe this will be moved into network listening loop
+ */
+void	Router::sendResponse(Response const& response) {
+	// TODO
+	(void)response;
 }
 
 std::string	Router::_resolveScriptPath(std::string const& requestPath, LocationBlock const* location) const {
@@ -85,43 +69,3 @@ std::string	Router::_resolveFilePath(std::string const& requestPath, LocationBlo
 	(void)requestPath; (void)location; // to silence unused parameter warning
 }
 
-void	Router::_sendResponse(Response const& response) const {
-	// TODO
-	std::cout << "-- DEBUG: The router is sending the following response: --\n";
-	std::cout << response << std::endl;
-}
-
-Request const&	Router::getRequest() const {
-	return _request;
-}
-
-std::vector<ServerBlock> const&	Router::getServers() const {
-	return _servers;
-}
-
-HostPortPair const&	Router::getListeningOn() const {
-	return _listeningOn;
-}
-
-LocationBlock const* Router::getMatchingLocation() const {
-	return _location;
-}
-
-std::ostream&	operator<<(std::ostream& os, Router const& rhs) {
-	Request const& request = rhs.getRequest();
-	os << "Router:\n";
-	os << "- Listening on: " << rhs.getListeningOn().getHost() << ":" << rhs.getListeningOn().getPort() << "\n";
-	os << "- Request method: " << request.getMethod() << "\n";
-	os << "- Request path: " << request.getPath() << "\n";
-	os << "- Request version: " << request.getVersion() << "\n";
-	os << "- Headers: " << request.getHeaders().size() << std::endl;
-	for (std::map<std::string, std::string>::const_iterator it = request.getHeaders().begin();
-		it != request.getHeaders().end(); ++it) {
-		os << "  - " << it->first << ": '" << it->second << "'\n";
-	}
-	LocationBlock const* matchingLoc = rhs.getMatchingLocation();
-	os << "- Matching location:";
-	if (matchingLoc) os << "\n" << *matchingLoc;
-	else os << " [empty]";
-	return os;
-}

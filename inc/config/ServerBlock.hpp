@@ -14,7 +14,6 @@ class ServerBlock {
 	std::vector<std::string>	_indexFiles;
 
 	std::vector<LocationBlock>	_locations;
-	LocationBlock				_defaultLocation;
 
 	void	_parse(std::string const&);
 	void	_parseBlock(Tokens&, std::string const&, size_t&, int&, bool);
@@ -41,7 +40,6 @@ class ServerBlock {
 		std::map<int, std::string> const&	getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		std::vector<LocationBlock> const&	getLocations() const;
-		LocationBlock const&				getDefaultLocation() const;
 
 };
 
