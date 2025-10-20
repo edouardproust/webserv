@@ -1,7 +1,7 @@
 #include "router/RoutingDecision.hpp"
 
 RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair const& l)
-: _config(c), _request(r), _listen(l), _status(HTTP_BAD_REQUEST), _server(NULL),
+: _config(c), _request(r), _listen(l), _status(PARSE_ERR_BAD_REQUEST), _server(NULL),
   _location(NULL) {
 	_setLocation();
   }
@@ -79,7 +79,7 @@ LocationBlock const*	RoutingDecision::getLocation() const {
 
 void	RoutingDecision::_resolveFinalPath() {
 	if (!_location || !_server) {
-		_status = HTTP_INTERNAL_SERVER_ERROR;
+		_status = PARSE_INTERNAL_SERVER_ERROR;
 		return;
 	}
 	std::string path = _request.getPath();

@@ -5,7 +5,7 @@
 Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static RequestParser parser;
 	static Request request(rawRequest);
-	if (request.getStatus() != HTTP_OK) {
+	if (request.getStatus() != PARSE_SUCCESS) {
 		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus()));
 	}
 	return (request);
@@ -69,7 +69,7 @@ void dev::runParserValidationTests()
 	for (int i = 0; i < numTests; i++) {
 		Request request(rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
-			<< (request.getStatus() == HTTP_OK ? "PASS" : "FAIL")
+			<< (request.getStatus() == PARSE_SUCCESS ? "PASS" : "FAIL")
 			<< " (" << request.getStatus() << ")" << std::endl;
 	}
 }
@@ -112,7 +112,7 @@ void dev::runParsedContentTests()
 
         std::cout << "Parse status: " << request.getStatus() << std::endl;
 
-        if (request.getStatus() == HTTP_OK)
+        if (request.getStatus() == PARSE_SUCCESS)
 		{
             std::cout << "--- PARSED CONTENT ---" << std::endl;
             std::cout << request;

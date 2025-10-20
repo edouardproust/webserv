@@ -22,7 +22,7 @@ Response	StaticHandler::handleRequest(std::string const& filePath, Request const
 	return response;
 }
 
-Response	StaticHandler::handleError(HttpStatus status) {
+Response	StaticHandler::handleError(ParseStatus status) {
 	// This is a placeholder implementation
 	std::string errorPage = "<html><body><h1>Error " + utils::toString(status) + "</h1></body></html>";
 

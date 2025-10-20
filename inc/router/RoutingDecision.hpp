@@ -3,9 +3,9 @@
 
 #include "config/Config.hpp"
 #include "http/Request.hpp"
+#include "http/HttpStatus.hpp"
 #include "config/ServerBlock.hpp"
 #include "config/LocationBlock.hpp"
-#include "constants.hpp"
 
 class RoutingDecision {
 
@@ -41,7 +41,7 @@ class RoutingDecision {
 		void	setCgiExecutor();
 		void	setRedirectTarget();
 
-		HttpStatus				getStatus() const;
+		ParseStatus				getStatus() const;
 		ServerBlock const*		getServer() const;
 		LocationBlock const*	getLocation() const;
 

@@ -13,7 +13,7 @@ class Config {
 	std::string	_extractFileContent(std::string const&);
 	void		_parse(std::string const&);
 	void		_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&);
-	void		_addServer(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth);
+	void		_addServer(Tokens const&, std::string const&, size_t& i, int&);
 	void		_validate() const;
 
 	// Not used

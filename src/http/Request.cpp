@@ -3,13 +3,10 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request(std::string const& rawRequest)
-: _status(HTTP_BAD_REQUEST), _method(""), _requestTarget(""),
-  _path(""), _queryString(""), _version(""), _contentType(""),
-  _body("") {
-		static RequestParser parser;
-		parser.parseRequest(*this, rawRequest);
-  }
+Request::Request(std::string const& rawRequest) : _status(PARSE_INTERNAL_SERVER_ERROR), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {
+	static RequestParser parser;
+	parser.parseRequest(*this, rawRequest);
+}
 
 Request::Request(const Request& other) {
 	*this = other;
@@ -44,7 +41,7 @@ bool	Request::isSupportedMethod(std::string const& method) {
 	return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-const HttpStatus& Request::getStatus() const
+const ParseStatus& Request::getStatus() const
 {
 	return (this->_status);
 }
@@ -89,7 +86,7 @@ const std::string& Request::getBody() const
 	return this->_body;
 }
 
-void	Request::setStatus(HttpStatus status)
+void	Request::setStatus(ParseStatus status)
 {
 	this->_status = status;
 }
@@ -137,8 +134,10 @@ void	Request::setBody(const std::string& _body)
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
-	HttpStatus const& status = request.getStatus();
-	os << "- Status: " << status << "\n";
+	ParseStatus const& status = request.getStatus();
+	os << "- Status: ";
+	if (status != PARSE_INTERNAL_SERVER_ERROR) os << status << "\n";
+	else os << "[empty]\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
 	os << "- Request Target: " << request.getRequestTarget() << "\n";

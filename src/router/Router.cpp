@@ -23,8 +23,8 @@ Response Router::dispatchRequest(Config const& config, Request const& request, H
 	if (DEVMODE) std::cout << decision << std::endl;
 	return Response();
 	/*
-    HttpStatus requestStatus = _request.getStatus();
-    if (requestStatus != HTTP_OK) {
+    ParseStatus requestStatus = _request.getStatus();
+    if (requestStatus != PARSE_SUCCESS) {
 		_sendResponse(StaticHandler::handleError(requestStatus)); // TODO: add checks in Reponse ?
         return;
     }

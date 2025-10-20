@@ -20,65 +20,65 @@ RequestParser::~RequestParser() {}
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return request.setStatus(HTTP_BAD_REQUEST);
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	size_t requestStart;
 	if (!_isValidStart(rawRequest, requestStart))
-		return request.setStatus(HTTP_BAD_REQUEST);
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return request.setStatus(HTTP_BAD_REQUEST);
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return request.setStatus(HTTP_BAD_REQUEST);
+		return request.setStatus(PARSE_ERR_BAD_REQUEST);
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
-	HttpStatus	result = _parseRequestLine(request, requestLine);
-	if (result != HTTP_OK)
+	ParseStatus	result = _parseRequestLine(request, requestLine);
+	if (result != PARSE_SUCCESS)
 		return request.setStatus(result);
 	bool hasBody = _hasBody(rawRequest, headersEnd);
 	result = _parseHeaders(request, headersPart, hasBody);
-	if (result != HTTP_OK)
+	if (result != PARSE_SUCCESS)
 		return request.setStatus(result);
 	size_t bodyStart = headersEnd + 4;
 	if (hasBody)
 	{
 		std::string body = rawRequest.substr(bodyStart);
 		request.setBody(body);
-		HttpStatus bodyResult = _validateBody(request);
-		if (bodyResult != HTTP_OK)
+		ParseStatus bodyResult = _validateBody(request);
+		if (bodyResult != PARSE_SUCCESS)
 			return request.setStatus(bodyResult);
 	}
-	request.setStatus(HTTP_OK);
+	request.setStatus(PARSE_SUCCESS);
 }
 
-HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
+ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
 {
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
-			return HTTP_BAD_REQUEST;
+			return PARSE_ERR_BAD_REQUEST;
 	}
 	std::istringstream	requestLineStream(line);
 	std::string	methodStr, _requestTarget, _version;
 	if (!(requestLineStream >> methodStr >> _requestTarget >> _version))
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	char c;
 	while (requestLineStream.get(c))
 	{
 		if (c != ' ')
-			 return HTTP_BAD_REQUEST;
+			 return PARSE_ERR_BAD_REQUEST;
 	}
 	_parseRequestTarget(request, _requestTarget);
 	if (!_isValidMethod(methodStr))
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidPath(request.getPath()))
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidVersion(_version))
-		return HTTP_VERSION_NOT_SUPPORTED;
+		return PARSE_ERR_VERSION_NOT_SUPPORTED;
 	request.setMethod(methodStr);
 	request.setVersion(_version);
-	return HTTP_OK;
+	return PARSE_SUCCESS;
 }
 
 void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget) const
@@ -97,7 +97,7 @@ void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _r
 	}
 }
 
-HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
+ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
@@ -108,35 +108,35 @@ HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& hea
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return HTTP_BAD_REQUEST;
-		HttpStatus result = _parseHeaderLine(request, line);
-		if (result != HTTP_OK)
+			return PARSE_ERR_BAD_REQUEST;
+		ParseStatus result = _parseHeaderLine(request, line);
+		if (result != PARSE_SUCCESS)
 			return result;
 	}
 	std::map<std::string, std::string> headers = request.getHeaders();
 	if (headers.find("host") == headers.end())
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	if (hasBody)
 	{
 		if (headers.find("content-length") == headers.end())
-			return HTTP_LENGTH_REQUIRED;
+			return PARSE_ERR_LENGTH_REQUIRED;
 	}
-	return HTTP_OK;
+	return PARSE_SUCCESS;
 }
 
-HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
+ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
 	if (!name.empty() && std::isspace(name[name.length() - 1]))
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	if (name.empty())
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidHeaderName(name))
-		return HTTP_BAD_REQUEST;
+		return PARSE_ERR_BAD_REQUEST;
 	value = _trimOWS(value);
 
 	std::string normalizedName = _normalizeHeaderName(name);
@@ -147,10 +147,10 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& 
 	}
 	// -- additional check/set for specific headers can be added here --
 
-	return HTTP_OK;
+	return PARSE_SUCCESS;
 }
 
-HttpStatus	RequestParser::_validateBody(const Request& request)
+ParseStatus	RequestParser::_validateBody(const Request& request)
 {
 	std::map<std::string, std::string> headers = request.getHeaders();
 
@@ -160,11 +160,11 @@ HttpStatus	RequestParser::_validateBody(const Request& request)
 		unsigned long contentLength;
 		std::istringstream contentLengthStream(contentLengthStr);
 		if (!(contentLengthStream >> contentLength))
-			return HTTP_BAD_REQUEST;
+			return PARSE_ERR_BAD_REQUEST;
 		if (request.getBody().length() != contentLength)
-			return HTTP_BAD_REQUEST;
+			return PARSE_ERR_BAD_REQUEST;
 	}
-	return HTTP_OK;
+	return PARSE_SUCCESS;
 }
 
 bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& requestStart) const

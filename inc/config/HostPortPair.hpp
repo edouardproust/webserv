@@ -21,7 +21,7 @@ class HostPortPair {
 
 	public:
 
-		HostPortPair(std::string const& hostPortStr);
+		HostPortPair(std::string const&);
 		HostPortPair(HostPortPair const&);
 		HostPortPair& operator=(HostPortPair const&);
 		~HostPortPair();
