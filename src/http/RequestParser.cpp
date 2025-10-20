@@ -114,11 +114,15 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 			return result;
 	}
 	std::map<std::string, std::string> headers = request.getHeaders();
+	if (headers.find("content-length") != headers.end() &&
+		headers.find("transfer-encoding") != headers.end())
+			return PARSE_ERR_BAD_REQUEST;
 	if (headers.find("host") == headers.end())
 		return PARSE_ERR_BAD_REQUEST;
 	if (hasBody)
 	{
-		if (headers.find("content-length") == headers.end())
+		if ((headers.find("content-length") == headers.end()) &&
+			headers.find("transfer-encoding") == headers.end())
 			return PARSE_ERR_LENGTH_REQUIRED;
 	}
 	return PARSE_SUCCESS;
@@ -138,19 +142,72 @@ ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string&
 	if (!_isValidHeaderName(name))
 		return PARSE_ERR_BAD_REQUEST;
 	value = _trimOWS(value);
-
+	if (!_isValidHeaderValue(value))
+		return PARSE_ERR_BAD_REQUEST;
 	std::string normalizedName = _normalizeHeaderName(name);
-	request.addHeader(normalizedName, value);
-	if (normalizedName == "content-type") {
-		// TODO AVA: check syntax of the Content-Type header
-    	request.setContentType(value);
+	if (normalizedName == "content-type")
+	{
+		if (!_isValidContentType(value))
+			return PARSE_ERR_BAD_REQUEST;
+		request.setContentType(value);
 	}
-	// -- additional check/set for specific headers can be added here --
-
+	if (normalizedName == "transfer-encoding")
+	{
+		std::string normalizedValue = utils::toLowerCase(value);
+		if (normalizedValue == "gzip" || normalizedValue == "deflate" ||
+			normalizedValue == "compress" || normalizedValue == "br")
+			return PARSE_ERR_NOT_IMPLEMENTED;
+		else if (normalizedValue != "chunked")
+			return PARSE_ERR_BAD_REQUEST;
+	}
+	request.addHeader(normalizedName, value);
 	return PARSE_SUCCESS;
 }
 
-ParseStatus	RequestParser::_validateBody(const Request& request)
+ParseStatus	RequestParser::_parseChunkedBody(Request& request)
+{
+	std::string chunkedData = request.getBody();
+	std::stringstream unchunkedBody;
+	size_t pos = 0;
+	const size_t dataLength = chunkedData.length();
+
+	while (pos < dataLength)
+	{
+		size_t lineEnd = chunkedData.find("\r\n", pos);
+		if (lineEnd == std::string::npos)
+			return PARSE_ERR_BAD_REQUEST;
+		std::string chunkSizeStr = chunkedData.substr(pos, lineEnd - pos);
+		if (chunkSizeStr.empty())
+			return PARSE_ERR_BAD_REQUEST;
+		for (size_t i = 0; i < chunkSizeStr.length(); i++)
+		{
+			if (!std::isxdigit(chunkSizeStr[i]))
+				return PARSE_ERR_BAD_REQUEST;
+		}
+		size_t chunkSize;
+		std::stringstream hexStream;
+		hexStream << std::hex << chunkSizeStr;
+		if (!(hexStream >> chunkSize))
+			return PARSE_ERR_BAD_REQUEST;
+		pos = lineEnd + 2;
+		if (chunkSize == 0)
+		 	break ;
+		if (pos + chunkSize + 2 > dataLength)
+			return PARSE_ERR_BAD_REQUEST;
+		std::string chunkData = chunkedData.substr(pos, chunkSize);
+		unchunkedBody << chunkData;
+		size_t dataEnd = pos + chunkSize;
+		if (chunkedData.substr(dataEnd, 2) != "\r\n")
+			return PARSE_ERR_BAD_REQUEST;
+		pos = dataEnd + 2;
+	}
+	if (pos + 2 <= dataLength && chunkedData.substr(pos, 2) != "\r\n") 
+		return PARSE_ERR_BAD_REQUEST;
+	request.setBody(unchunkedBody.str());
+	return PARSE_SUCCESS;
+}
+
+ParseStatus	RequestParser::_validateBody(Request& request)
 {
 	std::map<std::string, std::string> headers = request.getHeaders();
 
@@ -164,6 +221,8 @@ ParseStatus	RequestParser::_validateBody(const Request& request)
 		if (request.getBody().length() != contentLength)
 			return PARSE_ERR_BAD_REQUEST;
 	}
+	if (headers.find("transfer-encoding") != headers.end())
+			return _parseChunkedBody(request);
 	return PARSE_SUCCESS;
 }
 
@@ -216,6 +275,42 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 	for (size_t i = 0; i < name.length(); i++)
 	{
 		if (!std::isalnum(name[i]) && validChars.find(name[i]) == std::string::npos)
+			return false;
+	}
+	return true;
+}
+
+bool	RequestParser::_isValidHeaderValue(const std::string& value) const
+{
+	for (size_t i = 0; i < value.length(); i++)
+	{
+		if (value[i] == '\0')
+			return false;
+		if (value[i] < 0x20 || value[i] == 0x7F)
+			return false;
+	}
+	return true;
+}
+
+bool	RequestParser::_isValidContentType(const std::string& contentType) const
+{
+	if (contentType.empty())
+		return false;
+	size_t slashPos = contentType.find('/');
+	if (slashPos == std::string::npos || slashPos == 0)
+		return false;
+	if (contentType.find('\0') != std::string::npos)
+		return false;
+	return true;
+}
+
+bool	RequestParser::_isValidContentLength(const std::string& contentLength) const
+{
+	if (contentLength.empty())
+		return false;
+	for (size_t i = 0; i < contentLength.length(); i++)
+	{
+		if (contentLength[i] < '0' && contentLength[i] > '9')
 			return false;
 	}
 	return true;

@@ -14,13 +14,17 @@ class RequestParser
 	void 		_parseRequestTarget(Request& request, const std::string& _requestTarget) const;
 	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
 	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
-	ParseStatus	_validateBody(const Request& request);
+	ParseStatus _parseChunkedBody(Request& request);
+	ParseStatus	_validateBody(Request& request);
 
 	bool				_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
 	bool				_isValidMethod(const std::string& _method) const;
 	bool				_isValidPath(const std::string& _path) const;
 	bool				_isValidVersion(const std::string& _version) const;
 	bool				_isValidHeaderName(const std::string& name) const;
+	bool				_isValidHeaderValue(const std::string& value) const;
+	bool				_isValidContentType(const std::string& contentType) const;
+	bool				_isValidContentLength(const std::string& contentLength) const;
 	static std::string	_trimOWS(const std::string& str);
 	bool				_hasBody(const std::string& rawRequest, size_t headersEnd) const;
 	std::string			_normalizeHeaderName(const std::string& name) const;

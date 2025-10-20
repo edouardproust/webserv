@@ -80,7 +80,7 @@ const std::map<std::string, std::string>& Request::getHeaders() const
 
 const std::string& Request::getContentType() const
 {
-    return _contentType;
+    return this->_contentType;
 }
 
 const std::string& Request::getBody() const
@@ -125,7 +125,7 @@ void	Request::addHeader(const std::string& name, const std::string& value)
 
 void Request::setContentType(const std::string& value)
 {
-    _contentType = value;
+    this->_contentType = value;
 }
 
 void	Request::setBody(const std::string& _body)

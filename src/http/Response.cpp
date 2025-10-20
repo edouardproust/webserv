@@ -7,6 +7,7 @@ Response::Response() : _statusCode(200), _reasonPhrase("OK")
 	_headers["server"] = "webserv/1.0";
 	_headers["date"] = getCurrentDate();
 	_headers["connection"] = "keep-alive";
+	_headers["content-length"] = "0";
 }
 
 Response::Response(const Response& other)
