@@ -69,10 +69,10 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 		if (c != ' ')
 			 return PARSE_ERR_BAD_REQUEST;
 	}
-	_parseRequestTarget(request, _requestTarget);
+	ParseStatus result = _parseRequestTarget(request, _requestTarget);
+	if (result != PARSE_SUCCESS)
+	 	return result;
 	if (!_isValidMethod(methodStr))
-		return PARSE_ERR_BAD_REQUEST;
-	if (!_isValidPath(request.getPath()))
 		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidVersion(_version))
 		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
@@ -81,20 +81,60 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 	return PARSE_SUCCESS;
 }
 
-void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget) const
+ParseStatus	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget)
 {
 	request.setRequestTarget(_requestTarget);
 	size_t queryPos = _requestTarget.find('?');
 	if (queryPos != std::string::npos)
 	{
-		request.setPath(_requestTarget.substr(0, queryPos));
-		request.setQueryString(_requestTarget.substr(queryPos + 1));
+		std::string path = _requestTarget.substr(0, queryPos);
+		std::string query = _requestTarget.substr(queryPos + 1);
+		if (!_isValidPath(path))
+			return PARSE_ERR_BAD_REQUEST;
+		std::string decodedPath, decodedQuery;
+		if (_parseUrl(decodedPath, path) != PARSE_SUCCESS)
+			return PARSE_ERR_BAD_REQUEST;
+		if (_parseUrl(decodedQuery, query) != PARSE_SUCCESS)
+			return PARSE_ERR_BAD_REQUEST;
+		request.setPath(decodedPath);
+		request.setQueryString(decodedQuery);
 	}
 	else
 	{
-		request.setPath(_requestTarget);
+		if (!_isValidPath(_requestTarget))
+			return PARSE_ERR_BAD_REQUEST;
+		std::string decodedPath;
+		if (_parseUrl(decodedPath, _requestTarget) != PARSE_SUCCESS)
+			return PARSE_ERR_BAD_REQUEST;
+		request.setPath(decodedPath);
 		request.setQueryString("");
 	}
+	return PARSE_SUCCESS;
+}
+
+ParseStatus RequestParser::_parseUrl(std::string& result, const std::string& encoded)
+{
+	result.clear();
+	for (size_t i = 0; i < encoded.length(); i++)
+	{
+		if (encoded[i] == '%' && i + 2 < encoded.length())
+		{
+			std::string hex = encoded.substr(i + 1, 2);
+			if (!std::isxdigit(hex[0]) || !std::isxdigit(hex[1]))
+				return PARSE_ERR_BAD_REQUEST;
+			char decodedChar = utils::hexToChar(hex);
+			if (decodedChar == '\0' || decodedChar == '\r' || decodedChar == '\n' ||
+				decodedChar == '\t' || decodedChar == '\v' || decodedChar == '\f')
+				return PARSE_ERR_BAD_REQUEST;
+			result += decodedChar;
+			i += 2;
+		}
+		else if (encoded[i] == '+')
+			result += ' ';
+		else
+			result += encoded[i];
+	}
+	return PARSE_SUCCESS;
 }
 
 ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
@@ -184,10 +224,8 @@ ParseStatus	RequestParser::_parseChunkedBody(Request& request)
 			if (!std::isxdigit(chunkSizeStr[i]))
 				return PARSE_ERR_BAD_REQUEST;
 		}
-		size_t chunkSize;
-		std::stringstream hexStream;
-		hexStream << std::hex << chunkSizeStr;
-		if (!(hexStream >> chunkSize))
+		size_t chunkSize = utils::hexToSizeT(chunkSizeStr);
+		if (chunkSize == static_cast<size_t>(-1))
 			return PARSE_ERR_BAD_REQUEST;
 		pos = lineEnd + 2;
 		if (chunkSize == 0)
@@ -201,7 +239,7 @@ ParseStatus	RequestParser::_parseChunkedBody(Request& request)
 			return PARSE_ERR_BAD_REQUEST;
 		pos = dataEnd + 2;
 	}
-	if (pos + 2 <= dataLength && chunkedData.substr(pos, 2) != "\r\n") 
+	if (pos + 2 != dataLength || chunkedData.substr(pos, 2) != "\r\n")
 		return PARSE_ERR_BAD_REQUEST;
 	request.setBody(unchunkedBody.str());
 	return PARSE_SUCCESS;
@@ -338,3 +376,4 @@ std::string RequestParser::_normalizeHeaderName(const std::string& name) const
 {
 	return utils::toLowerCase(name);
 }
+

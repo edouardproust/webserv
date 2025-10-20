@@ -27,11 +27,13 @@ namespace utils {
 	bool	isAbsolutePath(std::string const& path);
 
 	size_t	toSizeT(std::string const&);
+	size_t	hexToSizeT(const std::string& hexStr);
 
 	std::string&	normalizePath(std::string& path);
 	std::string		getFileExtension(std::string const& path);
 	std::string		toLowerCase(const std::string& str);
 
+	char	hexToChar(const std::string& hex);
 }
 
 #include "../src/utils/utils.tpp"

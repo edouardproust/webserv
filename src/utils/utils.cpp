@@ -80,6 +80,18 @@ size_t	utils::toSizeT(std::string const& str)
 	return static_cast<size_t>(value);
 }
 
+size_t	utils::hexToSizeT(const std::string& hexStr)
+{
+	if (hexStr.empty())
+		return static_cast<size_t>(-1);
+	size_t result;
+	std::stringstream ss;
+	ss << std::hex << hexStr;
+	if (!(ss >> result))
+		 return static_cast<size_t>(-1);
+	return result;
+}
+
 std::string& utils::normalizePath(std::string& path) {
 	if (path.size() > 1 && path[path.size() - 1] == '/')
 		path.erase(path.size() - 1);
@@ -102,4 +114,13 @@ std::string	utils::toLowerCase(const std::string& str)
 	for (size_t i = 0; i < normalized.length(); ++i)
 		normalized[i] = std::tolower(normalized[i]);
 	return normalized;
+}
+
+char	utils::hexToChar(const std::string& hex)
+{
+	int value;
+	std::stringstream ss;
+	ss << std::hex << hex;
+	ss >> value;
+	return static_cast<char>(value);
 }

@@ -11,7 +11,8 @@ class RequestParser
 	private :
 
 	ParseStatus	_parseRequestLine(Request& request, const std::string& line);
-	void 		_parseRequestTarget(Request& request, const std::string& _requestTarget) const;
+	ParseStatus _parseRequestTarget(Request& request, const std::string& _requestTarget);
+	ParseStatus	_parseUrl(std::string& result, const std::string& encoded);
 	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
 	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
 	ParseStatus _parseChunkedBody(Request& request);
