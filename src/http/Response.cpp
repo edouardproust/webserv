@@ -30,18 +30,6 @@ Response& Response::operator=(const Response& other)
 
 Response::~Response() {}
 
-std::string	Response::stringify() const
-{
-	std::stringstream response;
-
-	response << _buildStatusLine();
-	response << _buildHeaders();
-	response << "\r\n";
-	if (!_body.empty())
-		response << _body;
-	return response.str();
-}
-
 int	Response::getStatusCode() const
 {
 	return _statusCode;
@@ -66,6 +54,8 @@ void	Response::setStatusCode(int statusCode)
 {
 	_statusCode = statusCode;
 	_reasonPhrase = _getReasonPhrase(statusCode);
+	if (statusCode == 204)
+		setBody("");
 }
 
 void	Response::setHeader(const std::string& name, const std::string& value)
@@ -102,6 +92,18 @@ void	Response::setError(int statusCode)
 	setHeader("Content-Type", "text/html");
 	std::string errorBody = _generateErrorPage();
 	setBody(errorBody);
+}
+
+std::string	Response::stringify() const
+{
+	std::stringstream response;
+
+	response << _buildStatusLine();
+	response << _buildHeaders();
+	response << "\r\n";
+	if (!_body.empty())
+		response << _body;
+	return response.str();
 }
 
 std::string Response::_getReasonPhrase(int statusCode) const
