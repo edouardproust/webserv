@@ -80,12 +80,6 @@ size_t	utils::toSizeT(std::string const& str)
 	return static_cast<size_t>(value);
 }
 
-std::string& utils::normalizePath(std::string& path) {
-	if (path.size() > 1 && path[path.size() - 1] == '/')
-		path.erase(path.size() - 1);
-	return path;
-}
-
 /**
  * Returns empty string "" in cse of failure.
  */
@@ -101,5 +95,81 @@ std::string	utils::toLowerCase(const std::string& str)
 	std::string normalized = str;
 	for (size_t i = 0; i < normalized.length(); ++i)
 		normalized[i] = std::tolower(normalized[i]);
+	return normalized;
+}
+
+/**
+ * Split a string into substrings separated by a given delimiter.
+ *
+ * Consecutive delimiters or leading/trailing delimiters are ignored,
+ * so empty substrings are skipped.
+ *
+ * Example: `split("a//b/c/", '/')` -> `{"a", "b", "c"}`
+ */
+std::vector<std::string>	utils::split(std::string const& s, char delim) {
+	std::vector<std::string> elems;
+	std::stringstream ss(s);
+	std::string item;
+	while (std::getline(ss, item, delim))
+		if (!item.empty()) elems.push_back(item);
+	return elems;
+}
+
+/**
+ * Merge two strings into a valid path.
+ *
+ * Trailing slashes are not trimmed.
+ *
+ * Examples:
+ * `joinPath("", "mydomain/index.htm")` -> `/mydomain/index.htm`
+ * `joinPath("var/www/html/", "")` -> `/var/www/html/`
+ * `joinPath("/var/www/html/", "/index.htm")` -> `/var/www/html/index.htm`
+ * `joinPath("/var/www/html", "test/")` -> `/var/www/html/test/`
+ * `joinPath("", "")` -> `/`
+ */
+std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
+	if (lhs.empty()) {
+		if (rhs.empty()) return "/";
+		return (!rhs.empty() && rhs[0] == '/') ? rhs : "/" + rhs;
+	}
+	std::string joinedPath = lhs;
+	if (!joinedPath.empty() && joinedPath[joinedPath.size() - 1] != '/')
+		joinedPath += '/';
+	if (!rhs.empty() && rhs[0] == '/')
+		joinedPath += rhs.substr(1);
+	else
+		joinedPath += rhs;
+	return joinedPath;
+}
+
+/**
+ * Normalize a path by:
+ * - Removing redundant '.' segments
+ * - Resolving '..' segments
+ * - Collapsing multiple consecutive '/' into a single '/'
+ * - Ensuring the path starts with a single '/'
+ * - Removing trailing '/' (except for the root '/')
+ *
+ * Examples:
+ * `_normalizePath("/var/www/html/.././index.html")` -> `/var/www/index.html`
+ * `_normalizePath("//var///www////html/test//")` -> `/var/www/html/test`
+ * `_normalizePath("/./././")` -> `/`
+ * `_normalizePath("/a/b/../../c/")` -> `/c`
+ */
+std::string utils::normalizePath(std::string const& path) {
+	std::vector<std::string> parts = utils::split(path, '/');
+	std::vector<std::string> clean;
+	for (size_t i = 0; i < parts.size(); ++i) {
+		if (parts[i] == "..") {
+			if (!clean.empty()) clean.pop_back();
+		} else if (parts[i] != "." && !parts[i].empty()) {
+			clean.push_back(parts[i]);
+		}
+	}
+	std::string normalized = "/";
+	for (size_t i = 0; i < clean.size(); ++i) {
+		normalized += clean[i];
+		if (i + 1 < clean.size()) normalized += "/";
+	}
 	return normalized;
 }

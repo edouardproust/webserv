@@ -155,7 +155,7 @@ void	ServerBlock::_setRoot(Tokens const& tokens) {
 		throw std::runtime_error("Value is an empty string");
 	if (!utils::isAbsolutePath(root))
 		throw std::runtime_error("Not an absolute path: '" + root + "'");
-	_root = utils::normalizePath(root);
+	_root = Config::normalizePath(root);
 }
 
 /**

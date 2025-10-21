@@ -56,16 +56,3 @@ void	Router::sendResponse(Response const& response) {
 	// TODO
 	(void)response;
 }
-
-std::string	Router::_resolveScriptPath(std::string const& requestPath, LocationBlock const* location) const {
-	// TODO
-	return "/var/www/cgi-bin" + requestPath.substr(location->getPath().length());
-	(void)requestPath; (void)location; // to silence unused parameter warning
-}
-
-std::string	Router::_resolveFilePath(std::string const& requestPath, LocationBlock const* location) const {
-	// TODO
-	return location->getRoot() + requestPath;
-	(void)requestPath; (void)location; // to silence unused parameter warning
-}
-

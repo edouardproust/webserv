@@ -14,6 +14,7 @@ BASE_SRC_FILES = \
 	config/LocationBlock.cpp \
 	config/HostPortPair.cpp \
 	config/ServerBlock.cpp \
+	http/HttpStatus.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
 	http/Response.cpp \

@@ -58,6 +58,7 @@ class LocationBlock {
 
 		bool	isCgi() const;
 		bool	isRedirection() const;
+		bool	isDirectory() const;
 
 };
 

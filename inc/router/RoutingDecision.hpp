@@ -6,6 +6,7 @@
 #include "http/HttpStatus.hpp"
 #include "config/ServerBlock.hpp"
 #include "config/LocationBlock.hpp"
+#include "utils/utils.hpp"
 
 class RoutingDecision {
 
@@ -22,7 +23,7 @@ class RoutingDecision {
 
 	void	_setServer();
 	void	_setLocation();
-
+	void	_setFinalPath();
 
 	// Not used
 	RoutingDecision();
@@ -37,13 +38,13 @@ class RoutingDecision {
 		~RoutingDecision();
 
 		void	setStatus();
-		void	setFinalPath();
 		void	setCgiExecutor();
 		void	setRedirectTarget();
 
-		ParseStatus				getStatus() const;
+		HttpStatus const&		getStatus() const;
 		ServerBlock const*		getServer() const;
 		LocationBlock const*	getLocation() const;
+		std::string const&		getFinalPath() const;
 
 };
 

@@ -12,11 +12,88 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{405, "Method Not Allowed", "method_not_allowed"},
 	{411, "Length Required", "length_required"},
 	{413, "Content Too Large", "content_too_large"},
-	{500, "Internal Server Error", "internal_server_error"},
+	{500, "Internal Server Error", "internal_server_error"}, // default (do not delete!)
 	{501, "Not Implemented", "not_implemented"},
 	{502, "Bad Gateway", "bad_gateway"},
 	{505, "HTTP Version Not Supported", "version_not_supported"},
 };
+
+// constructors
+
+/**
+ * Build a `HttpStatus` from a HTTP status code.
+ *
+ * - Supported codes: `200`, `201`, `204`, `301`, `302`, `400`, `403`,
+ * `404`, `405`, `411`, `413`, `500`, `501`, `502`, `505`
+ * - Any other code defaults to `500`
+ */
+HttpStatus::HttpStatus(int code) {
+	_initFromEntry(_findByCode(code));
+}
+
+/**
+ * Build a `HttpStatus` from a HTTP status slug.
+ *
+ * - Supported slugs: `ok`, `created`, `no_content`, `moved_permanently`,
+ * `found`, `bad_request`, `forbidden`, `not_found`, `method_not_allowed`,
+ * `length_required`, `content_too_large`, `internal_server_error`,
+ * `not_implemented`, `bad_gateway`, `version_not_supported`
+ * - Any other slug will default to `internal_server_error`
+ */
+HttpStatus::HttpStatus(std::string const& slug) {
+	_initFromEntry(_findBySlug(slug));
+}
+
+HttpStatus::HttpStatus(HttpStatus const& other)
+: _code(other._code), _reason(other._reason), _slug(other._slug) {}
+
+HttpStatus& HttpStatus::operator=(HttpStatus const& other) {
+	if (this != &other) {
+		_code = other._code;
+		_reason = other._reason;
+		_slug = other._slug;
+	}
+	return *this;
+}
+
+HttpStatus::~HttpStatus() {}
+
+// public
+
+int	HttpStatus::getCode() const {
+	return _code;
+}
+std::string const&	HttpStatus::getReason() const {
+	return _reason;
+}
+
+std::string const&	HttpStatus::getSlug() const {
+	return _slug;
+}
+
+/**
+ * Returns the HttpStatus as a string like "404 Not Found".
+ */
+std::string	HttpStatus::toString() const {
+	std::ostringstream oss;
+	oss << _code << " " << _reason;
+	return oss.str();
+}
+
+bool	HttpStatus::isError(int code) {
+	return code >= 400;
+}
+
+std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
+	os << "HttpStatus: "
+		<< "code=" << rhs.getCode()
+		<< "reason=\"" << rhs.getReason() << "\""
+		<< "slug=\"" << rhs.getSlug() << "\""
+		<< "\n";
+	return os;
+}
+
+// private
 
 const size_t HttpStatus::STATUS_TABLE_SIZE = sizeof(HttpStatus::STATUS_TABLE) / sizeof(HttpStatus::Entry);
 
@@ -34,78 +111,10 @@ HttpStatus::Entry const* HttpStatus::_findBySlug(std::string const& slug) {
 	return NULL;
 }
 
-HttpStatus::HttpStatus(int code) {
-	const Entry* found = _findByCode(code);
-	if (found) {
-		_code = found->code;
-		_reason = found->reason;
-		_slug = found->slug;
-	} else {
-		_code = 500;
-		_reason = "Internal Server Error";
-		_slug = "internal_server_error";
-	}
+void	HttpStatus::_initFromEntry(const Entry* entry) {
+	if (!entry)
+		entry = _findByCode(500); // fallback to 500 Internal Server Error
+	_code = entry->code;
+	_reason = entry->reason;
+	_slug = entry->slug;
 }
-
-HttpStatus::~HttpStatus() {}
-
-HttpStatus::HttpStatus(std::string const& value) {
-	// si valeur numérique => code
-	if (!value.empty() && std::isdigit(value[0])) {
-		int code = std::atoi(value.c_str());
-		*this = HttpStatus(code);
-	} else {
-		*this = HttpStatus(value, true);
-	}
-}
-
-HttpStatus::HttpStatus(std::string const& slug, bool isSlug) {
-	const Entry* found = _findBySlug(slug);
-	if (found) {
-		_code = found->code;
-		_reason = found->reason;
-		_slug = found->slug;
-	} else {
-		_code = 500;
-		_reason = "Internal Server Error";
-		_slug = "internal_server_error";
-	}
-}
-
-int	HttpStatus::getCode() const {
-	return _code;
-}
-std::string const&	HttpStatus::getReason() const {
-	return _reason;
-}
-
-std::string const&	HttpStatus::getSlug() const {
-	return _slug;
-}
-
-/**
- * Returns the HttpStatus as a string, like "404 Not Found"
- */
-std::string	HttpStatus::toString() const {
-	std::ostringstream oss;
-	oss << _code << " " << _reason;
-	return oss.str();
-}
-
-HttpStatus	HttpStatus::fromSlug(std::string const& slug) {
-	return HttpStatus(slug, true);
-}
-
-bool	HttpStatus::isError(int code) {
-	return code >= 400;
-}
-
-std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
-	os << "HttpStatus: "
-		<< "code=" << rhs.getCode()
-		<< "reason=\"" << rhs.getReason() << "\""
-		<< "slug=\"" << rhs.getSlug() << "\""
-		<< "\n";
-	return os;
-}
-

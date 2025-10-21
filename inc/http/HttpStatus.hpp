@@ -1,5 +1,5 @@
-#ifndef PARSE_STATUS_HPP
-#define PARSE_STATUS_HPP
+#ifndef HTTP_STATUS_HPP
+#define HTTP_STATUS_HPP
 
 #include <string>
 #include <sstream>
@@ -16,18 +16,18 @@ class HttpStatus {
 	static const size_t STATUS_TABLE_SIZE;
 
 	static Entry const*	_findByCode(int code);
-	static Entry const*	_findBySlug(std::string const& slug);
+	static Entry const*	_findBySlug(std::string const&);
+	void				_initFromEntry(const Entry* entry);
 
-	// Not used
-	HttpStatus();
-	HttpStatus(HttpStatus const&);
-	HttpStatus(std::string const& slug, bool isSlug);
-	HttpStatus& operator=(HttpStatus const&);
+
+	HttpStatus(); // Not used
 
 	public:
 
-		HttpStatus(int code);
-		HttpStatus(std::string const& str);
+		HttpStatus(int);
+		HttpStatus(std::string const&);
+		HttpStatus(HttpStatus const&);
+		HttpStatus& operator=(HttpStatus const&);
 		~HttpStatus();
 
 		int					getCode() const;
@@ -35,8 +35,7 @@ class HttpStatus {
 		std::string const&	getSlug() const;
 
 		std::string			toString() const;
-		static HttpStatus	fromSlug(std::string const& slug);
-		static bool			isError(int code);
+		static bool			isError(int);
 
 };
 

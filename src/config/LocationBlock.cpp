@@ -113,7 +113,7 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 void	LocationBlock::_setPath(std::string& path) {
 	if (!utils::isAbsolutePath(path))
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
-	_path = utils::normalizePath(path);
+	_path = Config::normalizePath(path);
 }
 
 void	LocationBlock::setServer(ServerBlock* server) {
@@ -309,13 +309,16 @@ LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server
     return defaultLocation;
 }
 
-
 bool	LocationBlock::isCgi() const {
 	return !_cgi.empty();
 }
 
 bool	LocationBlock::isRedirection() const {
 	return _return.first != -1 && !_return.second.empty();
+}
+
+bool	LocationBlock::isDirectory() const {
+	return utils::isAccessibleDirectory(_path);
 }
 
 

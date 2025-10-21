@@ -4,6 +4,7 @@ RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair
 : _config(c), _request(r), _listen(l), _status(PARSE_ERR_BAD_REQUEST), _server(NULL),
   _location(NULL) {
 	_setLocation();
+	_setFinalPath();
   }
 
 RoutingDecision::~RoutingDecision() {}
@@ -50,11 +51,19 @@ void	RoutingDecision::_setLocation() {
 		}
 	}
 	_location = best ? best : &LocationBlock::getDefaultLocation(NULL);
-	std::cout << "DEBUG: " << *_location << std::endl;
 }
 
-void	RoutingDecision::setFinalPath() {
-	// TODO
+void	RoutingDecision::_setFinalPath() {
+	std::string reqPath = _request.getPath();
+	std::string locPath = _location ? _location->getPath() : "";
+	std::string locRoot = _location ? _location->getRoot() : "";
+
+	std::string relativeReqPath = reqPath;
+	if (reqPath.find(locPath) == 0)
+		relativeReqPath = reqPath.substr(locPath.length());
+	if (relativeReqPath.empty()) relativeReqPath = "/";
+	std::string joinedPath = utils::joinPath(locRoot, relativeReqPath);
+	_finalPath = utils::normalizePath(joinedPath);
 }
 
 void	RoutingDecision::setCgiExecutor() {
@@ -65,7 +74,7 @@ void	RoutingDecision::setRedirectTarget() {
 	// TODO
 }
 
-HttpStatus	RoutingDecision::getStatus() const {
+HttpStatus const&	RoutingDecision::getStatus() const {
 	return _status;
 }
 
@@ -77,26 +86,31 @@ LocationBlock const*	RoutingDecision::getLocation() const {
 	return _location;
 }
 
+std::string const&	RoutingDecision::getFinalPath() const {
+	return _finalPath;
+}
+
 void	RoutingDecision::_resolveFinalPath() {
 	if (!_location || !_server) {
-		_status = PARSE_INTERNAL_SERVER_ERROR;
+		_status = HttpStatus("internal_server_error");
 		return;
 	}
-	std::string path = _request.getPath();
 	// Redirection (return) a priorité
 	std::pair<int, std::string> ret = _location->getReturn();
 	if (_location->isRedirection()) {
-		_status = ret.first;
+		_status = HttpStatus(ret.first);
 		_redirectTarget = ret.second;
 		return;
 	}
+	/*
 	// Vérifier si le chemin correspond à un dossier
-	if (_location->isDirectory(path)) {
+	if (_location->isDirectory(_finalPath)) {
+		std::cout << "[DEBUG: is a directory final path]" << std::endl; // DEBUG
 		// Chercher un fichier index
 		std::string indexFile = _location->findIndexFile(path);
 		if (!indexFile.empty()) {
 			_finalPath = indexFile;
-			_status = 200;
+			_status = HttpStatus("ok");
 			return;
 		}
 		// Si autoindex est activé, servir la liste des fichiers
@@ -112,8 +126,8 @@ void	RoutingDecision::_resolveFinalPath() {
 	// Chemin normal (fichier) : vérifier existence si nécessaire
 	_finalPath = path;
 	_status = 200;
+	*/
 }
-
 
 std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 	os << "RoutingDecision:\n";
@@ -125,6 +139,10 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 	LocationBlock const* location = rhs.getLocation();
 	if (location) os << "\n" << *location;
 	else os << "[empty]";
+
+	std::string const& finalPath = rhs.getFinalPath();
+	os << "- finalPath: " << finalPath ? finalPath : "[empty]";
+
 	os << "\n";
 	return os;
 }

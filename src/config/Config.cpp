@@ -158,6 +158,12 @@ size_t	Config::parseSize(std::string const& sizeStr) {
 	return number * multiplier;
 }
 
+std::string&	Config::normalizePath(std::string& path) {
+	if (path.size() > 1 && path[path.size() - 1] == '/')
+		path.erase(path.size() - 1);
+	return path;
+}
+
 std::vector<ServerBlock> const&	Config::getServers() const {
 	return _servers;
 }

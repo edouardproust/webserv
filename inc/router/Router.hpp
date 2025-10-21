@@ -20,8 +20,8 @@ class Router
 
 	public:
 
-		static Response dispatchRequest(Config const&, Request const&, HostPortPair const&);
-		static void		sendResponse(Response const&);
+		static Response 	dispatchRequest(Config const&, Request const&, HostPortPair const&);
+		static void			sendResponse(Response const&);
 
 };
 
