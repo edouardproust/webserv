@@ -348,7 +348,7 @@ bool	RequestParser::_isValidContentLength(const std::string& contentLength) cons
 		return false;
 	for (size_t i = 0; i < contentLength.length(); i++)
 	{
-		if (contentLength[i] < '0' && contentLength[i] > '9')
+		if (contentLength[i] < '0' || contentLength[i] > '9')
 			return false;
 	}
 	return true;
@@ -360,7 +360,6 @@ std::string	 RequestParser::_trimOWS(const std::string& str)
 
 	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
 		start++;
-
 	size_t end = str.size();
 	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
 		end--;
@@ -376,4 +375,3 @@ std::string RequestParser::_normalizeHeaderName(const std::string& name) const
 {
 	return utils::toLowerCase(name);
 }
-

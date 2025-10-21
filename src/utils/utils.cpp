@@ -118,9 +118,20 @@ std::string	utils::toLowerCase(const std::string& str)
 
 char	utils::hexToChar(const std::string& hex)
 {
-	int value;
-	std::stringstream ss;
-	ss << std::hex << hex;
-	ss >> value;
+	if (hex.length() != 2)
+		return -1;
+	int value = 0;
+	for (size_t i = 0; i < 2; i++)
+	{
+		char c = hex[i];
+		if (c >= '0' && c <= '9')
+			value = value * 16 + (c - '0');
+		else if (c >= 'A' && c <= 'F')
+			value = value * 16 + (c - 'A' + 10);
+		else if (c >= 'a' && c <= 'f')
+			value = value * 16 + (c - 'a' + 10);
+		else
+			return -1;
+	}
 	return static_cast<char>(value);
 }
