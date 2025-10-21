@@ -6,8 +6,8 @@ Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static RequestParser parser;
 	static Request request;
 	parser.parseRequest(request, rawRequest);
-	if (request.getStatus() != PARSE_SUCCESS) {
-		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus()));
+	if (request.getStatus().getCode() != 200) {
+		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus().getCode()));
 	}
 	return (request);
 }
@@ -71,8 +71,8 @@ void dev::runParserValidationTests()
 		Request request;
 		parser.parseRequest(request, rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
-			<< (request.getStatus() == PARSE_SUCCESS ? "PASS" : "FAIL")
-			<< " (" << request.getStatus() << ")" << std::endl;
+			<< (request.getStatus().getCode() == 200 ? "PASS" : "FAIL")
+			<< " (" << request.getStatus().getCode() << ")" << std::endl;
 	}
 }
 
@@ -113,9 +113,9 @@ void dev::runParsedContentTests()
         Request request;
         parser.parseRequest(request, tests[i].rawRequest);
 
-        std::cout << "Parse status: " << request.getStatus() << std::endl;
+        std::cout << "Parse status: " << request.getStatus().getCode() << std::endl;
 
-        if (request.getStatus() == PARSE_SUCCESS)
+        if (request.getStatus().getCode() == 200)
 		{
             std::cout << "--- PARSED CONTENT ---" << std::endl;
             std::cout << request;

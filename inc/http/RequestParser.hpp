@@ -2,6 +2,7 @@
 # define REQUESTPARSER_HPP
 
 # include "http/Request.hpp"
+# include "http/HttpStatus.hpp"
 # include "constants.hpp"
 # include <string>
 # include <sstream>
@@ -10,13 +11,13 @@ class RequestParser
 {
 	private :
 
-	ParseStatus	_parseRequestLine(Request& request, const std::string& line);
-	ParseStatus _parseRequestTarget(Request& request, const std::string& _requestTarget);
-	ParseStatus	_parseUrl(std::string& result, const std::string& encoded);
-	ParseStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
-	ParseStatus	_parseHeaderLine(Request& request, const std::string& line);
-	ParseStatus _parseChunkedBody(Request& request);
-	ParseStatus	_validateBody(Request& request);
+	HttpStatus	_parseRequestLine(Request& request, const std::string& line);
+	HttpStatus	_parseRequestTarget(Request& request, const std::string& _requestTarget);
+	HttpStatus	_parseUrl(std::string& result, const std::string& encoded);
+	HttpStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
+	HttpStatus	_parseHeaderLine(Request& request, const std::string& line);
+	HttpStatus _parseChunkedBody(Request& request);
+	HttpStatus	_validateBody(Request& request);
 
 	bool				_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
 	bool				_isValidMethod(const std::string& _method) const;

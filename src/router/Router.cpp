@@ -19,8 +19,8 @@ Router::~Router() {}
  *   responsible for checking the data thoroughly.
  */
 void Router::dispatchRequest() {
-    ParseStatus requestStatus = _request.getStatus();
-    if (requestStatus != PARSE_SUCCESS) {
+    HttpStatus requestStatus = _request.getStatus();
+    if (requestStatus.getCode() != 200) {
 		_sendResponse(StaticHandler::handleError(requestStatus)); // TODO: add checks in Reponse ?
         return;
     }

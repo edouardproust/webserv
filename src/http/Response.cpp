@@ -1,4 +1,5 @@
 #include "http/Response.hpp"
+#include "static/StaticHandler.hpp"
 #include "utils/utils.hpp"
 #include <ctime>
 
@@ -94,6 +95,23 @@ void	Response::setError(int statusCode)
 	setBody(errorBody);
 }
 
+std::string Response::_generateErrorPage() const
+{
+	std::stringstream html;
+	std::string reasonPhrase = _getReasonPhrase(_statusCode);
+
+	html << "<html>\n"
+		 << "  <head>\n"
+		 << "    <title>" << _statusCode << " " << reasonPhrase << "</title>\n"
+		 << "  </head>\n"
+		 << "  <body>\n"
+		 << "    <center><h1>" << _statusCode << " " << reasonPhrase << "</h1></center>\n"
+		 << "    <hr><center>webserv/1.0</center>\n"
+		 << "  </body>\n"
+		 << "</html>";
+	return html.str();
+}
+
 std::string	Response::stringify() const
 {
 	std::stringstream response;
@@ -157,23 +175,6 @@ std::string Response::getCurrentDate() const
 	char buffer[80];
 	strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	return buffer;
-}
-
-std::string Response::_generateErrorPage() const
-{
-	std::stringstream html;
-	std::string reasonPhrase = _getReasonPhrase(_statusCode);
-
-	html << "<html>\n"
-		 << "  <head>\n"
-		 << "    <title>" << _statusCode << " " << reasonPhrase << "</title>\n"
-		 << "  </head>\n"
-		 << "  <body>\n"
-		 << "    <center><h1>" << _statusCode << " " << reasonPhrase << "</h1></center>\n"
-		 << "    <hr><center>webserv/1.0</center>\n"
-		 << "  </body>\n"
-		 << "</html>";
-	return html.str();
 }
 
 std::string Response::_buildStatusLine() const

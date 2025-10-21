@@ -20,68 +20,68 @@ RequestParser::~RequestParser() {}
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus(400));
 	size_t requestStart;
 	if (!_isValidStart(rawRequest, requestStart))
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus(400));
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus(400));
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus(400));
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
-	ParseStatus	result = _parseRequestLine(request, requestLine);
-	if (result != PARSE_SUCCESS)
+	HttpStatus	result = _parseRequestLine(request, requestLine);
+	if (result.getCode() != 200)
 		return request.setStatus(result);
 	bool hasBody = _hasBody(rawRequest, headersEnd);
 	result = _parseHeaders(request, headersPart, hasBody);
-	if (result != PARSE_SUCCESS)
+	if (result.getCode() != 200)
 		return request.setStatus(result);
 	size_t bodyStart = headersEnd + 4;
 	if (hasBody)
 	{
 		std::string body = rawRequest.substr(bodyStart);
 		request.setBody(body);
-		ParseStatus bodyResult = _validateBody(request);
-		if (bodyResult != PARSE_SUCCESS)
+		HttpStatus bodyResult = _validateBody(request);
+		if (bodyResult.getCode() != 200)
 			return request.setStatus(bodyResult);
 	}
-	request.setStatus(PARSE_SUCCESS);
+	request.setStatus(HttpStatus(200));
 }
 
-ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
 {
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 	}
 	std::istringstream	requestLineStream(line);
 	std::string	methodStr, _requestTarget, _version;
 	if (!(requestLineStream >> methodStr >> _requestTarget >> _version))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	char c;
 	while (requestLineStream.get(c))
 	{
 		if (c != ' ')
-			 return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 	}
-	ParseStatus result = _parseRequestTarget(request, _requestTarget);
-	if (result != PARSE_SUCCESS)
+	HttpStatus result = _parseRequestTarget(request, _requestTarget);
+	if (result.getCode() != 200)
 	 	return result;
 	if (!_isValidMethod(methodStr))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	if (!_isValidVersion(_version))
-		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
+		return HttpStatus(505);;
 	request.setMethod(methodStr);
 	request.setVersion(_version);
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
-ParseStatus	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget)
+HttpStatus	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget)
 {
 	request.setRequestTarget(_requestTarget);
 	size_t queryPos = _requestTarget.find('?');
@@ -90,29 +90,29 @@ ParseStatus	RequestParser::_parseRequestTarget(Request& request, const std::stri
 		std::string path = _requestTarget.substr(0, queryPos);
 		std::string query = _requestTarget.substr(queryPos + 1);
 		if (!_isValidPath(path))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		std::string decodedPath, decodedQuery;
-		if (_parseUrl(decodedPath, path) != PARSE_SUCCESS)
-			return PARSE_ERR_BAD_REQUEST;
-		if (_parseUrl(decodedQuery, query) != PARSE_SUCCESS)
-			return PARSE_ERR_BAD_REQUEST;
+		if (_parseUrl(decodedPath, path).getCode() != 200)
+			return HttpStatus(400);
+		if (_parseUrl(decodedQuery, query).getCode() != 200)
+			return HttpStatus(400);
 		request.setPath(decodedPath);
 		request.setQueryString(decodedQuery);
 	}
 	else
 	{
 		if (!_isValidPath(_requestTarget))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		std::string decodedPath;
-		if (_parseUrl(decodedPath, _requestTarget) != PARSE_SUCCESS)
-			return PARSE_ERR_BAD_REQUEST;
+		if (_parseUrl(decodedPath, _requestTarget).getCode() != 200)
+			return HttpStatus(400);
 		request.setPath(decodedPath);
 		request.setQueryString("");
 	}
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
-ParseStatus RequestParser::_parseUrl(std::string& result, const std::string& encoded)
+HttpStatus RequestParser::_parseUrl(std::string& result, const std::string& encoded)
 {
 	result.clear();
 	for (size_t i = 0; i < encoded.length(); i++)
@@ -121,11 +121,11 @@ ParseStatus RequestParser::_parseUrl(std::string& result, const std::string& enc
 		{
 			std::string hex = encoded.substr(i + 1, 2);
 			if (!std::isxdigit(hex[0]) || !std::isxdigit(hex[1]))
-				return PARSE_ERR_BAD_REQUEST;
+				return HttpStatus(400);
 			char decodedChar = utils::hexToChar(hex);
 			if (decodedChar == '\0' || decodedChar == '\r' || decodedChar == '\n' ||
 				decodedChar == '\t' || decodedChar == '\v' || decodedChar == '\f')
-				return PARSE_ERR_BAD_REQUEST;
+				return HttpStatus(400);
 			result += decodedChar;
 			i += 2;
 		}
@@ -134,10 +134,10 @@ ParseStatus RequestParser::_parseUrl(std::string& result, const std::string& enc
 		else
 			result += encoded[i];
 	}
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
-ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
+HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
@@ -148,47 +148,47 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return PARSE_ERR_BAD_REQUEST;
-		ParseStatus result = _parseHeaderLine(request, line);
-		if (result != PARSE_SUCCESS)
+			return HttpStatus(400);
+		HttpStatus result = _parseHeaderLine(request, line);
+		if (result.getCode() != 200)
 			return result;
 	}
 	std::map<std::string, std::string> headers = request.getHeaders();
 	if (headers.find("content-length") != headers.end() &&
 		headers.find("transfer-encoding") != headers.end())
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 	if (headers.find("host") == headers.end())
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	if (hasBody)
 	{
 		if ((headers.find("content-length") == headers.end()) &&
 			headers.find("transfer-encoding") == headers.end())
-			return PARSE_ERR_LENGTH_REQUIRED;
+			return HttpStatus(411);
 	}
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
-ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
 	if (!name.empty() && std::isspace(name[name.length() - 1]))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	if (name.empty())
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	if (!_isValidHeaderName(name))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	value = _trimOWS(value);
 	if (!_isValidHeaderValue(value))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	std::string normalizedName = _normalizeHeaderName(name);
 	if (normalizedName == "content-type")
 	{
 		if (!_isValidContentType(value))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		request.setContentType(value);
 	}
 	if (normalizedName == "transfer-encoding")
@@ -196,15 +196,15 @@ ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string&
 		std::string normalizedValue = utils::toLowerCase(value);
 		if (normalizedValue == "gzip" || normalizedValue == "deflate" ||
 			normalizedValue == "compress" || normalizedValue == "br")
-			return PARSE_ERR_NOT_IMPLEMENTED;
+			return HttpStatus(501);
 		else if (normalizedValue != "chunked")
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 	}
 	request.addHeader(normalizedName, value);
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
-ParseStatus	RequestParser::_parseChunkedBody(Request& request)
+HttpStatus	RequestParser::_parseChunkedBody(Request& request)
 {
 	std::string chunkedData = request.getBody();
 	std::stringstream unchunkedBody;
@@ -215,37 +215,37 @@ ParseStatus	RequestParser::_parseChunkedBody(Request& request)
 	{
 		size_t lineEnd = chunkedData.find("\r\n", pos);
 		if (lineEnd == std::string::npos)
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		std::string chunkSizeStr = chunkedData.substr(pos, lineEnd - pos);
 		if (chunkSizeStr.empty())
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		for (size_t i = 0; i < chunkSizeStr.length(); i++)
 		{
 			if (!std::isxdigit(chunkSizeStr[i]))
-				return PARSE_ERR_BAD_REQUEST;
+				return HttpStatus(400);
 		}
 		size_t chunkSize = utils::hexToSizeT(chunkSizeStr);
 		if (chunkSize == static_cast<size_t>(-1))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		pos = lineEnd + 2;
 		if (chunkSize == 0)
 		 	break ;
 		if (pos + chunkSize + 2 > dataLength)
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		std::string chunkData = chunkedData.substr(pos, chunkSize);
 		unchunkedBody << chunkData;
 		size_t dataEnd = pos + chunkSize;
 		if (chunkedData.substr(dataEnd, 2) != "\r\n")
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		pos = dataEnd + 2;
 	}
 	if (pos + 2 != dataLength || chunkedData.substr(pos, 2) != "\r\n")
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus(400);
 	request.setBody(unchunkedBody.str());
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
-ParseStatus	RequestParser::_validateBody(Request& request)
+HttpStatus	RequestParser::_validateBody(Request& request)
 {
 	std::map<std::string, std::string> headers = request.getHeaders();
 
@@ -255,13 +255,13 @@ ParseStatus	RequestParser::_validateBody(Request& request)
 		unsigned long contentLength;
 		std::istringstream contentLengthStream(contentLengthStr);
 		if (!(contentLengthStream >> contentLength))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 		if (request.getBody().length() != contentLength)
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus(400);
 	}
 	if (headers.find("transfer-encoding") != headers.end())
 			return _parseChunkedBody(request);
-	return PARSE_SUCCESS;
+	return HttpStatus(200);
 }
 
 bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& requestStart) const
