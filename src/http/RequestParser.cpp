@@ -60,8 +60,8 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 			return HttpStatus(400);
 	}
 	std::istringstream	requestLineStream(line);
-	std::string	methodStr, _requestTarget, _version;
-	if (!(requestLineStream >> methodStr >> _requestTarget >> _version))
+	std::string	methodStr, _requestTarget, versionStr;
+	if (!(requestLineStream >> methodStr >> _requestTarget >> versionStr))
 		return HttpStatus(400);
 	char c;
 	while (requestLineStream.get(c))
@@ -74,10 +74,10 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 	 	return result;
 	if (!_isValidMethod(methodStr))
 		return HttpStatus(400);
-	if (!_isValidVersion(_version))
-		return HttpStatus(505);;
+	if (!_isValidVersion(versionStr))
+		return HttpStatus(400);;
 	request.setMethod(methodStr);
-	request.setVersion(_version);
+	request.setVersion(versionStr);
 	return HttpStatus(200);
 }
 
@@ -287,7 +287,7 @@ bool	RequestParser::_isValidMethod(const std::string& methodStr) const
 		if (!std::isalpha(methodStr[i]) || !std::isupper(methodStr[i]))
 			return false;
     }
-	return (Request::isSupportedMethod(methodStr));
+	return (Request::isSupportedMethod(methodStr) || Request::isExistingMethod(methodStr));
 }
 
 bool	RequestParser::_isValidPath(const std::string& _path) const
@@ -299,11 +299,15 @@ bool	RequestParser::_isValidPath(const std::string& _path) const
 	return true;
 }
 
-bool	RequestParser::_isValidVersion(const std::string& _version) const
+bool	RequestParser::_isValidVersion(const std::string& versionStr) const
 {
-	if (_version.empty())
+	if (versionStr.empty())
 		return false;
-	 return _version == "HTTP/1.1";
+	if (versionStr.compare(0, 5, "HTTP/") != 0)
+		return false;
+	if (versionStr.length() <= 5)
+		return false;
+	return (Request::isSupportedVersion(versionStr) || Request::isExistingVersion(versionStr));
 }
 
 bool	RequestParser::_isValidHeaderName(const std::string& name) const

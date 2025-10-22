@@ -2,6 +2,9 @@
 #include "http/RequestParser.hpp"
 
 std::set<std::string> Request::_supportedMethods;
+std::set<std::string> Request::_existingMethods;
+std::set<std::string> Request::_supportedVersions;
+std::set<std::string> Request::_existingVersions;
 
 Request::Request(): _status(HttpStatus(200)), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {}
 
@@ -42,6 +45,35 @@ bool	Request::isSupportedMethod(std::string const& method) {
 		// More supported methods can be added here
 	}
 	return _supportedMethods.find(method) != _supportedMethods.end();
+}
+
+bool	Request::isExistingMethod(std::string const& method) {
+	if (_existingMethods.empty()) {
+		_existingMethods.insert("HEAD");
+		_existingMethods.insert("PUT");
+		_existingMethods.insert("OPTIONS");
+		_existingMethods.insert("PATCH");
+		_existingMethods.insert("CONNECT");
+		_existingMethods.insert("TRACE");
+	}
+	return _existingMethods.find(method) != _existingMethods.end();
+}
+
+bool	Request::isSupportedVersion(std::string const& version) {
+	if (_supportedVersions.empty()) {
+		_supportedVersions.insert("HTTP/1.1");
+	}
+	return _supportedVersions.find(version) != _supportedVersions.end();
+}
+
+bool	Request::isExistingVersion(std::string const& version) {
+	if (_existingVersions.empty()) {
+		_existingVersions.insert("HTTP/0.9");
+		_existingVersions.insert("HTTP/1.0");
+		_existingVersions.insert("HTTP/2");
+		_existingVersions.insert("HTTP/3");
+	}
+	return _existingVersions.find(version) != _existingVersions.end();
 }
 
 const HttpStatus& Request::getStatus() const

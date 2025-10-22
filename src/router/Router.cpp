@@ -81,8 +81,8 @@ std::string	Router::_resolveScriptPath(std::string const& requestPath, LocationB
 
 std::string	Router::_resolveFilePath(std::string const& requestPath, LocationBlock const* location) const {
 	// TODO
-	return location->getRoot() + requestPath;
-	(void)requestPath; (void)location; // to silence unused parameter warning
+    std::string relativePath = requestPath.substr(location->getPath().length());
+    return location->getRoot() + relativePath;
 }
 
 void	Router::_sendResponse(Response const& response) const {
@@ -121,7 +121,10 @@ std::ostream&	operator<<(std::ostream& os, Router const& rhs) {
 	}
 	LocationBlock const* matchingLoc = rhs.getMatchingLocation();
 	os << "- Matching location:";
-	if (matchingLoc) os << "\n" << *matchingLoc;
-	else os << " [empty]";
+	//if (matchingLoc) os << "\n" << *matchingLoc;
+	//else os << " [empty]";
+	if (matchingLoc)
+        os << matchingLoc->getPath();
+    else os << "[empty]";
 	return os;
 }

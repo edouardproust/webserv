@@ -14,6 +14,9 @@ class Request
 
 		HttpStatus	_status;
 		static std::set<std::string> _supportedMethods;
+		static std::set<std::string> _existingMethods;
+		static std::set<std::string> _supportedVersions;
+		static std::set<std::string> _existingVersions;
 		std::string	_method;
 		std::string	_requestTarget;
 		std::string _path;
@@ -34,6 +37,9 @@ class Request
 		void	parse(std::string const& rawRequest);
 
 		static bool	isSupportedMethod(std::string const& method);
+		static bool	isExistingMethod(std::string const& method);
+		static bool	isSupportedVersion(std::string const& version);
+		static bool	isExistingVersion(std::string const& version);
 
 		const HttpStatus&	getStatus() const;
 		const std::string&	getMethod() const;

@@ -14,7 +14,6 @@ class Response
 	std::string _body;
 
 	std::string	_getReasonPhrase(int statusCode) const;
-	std::string _generateErrorPage() const;
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
 
@@ -34,7 +33,6 @@ class Response
 	void	setStatusCode(int statusCode);
 	void	setHeader(const std::string& name, const std::string& value);
 	void	setBody(const std::string& body);
-	void	setError(int statusCode);
 
 	std::string	stringify() const;
 };

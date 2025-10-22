@@ -128,7 +128,6 @@ void dev::runParsedContentTests()
 
 void dev::runResponseTests()
 {
-
 	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
     Response response1;
     response1.setStatusCode(200);
@@ -137,8 +136,7 @@ void dev::runResponseTests()
     std::cout << response1.stringify() << std::endl;
 
 	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
-    Response response2;
-	response2.setError(404);
+	Response response2 = StaticHandler::handleError(HttpStatus(404));
 	std::cout << response2.stringify() << std::endl;
 
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
@@ -150,8 +148,7 @@ void dev::runResponseTests()
 	std::cout << response3.stringify() << std::endl;
 
 	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
-	Response response4;
-	response4.setError(500);
+	Response response4 = StaticHandler::handleError(HttpStatus(500));
 	std::cout << response4.stringify() << std::endl;
 
 	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;

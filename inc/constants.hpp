@@ -19,6 +19,6 @@ size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause <
 
 // static
 
-size_t const	MAX_FILE_SIZE = 10485760; // 10MB
+size_t const	MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 #endif

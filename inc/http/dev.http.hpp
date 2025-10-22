@@ -6,6 +6,7 @@
 #include "http/Request.hpp"
 #include "http/RequestParser.hpp"
 #include "http/Response.hpp"
+#include "static/StaticHandler.hpp"
 
 namespace dev {
 

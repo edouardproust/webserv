@@ -1,8 +1,6 @@
 #ifndef STATICHANDLER_HPP
 #define STATICHANDLER_HPP
 
-#include "constants.hpp"
-#include "http/HttpStatus.hpp"
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include <string>
@@ -10,26 +8,27 @@
 
 class StaticHandler
 {
-	/*private:
+	private:
 
 	static std::map<std::string, std::string> _mimeTypes;
 
 	static std::map<std::string, std::string> _initMimeTypes();
-	static std::string _getMimeType(const std::string& filePath);
-	static std::string _generateErrorPage(int statusCode, const std::string& reasonPhrase) const;*/
+	static std::string 	_getMimeType(const std::string& filePath);
+	static size_t		_getFileSize(const std::string& path);
+	static std::string	_readFile(const std::string& path);
+	static std::string	_generateErrorPage(int statusCode, const std::string& reasonPhrase);
 
 	public:
 
-	// Not used
+	//not used
 	StaticHandler();
 	StaticHandler(StaticHandler const&);
 	~StaticHandler();
 	StaticHandler&	operator=(StaticHandler const&);
 
 	static Response	handleRequest(std::string const&, Request const&);
-	static Response	handleError(HttpStatus);
+	static Response	handleError(const HttpStatus& status);
 
-	//std::string getMimeType(const std::string& filePath) const;
 
 };
 

@@ -87,31 +87,6 @@ void	Response::setBody(const std::string& body)
 		_headers.erase("content-type");
 }
 
-void	Response::setError(int statusCode)
-{
-	setStatusCode(statusCode);
-	setHeader("Content-Type", "text/html");
-	std::string errorBody = _generateErrorPage();
-	setBody(errorBody);
-}
-
-std::string Response::_generateErrorPage() const
-{
-	std::stringstream html;
-	std::string reasonPhrase = _getReasonPhrase(_statusCode);
-
-	html << "<html>\n"
-		 << "  <head>\n"
-		 << "    <title>" << _statusCode << " " << reasonPhrase << "</title>\n"
-		 << "  </head>\n"
-		 << "  <body>\n"
-		 << "    <center><h1>" << _statusCode << " " << reasonPhrase << "</h1></center>\n"
-		 << "    <hr><center>webserv/1.0</center>\n"
-		 << "  </body>\n"
-		 << "</html>";
-	return html.str();
-}
-
 std::string	Response::stringify() const
 {
 	std::stringstream response;
