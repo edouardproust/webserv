@@ -3,17 +3,16 @@
 #include "utils/utils.hpp"
 #include <ctime>
 
-Response::Response() : _statusCode(200), _reasonPhrase("OK")
+Response::Response() : _status(200)
 {
 	_headers["server"] = "webserv/1.0";
-	_headers["date"] = getCurrentDate();
+	_headers["date"] = _getCurrentDate();
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
 }
 
 Response::Response(const Response& other)
-	: _statusCode(other._statusCode),
-	  _reasonPhrase(other._reasonPhrase),
+	: _status(other._status),
 	  _headers(other._headers),
 	  _body(other._body) {}
 
@@ -21,8 +20,7 @@ Response& Response::operator=(const Response& other)
 {
 	if (this != &other)
 	{
-		_statusCode = other._statusCode;
-		_reasonPhrase = other._reasonPhrase;
+		_status = other._status;
 		_headers = other._headers;
 		_body = other._body;
 	}
@@ -31,14 +29,9 @@ Response& Response::operator=(const Response& other)
 
 Response::~Response() {}
 
-int	Response::getStatusCode() const
+const HttpStatus& Response::getStatus() const
 {
-	return _statusCode;
-}
-
-const std::string& Response::getReasonPhrase() const
-{
-	return _reasonPhrase;
+	return _status;
 }
 
 const std::map<std::string, std::string>& Response::getHeaders() const
@@ -53,8 +46,7 @@ const std::string& Response::getBody() const
 
 void	Response::setStatusCode(int statusCode)
 {
-	_statusCode = statusCode;
-	_reasonPhrase = _getReasonPhrase(statusCode);
+	_status = HttpStatus(statusCode);
 	if (statusCode == 204)
 		setBody("");
 }
@@ -99,51 +91,7 @@ std::string	Response::stringify() const
 	return response.str();
 }
 
-std::string Response::_getReasonPhrase(int statusCode) const
-{
-	switch(statusCode)
-	{
-		//Success
-		case 200:
-			return "OK";
-		case 201:
-			return "Created";
-		case 204:
-			return "No Content";
-		 // Redirection (for CGI/location blocks)
-		case 301:
-			return "Moved Permanently";
-		case 302:
-			return "Found";
-		// Client Errors
-		case 400:
-			return "Bad Request";
-		case 403:
-			return "Forbidden";
-		case 404:
-			return "Not Found";
-		case 405:
-			return "Method Not Allowed";
-		case 411:
-			return "Length Required";
-		case 413:
-			return "Content Too Large";
-		// Server Errors
-		case 500:
-			return "Internal Server Error";
-		case 501:
-			return "Not Implemented";
-		case 502:
-			return "Bad Gateway";
-		case 505:
-			return "HTTP Version Not Supported";
-		//more status codes to be added accordingly!!
-		default:
-			return "Unknown";
-	}
-}
-
-std::string Response::getCurrentDate() const
+std::string Response::_getCurrentDate() const
 {
 	time_t now = time(0);
 	struct tm* timeinfo = gmtime(&now);
@@ -156,7 +104,7 @@ std::string Response::_buildStatusLine() const
 {
 	std::stringstream statusLine;
 
-	statusLine << "HTTP/1.1 " << _statusCode << " " << _reasonPhrase << "\r\n";
+	statusLine << "HTTP/1.1 " << _status.getCode() << " " << _status.getReason() << "\r\n";
 	return statusLine.str();
 }
 
@@ -184,7 +132,7 @@ std::string Response::_buildHeaders() const
 std::ostream& operator<<(std::ostream& os, const Response& response)
 {
 	os << "Response:\n";
-	os << "- Status: " << response.getStatusCode() << " " << response.getReasonPhrase() << "\n";
+	os << "- Status: " << response.getStatus().getCode() << " " << response.getStatus().getReason() << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = response.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();

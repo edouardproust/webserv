@@ -2,10 +2,10 @@
 #define DEV_HTTP_HPP
 
 #include "constants.hpp"
-#include "http/HttpStatus.hpp"
-#include "http/Request.hpp"
-#include "http/RequestParser.hpp"
-#include "http/Response.hpp"
+#include "HttpStatus.hpp"
+#include "Request.hpp"
+#include "RequestParser.hpp"
+#include "Response.hpp"
 #include "static/StaticHandler.hpp"
 
 namespace dev {

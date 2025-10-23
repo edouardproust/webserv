@@ -1,8 +1,8 @@
 #ifndef REQUESTPARSER_HPP
 # define REQUESTPARSER_HPP
 
-# include "http/Request.hpp"
-# include "http/HttpStatus.hpp"
+# include "Request.hpp"
+# include "HttpStatus.hpp"
 # include "constants.hpp"
 # include <string>
 # include <sstream>
@@ -16,7 +16,7 @@ class RequestParser
 	HttpStatus	_parseUrl(std::string& result, const std::string& encoded);
 	HttpStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
 	HttpStatus	_parseHeaderLine(Request& request, const std::string& line);
-	HttpStatus _parseChunkedBody(Request& request);
+	HttpStatus	_parseChunkedBody(Request& request);
 	HttpStatus	_validateBody(Request& request);
 
 	bool				_isValidStart(const std::string& rawRequest, size_t& requestStart) const;

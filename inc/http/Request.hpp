@@ -1,7 +1,7 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
-# include "http/HttpStatus.hpp"
+# include "HttpStatus.hpp"
 # include "constants.hpp"
 # include <string>
 # include <iostream>
