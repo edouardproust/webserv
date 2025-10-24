@@ -3,12 +3,22 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request(std::string const& rawRequest) : _status(PARSE_INTERNAL_SERVER_ERROR), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {
+Request::Request(std::string const& rawRequest)
+: _status(HttpStatus("bad_request")),
+  _method(""),
+  _requestTarget(""),
+  _path(""),
+  _queryString(""),
+  _version(""),
+  _contentType(""),
+  _body(""),
+  _bodySize(MAX_SIZE_T) // TODO implement de logic to calculate and set _bodySize
+{
 	static RequestParser parser;
 	parser.parseRequest(*this, rawRequest);
 }
 
-Request::Request(const Request& other) {
+Request::Request(const Request& other): _status(other._status) {
 	*this = other;
 }
 
@@ -25,6 +35,7 @@ Request& Request::operator=(const Request& other)
 		this->_headers = other._headers;
 		this->_contentType = other._contentType;
 		this->_body = other._body;
+		this->_bodySize = other._bodySize;
 	}
 	return (*this);
 }
@@ -41,7 +52,7 @@ bool	Request::isSupportedMethod(std::string const& method) {
 	return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-const ParseStatus& Request::getStatus() const
+const HttpStatus& Request::getStatus() const
 {
 	return (this->_status);
 }
@@ -86,7 +97,13 @@ const std::string& Request::getBody() const
 	return this->_body;
 }
 
-void	Request::setStatus(ParseStatus status)
+size_t	Request::getBodySize() const
+{
+	return this->_bodySize;
+}
+
+
+void	Request::setStatus(HttpStatus const& status)
 {
 	this->_status = status;
 }
@@ -134,9 +151,9 @@ void	Request::setBody(const std::string& _body)
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
-	ParseStatus const& status = request.getStatus();
+	HttpStatus const& status = request.getStatus();
 	os << "- Status: ";
-	if (status != PARSE_INTERNAL_SERVER_ERROR) os << status << "\n";
+	if (status.getCode() != 500) os << status << "\n";
 	else os << "[empty]\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";

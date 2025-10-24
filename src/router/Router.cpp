@@ -1,10 +1,4 @@
 #include "router/Router.hpp"
-#include "router/RoutingDecision.hpp"
-#include "static/StaticHandler.hpp"
-#include "cgi/CGIHandler.hpp"
-#include "utils/utils.hpp"
-#include "constants.hpp"
-#include <iostream>
 
 Router::Router() {}
 
@@ -14,45 +8,57 @@ Router::~Router() {}
  * Dispatch the request to corresponding handler by crossing data between Config and Request.
  *
  * Notes:
- * - The Router does not check the validity of the data inside Config and Request objects,
+ * - Router does not check the validity of the data inside Config and Request objects,
  *   so the data needs to be 100% correct when passed to the Router. Related parsers are
  *   responsible for checking the data thoroughly.
+ * - It is the role of StaticHandler to check if the requested file or directory is accesible.
+ *   It also checks "autoindex" and "index" directives in config, in order to serve a directory
+ *   listing page if needed.
+ * - It is the role of CGIHandler to check if the script exists and is executable.
  */
 Response Router::dispatchRequest(Config const& config, Request const& request, HostPortPair const& listen) {
-	RoutingDecision decision(config, request, listen);
-	if (DEVMODE) std::cout << decision << std::endl;
-	return Response();
-	/*
-    ParseStatus requestStatus = _request.getStatus();
-    if (requestStatus != PARSE_SUCCESS) {
-		_sendResponse(StaticHandler::handleError(requestStatus)); // TODO: add checks in Reponse ?
-        return;
-    }
-    ServerBlock const& server = _findMatchingServer();
-    _setMatchingLocation(server.getLocations(), _request.getPath());
-	if (!_location)
-		_location = &server.getDefaultLocation();
-	if (DEVMODE)
-		std::cout << *this << std::endl;
-    std::string executor = "";
-	std::string const& extension = utils::getFileExtension(_request.getPath());
-    if (_location->isCgiLocation() && !extension.empty()) { // the request path matches a CGI location and has an extension
-        executor = _location->getCgiExecutor(extension); // if no executor found for this extension: executor = ""
-    }
-	if (!executor.empty()) { // the file extension is handled by the CGI config of this location
-        std::string scriptPath = _resolveScriptPath(_request.getPath(), _location);
-		_sendResponse(CGIHandler::handleRequest(scriptPath, executor, _request));
-    } else { // not a CGI request or file extension not handled by this location
-        std::string filePath = _resolveFilePath(_request.getPath(), _location);
-		_sendResponse(StaticHandler::handleRequest(filePath, _request));
-    }
-	*/
+	Response res;
+
+	HttpStatus const& reqStatus = request.getStatus();
+	if (reqStatus.getSlug() != "ok")
+		return StaticHandler::handleError(HttpStatus(reqStatus));
+
+	RoutingDecision rd(config, request, listen);
+	if (DEVMODE) std::cout << rd << std::endl; // DEBUG
+	LocationBlock const* loc = rd.getLocation();
+	RoutingDecision::Decision decision = rd.getDecision();
+
+	// error / redirection
+	if (decision == RoutingDecision::ERROR)
+		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()));
+	if (decision == RoutingDecision::REDIRECTION) {
+		std::pair<int, std::string> const& ret = rd.getLocation()->getReturn();
+		return RedirectionHandler::handleRedirection(ret.first, ret.second);
+	}
+	// cgi / static
+	std::string path = _buildFilePath(loc->getRoot(), loc->getPath(), request.getPath());
+	if (decision == RoutingDecision::CGI) {
+		std::string ext = utils::getFileExtension(path);
+		return CGIHandler::handleRequest(request, path, loc->getCgiExecutor(ext));
+	}
+	if (decision == RoutingDecision::STATIC) {
+		std::string const&	method = request.getMethod();
+		if (method == "GET")
+			return StaticHandler::handleGet(request, path, loc->getAutoindex(), loc->getIndexFiles());
+		else if (method == "DELETE")
+			return StaticHandler::handleDelete(request, path);
+		else
+			return StaticHandler::handleError(HttpStatus("method_not_allowed"));
+	}
+	// fallback
+	return StaticHandler::handleError(HttpStatus("internal_server_error"));
 }
 
-/**
- * //TODO: Maybe this will be moved into network listening loop
- */
-void	Router::sendResponse(Response const& response) {
-	// TODO
-	(void)response;
+std::string	Router::_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath) {
+	std::string relativeReqPath = reqPath;
+	if (reqPath.find(locPath) == 0)
+		relativeReqPath = reqPath.substr(locPath.length());
+	if (relativeReqPath.empty()) relativeReqPath = "/";
+	std::string joinedPath = utils::joinPath(locRoot, relativeReqPath);
+	return utils::normalizePath(joinedPath);
 }

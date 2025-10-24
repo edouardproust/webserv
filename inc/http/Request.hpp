@@ -1,7 +1,7 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
-# include "constants.hpp"
+# include "http/HttpStatus.hpp"
 # include <string>
 # include <iostream>
 # include <map>
@@ -11,7 +11,7 @@ class Request
 {
 	private :
 
-		ParseStatus	_status;
+		HttpStatus	_status;
 		static std::set<std::string> _supportedMethods;
 		std::string	_method;
 		std::string	_requestTarget;
@@ -22,8 +22,7 @@ class Request
 		std::string	_contentType;
 		std::string	_body;
 
-		// Not used
-		Request();
+		Request(); // Not used
 
 	public:
 
@@ -34,7 +33,7 @@ class Request
 
 		static bool	isSupportedMethod(std::string const& method);
 
-		const ParseStatus&	getStatus() const;
+		const HttpStatus&	getStatus() const;
 		const std::string&	getMethod() const;
 		const std::string&	getRequestTarget() const;
 		const std::string&	getPath() const;
@@ -44,7 +43,7 @@ class Request
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
 
-		void	setStatus(ParseStatus status);
+		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
 		void	setRequestTarget(std::string const& requestTarget);
 		void	setPath(std::string const& path);

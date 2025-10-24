@@ -7,6 +7,8 @@ Subject: [click here](subject/en.subject.pdf)
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
 
 ## TODO
+- General:
+	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
 - Config parsing:
 	- Add a function `utils::isValidIpAddress` + use it inside `Config::parse`
 	- Accept `ssl` option in `listen` directive ?

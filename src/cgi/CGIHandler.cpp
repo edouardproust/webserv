@@ -4,7 +4,7 @@
 
 CGIHandler::CGIHandler() {}
 
-Response	CGIHandler::handleRequest(const std::string& scriptPath, const std::string& executor, Request req)
+Response	CGIHandler::handleRequest(Request req, const std::string& scriptPath, const std::string& executor)
 {
 	std::string const& method = req.getMethod();
 	std::string const& body = req.getBody();

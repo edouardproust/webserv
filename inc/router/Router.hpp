@@ -2,9 +2,11 @@
 #define ROUTER_HPP
 
 #include "http/Request.hpp"
-#include "http/Response.hpp"
+#include "http/HttpStatus.hpp"
 #include "config/Config.hpp"
-#include "typedefs.hpp"
+#include "router/RoutingDecision.hpp"
+#include "static/StaticHandler.hpp"
+#include "cgi/CGIHandler.hpp"
 
 class Router
 {
@@ -18,10 +20,11 @@ class Router
 	Router&	operator=(Router const&);
 	~Router();
 
+	static std::string	_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath);
+
 	public:
 
 		static Response 	dispatchRequest(Config const&, Request const&, HostPortPair const&);
-		static void			sendResponse(Response const&);
 
 };
 

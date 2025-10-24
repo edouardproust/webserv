@@ -1,5 +1,4 @@
 #include "static/StaticHandler.hpp"
-#include "utils/utils.hpp"
 
 /**
  * Very likely needed information (to be confirmed):
@@ -22,12 +21,12 @@ Response	StaticHandler::handleRequest(std::string const& filePath, Request const
 	return response;
 }
 
-Response	StaticHandler::handleError(ParseStatus status) {
+Response	StaticHandler::handleError(HttpStatus const& status) {
 	// This is a placeholder implementation
 	std::string errorPage = "<html><body><h1>Error " + utils::toString(status) + "</h1></body></html>";
 
 	// Build dummy response to allow compilation
 	Response response;
-	response.setError(status);
+	response.setError(status.getCode());
 	return response;
 }

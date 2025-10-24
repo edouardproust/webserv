@@ -212,7 +212,6 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 	for (size_t j = 1; j < tokens.size(); ++j) {
 		if (tokens[j].empty())
 			throw std::runtime_error("An index value is an empty string");
-		// TODO: check that each index file is accessible ?
 		_indexFiles.push_back(tokens[j]);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
@@ -225,15 +224,11 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 void	LocationBlock::_setCgi(Tokens const& tokens) {
 	if (tokens.size() != 3)
 		throw std::runtime_error("Should have 3 arguments");
-	if (tokens[1].empty())
-		throw std::runtime_error("Extension is an empty string");
-	if (tokens[2].empty())
-		throw std::runtime_error("Executable is an empty string");
 	std::string extension = tokens[1], executable = tokens[2];
-	if (extension.empty() || executable.empty())
+	if (extension.empty())
 		throw std::runtime_error("Extension is an empty string");
 	if (executable.empty())
-		throw std::runtime_error("Executable path is an empty string");
+		throw std::runtime_error("Executable is an empty string");
     if (extension[0] != '.')
 		throw std::runtime_error("Extension must start with a dot: " + extension);
     if (_cgi.find(extension) != _cgi.end())
@@ -272,7 +267,7 @@ std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
 	return _return;
 }
 
-unsigned long	LocationBlock::getClientMaxBodySize() const {
+size_t	LocationBlock::getClientMaxBodySize() const {
 	if (!_isSetClientMaxBodySize && _server)
 		return _server->getClientMaxBodySize();
 	return _clientMaxBodySize;
@@ -309,18 +304,30 @@ LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server
     return defaultLocation;
 }
 
-bool	LocationBlock::isCgi() const {
-	return !_cgi.empty();
+bool	LocationBlock::isCgi(std::string const& extension) const {
+	if (extension.empty())
+		return false;
+	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); ++it) {
+		if (it->first == extension)
+			return true;
+	}
+	return false;
 }
 
 bool	LocationBlock::isRedirection() const {
 	return _return.first != -1 && !_return.second.empty();
 }
 
-bool	LocationBlock::isDirectory() const {
-	return utils::isAccessibleDirectory(_path);
+bool	LocationBlock::isAllowedMethod(std::string const& method) const {
+	return _limitExcept.empty() || (_limitExcept.find(method) != _limitExcept.end());
 }
 
+bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& method) const {
+	static std::string const methodsWithBody[] = {"POST", "PUT", "PATCH"};
+    if (utils::isInArray(method, methodsWithBody))
+        return size <= getClientMaxBodySize();
+    return true; // GET, HEAD, DELETE, etc.
+}
 
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	std::string const in = "  "; // indentation

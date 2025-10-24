@@ -15,6 +15,7 @@ class LocationBlock {
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
 	size_t						_clientMaxBodySize; 	// optional, overrides server limit.
 	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location.
+	std::string					_upload_store;			// TODO optional: uploads target directory (used if request method is POST and path is a static file)
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
 
@@ -49,16 +50,17 @@ class LocationBlock {
 		std::set<std::string> const&		getLimitExcept() const;
 		std::pair<int, std::string>	const&	getReturn() const;
 		bool								getClientMaxBodySizeSet() const;
-		unsigned long						getClientMaxBodySize() const;
+		size_t								getClientMaxBodySize() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		CgiDirective const&					getCgi() const;
 		std::string const					getCgiExecutor(std::string const&) const;
 
 		static LocationBlock const&			getDefaultLocation(ServerBlock const*);
 
-		bool	isCgi() const;
+		bool	isCgi(std::string const&) const;
 		bool	isRedirection() const;
-		bool	isDirectory() const;
+		bool	isAllowedMethod(std::string const&) const;
+		bool	isAllowedClientBodySize(size_t, std::string const&) const;
 
 };
 

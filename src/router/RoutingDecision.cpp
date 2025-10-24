@@ -1,16 +1,35 @@
 #include "router/RoutingDecision.hpp"
 
 RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair const& l)
-: _config(c), _request(r), _listen(l), _status(PARSE_ERR_BAD_REQUEST), _server(NULL),
-  _location(NULL) {
+: _config(c), _request(r), _listen(l), _server(NULL), _location(NULL), _finalPath(),
+  _decision(ERROR), _errorSlug("internal_server_error") {
+	_setServer();
 	_setLocation();
-	_setFinalPath();
-  }
+	_makeDecision();
+}
 
 RoutingDecision::~RoutingDecision() {}
 
-void	RoutingDecision::setStatus() {
-	//TODO
+/**
+ * Notes:
+ * - HTTP version is checked during request parsing.
+ */
+void	RoutingDecision::_makeDecision() {
+	std::string const& reqMethod = _request.getMethod();
+	size_t reqBodySize = _request.getBodySize();
+
+	if (!_location || !_server)
+		_setError("internal_server_error");
+	else if (!_location->isAllowedMethod(reqMethod))
+		_setError("method_not_allowed");
+	else if (!_location->isAllowedClientBodySize(_request.getBodySize(), reqMethod))
+		_setError("content_too_large");
+	else if (_location->isRedirection())
+		_decision = REDIRECTION;
+	else if (_location->isCgi(utils::getFileExtension(_request.getPath())))
+		_decision = CGI;
+	else
+		_decision = STATIC;
 }
 
 void	RoutingDecision::_setServer() {
@@ -53,29 +72,13 @@ void	RoutingDecision::_setLocation() {
 	_location = best ? best : &LocationBlock::getDefaultLocation(NULL);
 }
 
-void	RoutingDecision::_setFinalPath() {
-	std::string reqPath = _request.getPath();
-	std::string locPath = _location ? _location->getPath() : "";
-	std::string locRoot = _location ? _location->getRoot() : "";
-
-	std::string relativeReqPath = reqPath;
-	if (reqPath.find(locPath) == 0)
-		relativeReqPath = reqPath.substr(locPath.length());
-	if (relativeReqPath.empty()) relativeReqPath = "/";
-	std::string joinedPath = utils::joinPath(locRoot, relativeReqPath);
-	_finalPath = utils::normalizePath(joinedPath);
+void	RoutingDecision::_setError(std::string const& errorSlug) {
+	_decision = ERROR;
+	_errorSlug = errorSlug;
 }
 
-void	RoutingDecision::setCgiExecutor() {
-	// TODO
-}
-
-void	RoutingDecision::setRedirectTarget() {
-	// TODO
-}
-
-HttpStatus const&	RoutingDecision::getStatus() const {
-	return _status;
+RoutingDecision::Decision const&	RoutingDecision::getDecision() const {
+	return _decision;
 }
 
 ServerBlock const*	RoutingDecision::getServer() const {
@@ -86,51 +89,15 @@ LocationBlock const*	RoutingDecision::getLocation() const {
 	return _location;
 }
 
-std::string const&	RoutingDecision::getFinalPath() const {
-	return _finalPath;
-}
-
-void	RoutingDecision::_resolveFinalPath() {
-	if (!_location || !_server) {
-		_status = HttpStatus("internal_server_error");
-		return;
-	}
-	// Redirection (return) a priorité
-	std::pair<int, std::string> ret = _location->getReturn();
-	if (_location->isRedirection()) {
-		_status = HttpStatus(ret.first);
-		_redirectTarget = ret.second;
-		return;
-	}
-	/*
-	// Vérifier si le chemin correspond à un dossier
-	if (_location->isDirectory(_finalPath)) {
-		std::cout << "[DEBUG: is a directory final path]" << std::endl; // DEBUG
-		// Chercher un fichier index
-		std::string indexFile = _location->findIndexFile(path);
-		if (!indexFile.empty()) {
-			_finalPath = indexFile;
-			_status = HttpStatus("ok");
-			return;
-		}
-		// Si autoindex est activé, servir la liste des fichiers
-		if (_location->getAutoindex() == "on") {
-			_finalPath = path;
-			_status = 200; // La page autoindex sera générée dynamiquement
-			return;
-		}
-		// Sinon, pas d'index et autoindex off => Forbidden
-		_status = 403;
-		return;
-	}
-	// Chemin normal (fichier) : vérifier existence si nécessaire
-	_finalPath = path;
-	_status = 200;
-	*/
+std::string const&	RoutingDecision::getErrorSlug() const {
+	return _errorSlug;
 }
 
 std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
+	//TODO Update with _decision
 	os << "RoutingDecision:\n";
+
+	os << "- Decision: " << rhs.getDecision() << "\n";
 
 	os << "- Matching server:\n";
 	os << "  - root: '" << rhs.getServer()->getRoot() << "'\n";
@@ -139,9 +106,6 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 	LocationBlock const* location = rhs.getLocation();
 	if (location) os << "\n" << *location;
 	else os << "[empty]";
-
-	std::string const& finalPath = rhs.getFinalPath();
-	os << "- finalPath: " << finalPath ? finalPath : "[empty]";
 
 	os << "\n";
 	return os;

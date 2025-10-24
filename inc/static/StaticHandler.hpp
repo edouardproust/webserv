@@ -4,6 +4,8 @@
 #include "constants.hpp"
 #include "http/Request.hpp"
 #include "http/Response.hpp"
+#include "http/HttpStatus.hpp"
+#include "utils/utils.hpp"
 #include <string>
 #include <map>
 #include <vector>
@@ -19,7 +21,7 @@ class StaticHandler {
 	public:
 
 		static Response	handleRequest(std::string const&, Request const&);
-		static Response	handleError(ParseStatus);
+		static Response	handleError(HttpStatus const&);
 
 };
 

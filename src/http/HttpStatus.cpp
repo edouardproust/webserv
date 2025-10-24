@@ -85,11 +85,8 @@ bool	HttpStatus::isError(int code) {
 }
 
 std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
-	os << "HttpStatus: "
-		<< "code=" << rhs.getCode()
-		<< "reason=\"" << rhs.getReason() << "\""
-		<< "slug=\"" << rhs.getSlug() << "\""
-		<< "\n";
+	os << "HttpStatus: {"<< rhs.getCode()
+		<< ", \"" << rhs.getReason() << "\", " << rhs.getSlug() << "}";
 	return os;
 }
 

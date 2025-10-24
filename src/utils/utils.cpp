@@ -1,9 +1,4 @@
 #include "utils/utils.hpp"
-#include "constants.hpp"
-#include <sstream>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <cerrno>
 
 bool	utils::isInt(std::string const& str)
 {
@@ -18,38 +13,6 @@ bool	utils::isInt(std::string const& str)
 	return true;
 }
 
-bool	utils::isAccessibleDirectory(std::string const& path) {
-	// not empty and starts with '/'
-	if (path.empty() || path[0] != '/')
-		return false;
-	// check directory file type
-	struct stat fileinfo;
-	if (stat(path.c_str(), &fileinfo) == -1)
-		return false;
-	if (!S_ISDIR(fileinfo.st_mode))
-		return false;
-	// is accessible ?
-	if (access(path.c_str(), R_OK | X_OK) != 0)
-    	return false;
-	return true;
-}
-
-bool	utils::isExecutableFile(std::string const& path) {
-	// not empty and starts with '/'
-	if (path.empty() || path[0] != '/')
-		return false;
-	struct stat fileinfo;
-	if (stat(path.c_str(), &fileinfo) == -1)
-		return false;
-	// check regular file type
-	if (!S_ISREG(fileinfo.st_mode))
-		return false;
-	// check execute permission
-	if (access(path.c_str(), X_OK) != 0)
-		return false;
-	return true;
-}
-
 /**
  * Only checking for Linux distros (path starting by '/')
  */
@@ -57,6 +20,34 @@ bool	utils::isAbsolutePath(std::string const& path) {
 	if (path.empty() || path[0] != '/')
 		return false;
     return true;
+}
+
+static bool	_checkFileTypeAndAccess(std::string const& path, mode_t expectedType, int accessMode) {
+    if (path.empty() || path[0] != '/')
+        return false;
+	// is existing path?
+    struct stat st;
+    if (stat(path.c_str(), &st) == -1)
+        return false;
+	// is expected type?
+    if ((st.st_mode & S_IFMT) != expectedType)
+        return false;
+	// is accessible?
+    if (access(path.c_str(), accessMode) != 0)
+        return false;
+    return true;
+}
+
+bool	utils::isAccessibleDirectory(std::string const& path) {
+    return _checkFileTypeAndAccess(path, S_IFDIR, R_OK | X_OK);
+}
+
+bool	utils::isReadableFile(std::string const& path) {
+    return _checkFileTypeAndAccess(path, S_IFREG, R_OK);
+}
+
+bool	utils::isExecutableFile(std::string const& path) {
+    return _checkFileTypeAndAccess(path, S_IFREG, X_OK);
 }
 
 /**
