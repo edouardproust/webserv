@@ -207,13 +207,10 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
 void	ServerBlock::_setErrorPages(Tokens const& tokens) {
 	if (tokens.size() < 3)
 		throw std::runtime_error("Should have at least 3 arguments");
-
 	// Check path (last argument)
 	std::string path = tokens.back();
 	if (!utils::isAbsolutePath(path)) // also checks if is an empty str
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
-	// TODO in Router: check if path exists
-
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
 		// Check each HTTP status codes
 		std::string codeStr = tokens[j];
@@ -262,7 +259,7 @@ size_t	ServerBlock::getClientMaxBodySize() const {
 	return _clientMaxBodySize;
 }
 
-std::map<int, std::string> const&	ServerBlock::getErrorPages() const {
+ErrorPages const&	ServerBlock::getErrorPages() const {
 	return _errorPages;
 }
 
@@ -280,9 +277,9 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 
-	std::map<int, std::string> const& errorPages = rhs.getErrorPages();
+	ErrorPages const& errorPages = rhs.getErrorPages();
 	os << "- error_pages: " << errorPages.size() << "\n";
-	for (std::map<int, std::string>::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
+	for (ErrorPages::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
 		os << "  - " << it->first << " -> " << it->second << "\n";
 
 	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();

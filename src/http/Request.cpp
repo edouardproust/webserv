@@ -12,7 +12,7 @@ Request::Request(std::string const& rawRequest)
   _version(""),
   _contentType(""),
   _body(""),
-  _bodySize(MAX_SIZE_T) // TODO implement de logic to calculate and set _bodySize
+  _bodySize(DEFAULT_MAX_CLIENT_BODY_SIZE) // TODO Ava: implement de logic to calculate and set _bodySize
 {
 	static RequestParser parser;
 	parser.parseRequest(*this, rawRequest);

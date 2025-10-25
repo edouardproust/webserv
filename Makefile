@@ -20,6 +20,7 @@ BASE_SRC_FILES = \
 	http/Response.cpp \
 	router/Router.cpp \
 	router/RoutingDecision.cpp \
+	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
 	cgi/CGIHandler.cpp
 

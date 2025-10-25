@@ -218,6 +218,24 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 		throw std::runtime_error("Duplicated index files");
 }
 
+void	LocationBlock::_setErrorPages(Tokens const& tokens) {
+	if (tokens.size() < 3)
+		throw std::runtime_error("Should have at least 3 arguments");
+	// Check path (last argument)
+	std::string path = tokens.back();
+	if (!utils::isAbsolutePath(path)) // also checks if is an empty str
+		throw std::runtime_error("Not an absolute path: '" + path + "'");
+	for (size_t j = 1; j < tokens.size() - 1; ++j) {
+		// Check each HTTP status codes
+		std::string codeStr = tokens[j];
+		size_t code = utils::toSizeT(codeStr); // throw if empty string, not an number or size_t overflow
+		if (code < 300 || code > 599)
+			throw std::out_of_range("Invalid HTTP code: " + codeStr);
+		// Add to map (overrides value of existing codes)
+		_errorPages[code] = path;
+	}
+}
+
 /**
  * May throw a runtime_error() exception.
  */
@@ -287,6 +305,12 @@ std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
 	return _indexFiles;
 }
 
+ErrorPages const&	LocationBlock::getErrorPages() const {
+	if (_errorPages.empty() && _server)
+		return _server->getErrorPages();
+	return _errorPages;
+}
+
 std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
 	if (extension.empty())
 		return "";
@@ -324,8 +348,9 @@ bool	LocationBlock::isAllowedMethod(std::string const& method) const {
 
 bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& method) const {
 	static std::string const methodsWithBody[] = {"POST", "PUT", "PATCH"};
-    if (utils::isInArray(method, methodsWithBody))
+    if (utils::isInArray(method, methodsWithBody)) {
         return size <= getClientMaxBodySize();
+	}
     return true; // GET, HEAD, DELETE, etc.
 }
 

@@ -10,7 +10,7 @@ class ServerBlock {
 	std::set<HostPortPair>		_listen;
 	size_t						_clientMaxBodySize;
 	bool						_isSetClientBodySize;
-	std::map<int, std::string>	_errorPages;
+	ErrorPages	_errorPages;
 	std::vector<std::string>	_indexFiles;
 
 	std::vector<LocationBlock>	_locations;
@@ -37,7 +37,7 @@ class ServerBlock {
 		std::string const&					getRoot() const;
 		std::set<HostPortPair> const&		getListen() const;
 		size_t								getClientMaxBodySize() const;
-		std::map<int, std::string> const&	getErrorPages() const;
+		ErrorPages const&	getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		std::vector<LocationBlock> const&	getLocations() const;
 

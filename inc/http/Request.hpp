@@ -21,6 +21,7 @@ class Request
 		std::map<std::string, std::string> _headers;
 		std::string	_contentType;
 		std::string	_body;
+		size_t		_bodySize;
 
 		Request(); // Not used
 
@@ -42,6 +43,7 @@ class Request
 		const std::map<std::string, std::string>&	getHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
+		size_t				getBodySize() const;
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);

@@ -1,19 +1,19 @@
 #ifndef RESPONSE_HPP
 # define RESPONSE_HPP
 
-# include "RequestParser.hpp"
+# include "http/RequestParser.hpp"
+# include "http/HttpStatus.hpp"
 # include <map>
 
 class Response
 {
 	private:
 
-	int	_statusCode;
+	HttpStatus	_status;
 	std::string	_reasonPhrase;
 	std::map<std::string, std::string> _headers;
 	std::string _body;
 
-	std::string	_getReasonPhrase(int statusCode) const;
 	std::string _generateErrorPage() const;
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
@@ -25,16 +25,15 @@ class Response
 	Response& operator=(const Response& other);
 	~Response();
 
-	int	getStatusCode() const;
-	const std::string& getReasonPhrase() const;
+	const HttpStatus& getStatus() const;
 	const std::map<std::string, std::string>& getHeaders() const;
 	const std::string& getBody() const;
 	std::string	getCurrentDate() const;
 
-	void	setStatusCode(int statusCode);
+	void	setStatus(const HttpStatus& status);
 	void	setHeader(const std::string& name, const std::string& value);
 	void	setBody(const std::string& body);
-	void	setError(int statusCode);
+	void	setError(const HttpStatus& status);
 
 	std::string	stringify() const;
 };

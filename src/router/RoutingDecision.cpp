@@ -1,7 +1,7 @@
 #include "router/RoutingDecision.hpp"
 
 RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair const& l)
-: _config(c), _request(r), _listen(l), _server(NULL), _location(NULL), _finalPath(),
+: _config(c), _request(r), _listen(l), _server(NULL), _location(NULL),
   _decision(ERROR), _errorSlug("internal_server_error") {
 	_setServer();
 	_setLocation();
@@ -15,14 +15,11 @@ RoutingDecision::~RoutingDecision() {}
  * - HTTP version is checked during request parsing.
  */
 void	RoutingDecision::_makeDecision() {
-	std::string const& reqMethod = _request.getMethod();
-	size_t reqBodySize = _request.getBodySize();
-
 	if (!_location || !_server)
 		_setError("internal_server_error");
-	else if (!_location->isAllowedMethod(reqMethod))
+	else if (!_location->isAllowedMethod(_request.getMethod()))
 		_setError("method_not_allowed");
-	else if (!_location->isAllowedClientBodySize(_request.getBodySize(), reqMethod))
+	else if (!_location->isAllowedClientBodySize(_request.getBodySize(), _request.getMethod()))
 		_setError("content_too_large");
 	else if (_location->isRedirection())
 		_decision = REDIRECTION;
@@ -94,19 +91,19 @@ std::string const&	RoutingDecision::getErrorSlug() const {
 }
 
 std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
-	//TODO Update with _decision
-	os << "RoutingDecision:\n";
-
-	os << "- Decision: " << rhs.getDecision() << "\n";
-
-	os << "- Matching server:\n";
-	os << "  - root: '" << rhs.getServer()->getRoot() << "'\n";
-
-	os << "- Matching location:";
+	int d = rhs.getDecision();
+	os << "RoutingDecision:\n"
+		<< "- Decision: " << (d == RoutingDecision::ERROR ? "ERROR"
+			: (d == RoutingDecision::REDIRECTION ? "REDIRECTION"
+				: (d == RoutingDecision::STATIC ? "STATIC"
+					: d == RoutingDecision::CGI ? "CGI"
+						: "UNKNOWN"))) << "\n"
+		<< "- Matching server:\n"
+		<< "  - root: '" << rhs.getServer()->getRoot() << "'\n"
+		<< "- Matching location:";
 	LocationBlock const* location = rhs.getLocation();
 	if (location) os << "\n" << *location;
 	else os << "[empty]";
 
-	os << "\n";
 	return os;
 }
