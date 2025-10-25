@@ -70,7 +70,28 @@ std::string StaticHandler::_generateErrorPage(int statusCode, const std::string&
 	return html.str();
 }
 
-Response	StaticHandler::handleRequest(std::string const& filePath, Request const& request)
+Response StaticHandler::_handleFileUpload(const std::string& filePath, const Request& request) {
+    // 1. Check if upload directory exists and is writable
+    std::string uploadDir = _getUploadDirectory(filePath);
+    if (!_isDirectoryWritable(uploadDir)) {
+        return handleError(HttpStatus(403));
+    }
+    
+    // 2. Generate unique filename (prevent overwrites)
+    std::string finalPath = _generateUploadPath(uploadDir, filePath);
+    
+    // 3. Save the file
+    if (_saveFile(finalPath, request.getBody())) {
+        Response response;
+        response.setStatusCode(201); // Created
+        response.setBody("File uploaded successfully");
+        return response;
+    } else {
+        return handleError(HttpStatus(500));
+    }
+}
+
+Response	StaticHandler::handleGet(std::string const& filePath, Request const& request)
 {
 	(void)request;
 	size_t fileSize = _getFileSize(filePath);
@@ -85,6 +106,19 @@ Response	StaticHandler::handleRequest(std::string const& filePath, Request const
 	response.setHeader("Content-Type", contentType);
 	response.setBody(content);
 	return response;
+}
+
+Response	StaticHandler::handleDelete(std::string const& filePath, Request const& request)
+{
+	(void)request;
+	if (std::remove(filePath.c_str()) == 0)
+	{
+		Response response;
+		response.setStatusCode(204);
+		return response;
+	}
+	else
+		return handleError(HttpStatus(403));
 }
 
 Response	StaticHandler::handleError(const HttpStatus& status)

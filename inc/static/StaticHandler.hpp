@@ -26,7 +26,9 @@ class StaticHandler
 	~StaticHandler();
 	StaticHandler&	operator=(StaticHandler const&);
 
-	static Response	handleRequest(std::string const&, Request const&);
+	static Response	handleGet(std::string const&, Request const&);
+	static Response	handlePut(std::string const&, Request const&);
+	static Response	handleDelete(std::string const&, Request const&);
 	static Response	handleError(const HttpStatus& status);
 
 
