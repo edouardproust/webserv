@@ -9,7 +9,6 @@ class HostPortPair {
 	std::string	_host;
 	size_t		_port;
 
-
 	void	_parseHostPort(std::string const&);
 
 	void	_setHost(std::string const&);

@@ -48,7 +48,7 @@ Response Router::dispatchRequest(Config const& config, Request const& request, H
 			return StaticHandler::handleGet(request, path, loc->getAutoindex() == "on", loc->getIndexFiles());
 		else if (method == "DELETE")
 			return StaticHandler::handleDelete(request, path);
-		// -- TODO additional supported methods can be added here --
+		// -- additional supported methods can be added here -- // TODO PUT method
 		else
 			return StaticHandler::handleError(HttpStatus("method_not_allowed"), locRoot, locErrorPages);
 	}
