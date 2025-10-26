@@ -20,9 +20,9 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 		// if errorPath exists and is a readable file: return a response with its content
 		// else return a Reponse with content of a built error page (not_found or forbidden)
 	}
-	// return a Response with the content of a built error page (not_found)
+	// return a Response with the content of a built error page
 	Response response;
-	response.setStatus(HttpStatus("not_found"));
+	response.setStatus(status);
 	return response;
 }
 
