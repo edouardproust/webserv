@@ -1,127 +1,66 @@
 #include "router/Router.hpp"
-#include "static/StaticHandler.hpp"
-#include "cgi/CGIHandler.hpp"
-#include "utils/utils.hpp"
-#include "constants.hpp"
-#include <iostream>
 
-Router::Router(Request const& request, std::vector<ServerBlock> const& servers, HostPortPair const& listeningOn)
-: _request(request), _servers(servers), _listeningOn(listeningOn), _location(NULL) {}
+Router::Router() {}
 
 Router::~Router() {}
 
 /**
- * Dispatch the request to corresponding handler by crossing data between Config and Request.
+ * Dispatch the request to the corresponding handler by crossing data between Config and Request.
  *
  * Notes:
- * - The Router does not check the validity of the data inside Config and Request objects,
+ * - Router does not check the validity of the data inside Config and Request objects,
  *   so the data needs to be 100% correct when passed to the Router. Related parsers are
  *   responsible for checking the data thoroughly.
+ * - A POST request matching a non-CGI location returns an error (method_not_allowed)
+ * - It is the role of StaticHandler to check if the requested file or directory is accesible.
+ *   It also checks "autoindex" and "index" directives in config, in order to serve a directory
+ *   listing page if needed.
+ * - It is the role of CGIHandler to check if the script exists and is executable.
  */
-void Router::dispatchRequest() {
-    ParseStatus requestStatus = _request.getStatus();
-    if (requestStatus != PARSE_SUCCESS) {
-		_sendResponse(StaticHandler::handleError(requestStatus)); // TODO: add checks in Reponse ?
-        return;
-    }
-    ServerBlock const& server = _findMatchingServer();
-    _setMatchingLocation(server.getLocations(), _request.getPath());
-	if (!_location)
-		_location = &server.getDefaultLocation();
-	if (DEVMODE)
-		std::cout << *this << std::endl;
-    std::string executor = "";
-	std::string const& extension = utils::getFileExtension(_request.getPath());
-    if (_location->isCgiLocation() && !extension.empty()) { // the request path matches a CGI location and has an extension
-        executor = _location->getCgiExecutor(extension); // if no executor found for this extension: executor = ""
-    }
-	if (!executor.empty()) { // the file extension is handled by the CGI config of this location
-        std::string scriptPath = _resolveScriptPath(_request.getPath(), _location);
-		_sendResponse(CGIHandler::handleRequest(scriptPath, executor, _request));
-    } else { // not a CGI request or file extension not handled by this location
-        std::string filePath = _resolveFilePath(_request.getPath(), _location);
-		_sendResponse(StaticHandler::handleRequest(filePath, _request));
-    }
-}
+Response Router::dispatchRequest(Config const& config, Request const& request, HostPortPair const& listen) {
+	RoutingDecision rd(config, request, listen);
+	if (DEVMODE) std::cout << rd << std::endl;
+	RoutingDecision::Decision decision = rd.getDecision();
+	LocationBlock const* loc = rd.getLocation();
+	std::string const& locRoot = loc->getRoot();
+	ErrorPages const& locErrorPages = loc->getErrorPages();
 
-ServerBlock const&	Router::_findMatchingServer() const {
-	for (size_t i = 0; i < _servers.size(); ++i) {
-		std::set<HostPortPair> serverListens = _servers[i].getListen();
-		for (std::set<HostPortPair>::const_iterator it = serverListens.begin(); it != serverListens.end(); ++it) {
-			if (*it == _listeningOn)
-				return _servers[i];
-		}
+	// error, redirection
+	HttpStatus const& reqStatus = request.getStatus();
+	if (reqStatus.getSlug() != "ok")
+		return StaticHandler::handleError(HttpStatus(reqStatus), locRoot, locErrorPages);
+
+	if (decision == RoutingDecision::ERROR)
+		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()), locRoot, locErrorPages);
+	if (decision == RoutingDecision::REDIRECTION) {
+		std::pair<int, std::string> const& ret = loc->getReturn();
+		return RedirectionHandler::handleRedirection(ret.first, ret.second);
 	}
-	// fallback for security, but should never happen
-	return _servers[0];
-}
-
-void	Router::_setMatchingLocation(std::vector<LocationBlock> const& locations, std::string const& path) {
-	LocationBlock const* best = NULL;
-	size_t longest = 0;
-	for (size_t i = 0; i < locations.size(); ++i) {
-		const std::string& locPath = locations[i].getPath();
-		if (path.compare(0, locPath.size(), locPath) == 0) { // prefix match
-			if (path.size() == locPath.size() || path[locPath.size()] == '/') { // prevents against false positives
-				if (locPath.size() > longest) {
-					longest = locPath.size();
-					best = &locations[i];
-				}
-			}
-		}
+	// cgi, static
+	std::string path = _buildFilePath(loc->getRoot(), loc->getPath(), request.getPath());
+	if (decision == RoutingDecision::CGI) {
+		std::string ext = utils::getFileExtension(path);
+		return CGIHandler::handleRequest(request, path, loc->getCgiExecutor(ext));
 	}
-	_location = best;
-}
-
-std::string	Router::_resolveScriptPath(std::string const& requestPath, LocationBlock const* location) const {
-	// TODO
-	return "/var/www/cgi-bin" + requestPath.substr(location->getPath().length());
-	(void)requestPath; (void)location; // to silence unused parameter warning
-}
-
-std::string	Router::_resolveFilePath(std::string const& requestPath, LocationBlock const* location) const {
-	// TODO
-	return location->getRoot() + requestPath;
-	(void)requestPath; (void)location; // to silence unused parameter warning
-}
-
-void	Router::_sendResponse(Response const& response) const {
-	// TODO
-	std::cout << "-- DEBUG: The router is sending the following response: --\n";
-	std::cout << response << std::endl;
-}
-
-Request const&	Router::getRequest() const {
-	return _request;
-}
-
-std::vector<ServerBlock> const&	Router::getServers() const {
-	return _servers;
-}
-
-HostPortPair const&	Router::getListeningOn() const {
-	return _listeningOn;
-}
-
-LocationBlock const* Router::getMatchingLocation() const {
-	return _location;
-}
-
-std::ostream&	operator<<(std::ostream& os, Router const& rhs) {
-	Request const& request = rhs.getRequest();
-	os << "Router:\n";
-	os << "- Listening on: " << rhs.getListeningOn().getHost() << ":" << rhs.getListeningOn().getPort() << "\n";
-	os << "- Request method: " << request.getMethod() << "\n";
-	os << "- Request path: " << request.getPath() << "\n";
-	os << "- Request version: " << request.getVersion() << "\n";
-	os << "- Headers: " << request.getHeaders().size() << std::endl;
-	for (std::map<std::string, std::string>::const_iterator it = request.getHeaders().begin();
-		it != request.getHeaders().end(); ++it) {
-		os << "  - " << it->first << ": '" << it->second << "'\n";
+	if (decision == RoutingDecision::STATIC) {
+		std::string const&	method = request.getMethod();
+		if (method == "GET")
+			return StaticHandler::handleGet(request, path, loc->getAutoindex() == "on", loc->getIndexFiles());
+		else if (method == "DELETE")
+			return StaticHandler::handleDelete(request, path);
+		// -- additional supported methods can be added here -- // TODO PUT method
+		else
+			return StaticHandler::handleError(HttpStatus("method_not_allowed"), locRoot, locErrorPages);
 	}
-	LocationBlock const* matchingLoc = rhs.getMatchingLocation();
-	os << "- Matching location:";
-	if (matchingLoc) os << "\n" << *matchingLoc;
-	else os << " [empty]";
-	return os;
+	// fallback
+	return StaticHandler::handleError(HttpStatus("internal_server_error"), locRoot, locErrorPages);
+}
+
+std::string	Router::_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath) {
+	std::string relativeReqPath = reqPath;
+	if (reqPath.find(locPath) == 0)
+		relativeReqPath = reqPath.substr(locPath.length());
+	if (relativeReqPath.empty()) relativeReqPath = "/";
+	std::string joinedPath = utils::joinPath(locRoot, relativeReqPath);
+	return utils::normalizePath(joinedPath);
 }

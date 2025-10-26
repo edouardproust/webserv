@@ -2,15 +2,16 @@
 #include "utils/utils.hpp"
 #include <ctime>
 
-Response::Response() : _statusCode(200), _reasonPhrase("OK")
+Response::Response() : _status(HttpStatus("ok"))
 {
 	_headers["server"] = "webserv/1.0";
 	_headers["date"] = getCurrentDate();
 	_headers["connection"] = "keep-alive";
+	_headers["content-length"] = "0";
 }
 
 Response::Response(const Response& other)
-	: _statusCode(other._statusCode),
+	: _status(other._status),
 	  _reasonPhrase(other._reasonPhrase),
 	  _headers(other._headers),
 	  _body(other._body) {}
@@ -19,7 +20,7 @@ Response& Response::operator=(const Response& other)
 {
 	if (this != &other)
 	{
-		_statusCode = other._statusCode;
+		_status = other._status;
 		_reasonPhrase = other._reasonPhrase;
 		_headers = other._headers;
 		_body = other._body;
@@ -41,14 +42,9 @@ std::string	Response::stringify() const
 	return response.str();
 }
 
-int	Response::getStatusCode() const
+const HttpStatus&	Response::getStatus() const
 {
-	return _statusCode;
-}
-
-const std::string& Response::getReasonPhrase() const
-{
-	return _reasonPhrase;
+	return _status;
 }
 
 const std::map<std::string, std::string>& Response::getHeaders() const
@@ -61,10 +57,9 @@ const std::string& Response::getBody() const
 	return _body;
 }
 
-void	Response::setStatusCode(int statusCode)
+void	Response::setStatus(const HttpStatus& status)
 {
-	_statusCode = statusCode;
-	_reasonPhrase = _getReasonPhrase(statusCode);
+	_status = status;
 }
 
 void	Response::setHeader(const std::string& name, const std::string& value)
@@ -95,56 +90,12 @@ void	Response::setBody(const std::string& body)
 		_headers.erase("content-type");
 }
 
-void	Response::setError(int statusCode)
+void	Response::setError(const HttpStatus& status)
 {
-	setStatusCode(statusCode);
+	setStatus(status);
 	setHeader("Content-Type", "text/html");
 	std::string errorBody = _generateErrorPage();
 	setBody(errorBody);
-}
-
-std::string Response::_getReasonPhrase(int statusCode) const
-{
-	switch(statusCode)
-	{
-		//Success
-		case 200:
-			return "OK";
-		case 201:
-			return "Created";
-		case 204:
-			return "No Content";
-		 // Redirection (for CGI/location blocks)
-		case 301:
-			return "Moved Permanently";
-		case 302:
-			return "Found";
-		// Client Errors
-		case 400:
-			return "Bad Request";
-		case 403:
-			return "Forbidden";
-		case 404:
-			return "Not Found";
-		case 405:
-			return "Method Not Allowed";
-		case 411:
-			return "Length Required";
-		case 413:
-			return "Content Too Large";
-		// Server Errors
-		case 500:
-			return "Internal Server Error";
-		case 501:
-			return "Not Implemented";
-		case 502:
-			return "Bad Gateway";
-		case 505:
-			return "HTTP Version Not Supported";
-		//more status codes to be added accordingly!!
-		default:
-			return "Unknown";
-	}
 }
 
 std::string Response::getCurrentDate() const
@@ -159,14 +110,13 @@ std::string Response::getCurrentDate() const
 std::string Response::_generateErrorPage() const
 {
 	std::stringstream html;
-	std::string reasonPhrase = _getReasonPhrase(_statusCode);
 
 	html << "<html>\n"
 		 << "  <head>\n"
-		 << "    <title>" << _statusCode << " " << reasonPhrase << "</title>\n"
+		 << "    <title>" << _status.toString() << "</title>\n"
 		 << "  </head>\n"
 		 << "  <body>\n"
-		 << "    <center><h1>" << _statusCode << " " << reasonPhrase << "</h1></center>\n"
+		 << "    <center><h1>" << _status.toString() << "</h1></center>\n"
 		 << "    <hr><center>webserv/1.0</center>\n"
 		 << "  </body>\n"
 		 << "</html>";
@@ -177,7 +127,7 @@ std::string Response::_buildStatusLine() const
 {
 	std::stringstream statusLine;
 
-	statusLine << "HTTP/1.1 " << _statusCode << " " << _reasonPhrase << "\r\n";
+	statusLine << "HTTP/1.1 " << _status.toString() << "\r\n";
 	return statusLine.str();
 }
 
@@ -205,16 +155,15 @@ std::string Response::_buildHeaders() const
 std::ostream& operator<<(std::ostream& os, const Response& response)
 {
 	os << "Response:\n";
-	os << "- Status: " << response.getStatusCode() << " " << response.getReasonPhrase() << "\n";
+	os << "- Status: " << response.getStatus().toString() << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = response.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 			os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: '" << response.getBody() << "'\n";
+	os << "- Body: '" << response.getBody().empty() << "'\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
 	os << "- Raw HTTP Response Preview:\n";
-	std::string raw = response.stringify();
-	os << "  " << raw << std::endl ;
+	os << "'" << response.stringify() << "'\n";
 	return os;
 }

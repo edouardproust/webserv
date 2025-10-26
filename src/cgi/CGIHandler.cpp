@@ -4,7 +4,7 @@
 
 CGIHandler::CGIHandler() {}
 
-Response	CGIHandler::handleRequest(const std::string& scriptPath, const std::string& executor, Request req)
+Response	CGIHandler::handleRequest(Request req, const std::string& scriptPath, const std::string& executor)
 {
 	std::string const& method = req.getMethod();
 	std::string const& body = req.getBody();
@@ -22,7 +22,7 @@ Response	CGIHandler::handleRequest(const std::string& scriptPath, const std::str
 	// Conversion of HTTP headers into env. variables (CGI standard)
 	Headers headers = req.getHeaders();
 	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it) {
-        std::string envVar = "HTTP_" + _headerToEnvVar(it->first);
+        std::string envVar = "PARSE_" + _headerToEnvVar(it->first);
         setenv(envVar.c_str(), it->second.c_str(), 1);
     }
 	// 4. Gestion of the request body for POST/PUT methods

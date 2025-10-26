@@ -1,33 +1,62 @@
 #include "static/StaticHandler.hpp"
-#include "utils/utils.hpp"
 
 /**
- * Very likely needed information (to be confirmed):
- * - _request.getMethod(),
- * - _request.getHeaders()
+ * Else, build a standard error page with `HttpStatus->toString()`.
  */
-Response	StaticHandler::handleRequest(std::string const& filePath, Request const& req) {
-	(void)req; // to silence unused parameter warnings
-	// This is a placeholder implementation
-	std::string staticContent = "<html><body><h1>Static Content from " + filePath + "</h1></body></html>";
+Response	StaticHandler::handleError(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages) {
+	std::cout << "[DEBUG] StaticHandler:\n"
+		<< "- action: Error\n"
+		<< "- status: " << status.toString() << "\n"
+		<< "- location root: " << locRoot << "\n"
+		<< "- error pages: " << locErrorPages.size() << "\n";
+	for (ErrorPages::const_iterator it = locErrorPages.begin(); it != locErrorPages.end(); ++it)
+		std::cout << "  - " << it->first << " -> " << it->second << "\n";
+	std::cout << std::endl;
 
-	// Build dummy response to allow compilation
+	// If one of `locErrorPages` corresponds to `HttpStatus->getCode()`, get its content.
+	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
+	if (search != locErrorPages.end()) {
+		std::string errorPath = utils::joinPath(locRoot, search->second);
+		// if errorPath exists and is a readable file: return a response with its content
+		// else return a Reponse with content of a built error page (not_found or forbidden)
+	}
+	// return a Response with the content of a built error page
 	Response response;
-	std::string content = "[This is the content of the static file]";
-	response.setStatusCode(200);
-	response.setHeader("Content-Type", "text/html");
-	response.setHeader("Content-Length", utils::toString(content.size()));
-	response.setHeader("Date", response.getCurrentDate());
-	response.setBody(content);
+	response.setStatus(status);
 	return response;
 }
 
-Response	StaticHandler::handleError(ParseStatus status) {
-	// This is a placeholder implementation
-	std::string errorPage = "<html><body><h1>Error " + utils::toString(status) + "</h1></body></html>";
+Response	StaticHandler::handleGet(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes) {
+	std::cout << "[DEBUG] StaticHandler:\n"
+		<< "- handle: Get\n"
+		<< "- method: " << request.getMethod() << "\n"
+		<< "- file path: " << path << "\n"
+		<< "- autoindex: " << (isAutoindex ? "true" : "false") << "\n"
+		<< "- location indexes: " << locIndexes.size() << "\n";
+	for (size_t i = 0; i < locIndexes.size(); ++i)
+		std::cout << "  - " << locIndexes[i] << "\n";
+	std::cout << std::endl;
 
-	// Build dummy response to allow compilation
+	/*
+	if path is a directory:
+		if isAutoIndex: loop over indexes and build indexPath = utils::joinPath(path, indexes[i]). If a indexPath is a readable file: return a Response with its content
+		else: return a Reponse with the content of a built directory index page
+	else if is a regular file:
+		if is an existing and readable file: return a Response with its content
+		else: return a Response with a built error page (not_found or forbidden)
+	*/
 	Response response;
-	response.setError(status);
 	return response;
 }
+
+Response	StaticHandler::handleDelete(Request const& request, std::string const& path) {
+	std::cout << "[DEBUG] StaticHandler:\n"
+		<< "- handle: Delete\n"
+		<< "- method: " << request.getMethod() << "\n"
+		<< "- file path: " << path << "\n"
+		<< std::endl;
+
+	Response response;
+	return response;
+}
+

@@ -9,32 +9,18 @@ int main(int argc, char** argv) {
 		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
 		return 1;
 	}
-	try {
-		Config cfg(argv[1]);
-		/*
-		Server server(cfg);
-		server.run(cfg);
 
-			// Inside server.run(), on each new request:
-			Request request("GET /index.html HTTP/1.0\r\nHost: localhost:8080\r\n\r\n");
-			int res = request.getHTTPStatus();
-			if (res < 400) {
-				Router router(request, cfg.getServers());
-			} else {
-				std::string const& errorPageContent = static::buildErrorPage(res);
-				Response response(HTTP_VERSION, res, errorPageContent);
-				server.sendResponseToClient(response);
-			}
-		*/
-		if (DEVMODE) {
-			std::cout << cfg << std::endl;
-			Request request;
-			request.parse("GET /images/hello.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-			std::cout << request << std::endl;
-			Router router(request, cfg.getServers(), HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
-			router.dispatchRequest();
-			//dev::runResponseTests();
-		}
+	try {
+		Config config(argv[1]);
+
+		// To be moved into 'network' listening loop:
+			std::cout << config << std::endl;
+			Request request("GE /images/hello.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+			if (DEVMODE) std::cout << request << std::endl;
+			Response const response = Router::dispatchRequest(config, request, HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
+			if (DEVMODE) std::cout << response << std::endl;
+			//Network::_sendResponse(response);
+
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;

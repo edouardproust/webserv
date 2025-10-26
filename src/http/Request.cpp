@@ -3,9 +3,22 @@
 
 std::set<std::string> Request::_supportedMethods;
 
-Request::Request() : _status(NOT_SET), _method(""), _requestTarget(""), _path(""), _queryString(""), _version(""), _contentType(""), _body("") {}
+Request::Request(std::string const& rawRequest)
+: _status(HttpStatus("bad_request")),
+  _method(""),
+  _requestTarget(""),
+  _path(""),
+  _queryString(""),
+  _version(""),
+  _contentType(""),
+  _body(""),
+  _bodySize(DEFAULT_MAX_CLIENT_BODY_SIZE) // TODO Ava: implement de logic to calculate and set _bodySize
+{
+	static RequestParser parser;
+	parser.parseRequest(*this, rawRequest);
+}
 
-Request::Request(const Request& other) {
+Request::Request(const Request& other): _status(other._status) {
 	*this = other;
 }
 
@@ -22,16 +35,12 @@ Request& Request::operator=(const Request& other)
 		this->_headers = other._headers;
 		this->_contentType = other._contentType;
 		this->_body = other._body;
+		this->_bodySize = other._bodySize;
 	}
 	return (*this);
 }
 
 Request::~Request() {}
-
-void	Request::parse(std::string const& rawRequest) {
-	RequestParser parser;
-	parser.parseRequest(*this, rawRequest);
-}
 
 bool	Request::isSupportedMethod(std::string const& method) {
 	if (_supportedMethods.empty()) {
@@ -43,7 +52,7 @@ bool	Request::isSupportedMethod(std::string const& method) {
 	return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-const ParseStatus& Request::getStatus() const
+const HttpStatus& Request::getStatus() const
 {
 	return (this->_status);
 }
@@ -88,7 +97,13 @@ const std::string& Request::getBody() const
 	return this->_body;
 }
 
-void	Request::setStatus(ParseStatus status)
+size_t	Request::getBodySize() const
+{
+	return this->_bodySize;
+}
+
+
+void	Request::setStatus(HttpStatus const& status)
 {
 	this->_status = status;
 }
@@ -136,9 +151,9 @@ void	Request::setBody(const std::string& _body)
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
-	ParseStatus const& status = request.getStatus();
+	HttpStatus const& status = request.getStatus();
 	os << "- Status: ";
-	if (status != NOT_SET) os << status << "\n";
+	if (status.getCode() != 500) os << status << "\n";
 	else os << "[empty]\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";

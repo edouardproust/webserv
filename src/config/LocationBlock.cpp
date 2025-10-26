@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cstdlib>
 
-LocationBlock::LocationBlock(ServerBlock* server)
+LocationBlock::LocationBlock(ServerBlock const* server)
 : _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)
 {}
 
@@ -30,6 +30,7 @@ LocationBlock::LocationBlock(const LocationBlock &other)
   _clientMaxBodySize(other._clientMaxBodySize),
   _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
   _indexFiles(other._indexFiles),
+  _errorPages(other._errorPages),
   _cgi(other._cgi)
 {}
 
@@ -44,6 +45,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_clientMaxBodySize = other._clientMaxBodySize;
 		_isSetClientMaxBodySize = other._isSetClientMaxBodySize;
 		_indexFiles = other._indexFiles;
+		_errorPages = other._errorPages;
 		_cgi = other._cgi;
 	}
 	return *this;
@@ -100,6 +102,8 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 			_setIndexFiles(tokens);
 		else if (directiveName == "cgi")
 			_setCgi(tokens);
+		else if (directiveName == "error_page")
+			_setErrorPages(tokens);
 		// -- additional directives can be added here --
 		else
 			throw std::runtime_error("Unsupported directive");
@@ -113,7 +117,7 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 void	LocationBlock::_setPath(std::string& path) {
 	if (!utils::isAbsolutePath(path))
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
-	_path = utils::normalizePath(path);
+	_path = Config::normalizePath(path);
 }
 
 void	LocationBlock::setServer(ServerBlock* server) {
@@ -140,26 +144,29 @@ void	LocationBlock::_setRoot(Tokens const& tokens) {
 void	LocationBlock::_setAutoindex(Tokens const& tokens) {
 	if (tokens.size() != 2)
 		throw std::runtime_error("Should have 2 arguments");
-	if (tokens[1].empty())
+	std::string const& autoindex = tokens[1];
+	if (autoindex.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (_autoindex != "on" && _autoindex != "off")
+	if (autoindex != "on" && autoindex != "off")
 		throw std::runtime_error("Value should be \"on\" or \"off\"");
-	_autoindex = tokens[1];
+	_autoindex = autoindex;
 }
 
 /**
  * May throw a runtime_error() exception.
  */
-void	LocationBlock::_setLimitExcept(Tokens const& tokens) {
+void LocationBlock::_setLimitExcept(Tokens const& tokens) {
 	if (tokens.size() < 2)
-		throw std::runtime_error("Should have at least 2 arguments");
-	if (tokens[1].empty())
-		throw std::runtime_error("Value is an empty string");
-	for (std::set<std::string>::const_iterator it = _limitExcept.begin(); it != _limitExcept.end(); it++) {
-		if (!Request::isSupportedMethod(*it))
-			throw std::runtime_error("Not supported method: " + *it);
+		throw std::runtime_error("Should have at least 1 method");
+	_limitExcept.clear(); // renitialise before filling up
+	for (size_t i = 1; i < tokens.size(); ++i) {
+		const std::string& method = tokens[i];
+		if (method.empty())
+			throw std::runtime_error("Method is an empty string");
+		if (!Request::isSupportedMethod(method))
+			throw std::runtime_error("Not supported method: " + method);
+		_limitExcept.insert(method);
 	}
-	_autoindex = tokens[1];
 }
 
 /**
@@ -209,11 +216,30 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 	for (size_t j = 1; j < tokens.size(); ++j) {
 		if (tokens[j].empty())
 			throw std::runtime_error("An index value is an empty string");
-		// TODO: check that each index file is accessible ?
 		_indexFiles.push_back(tokens[j]);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicated index files");
+}
+
+void	LocationBlock::_setErrorPages(Tokens const& tokens) {
+	if (tokens.size() < 3)
+		throw std::runtime_error("Should have at least 3 arguments");
+	// Check path (last argument)
+	std::string path = tokens.back();
+	if (!utils::isAbsolutePath(path)) // also checks if is an empty str
+		throw std::runtime_error("Not an absolute path: '" + path + "'");
+	for (size_t j = 1; j < tokens.size() - 1; ++j) {
+		// Check each HTTP status codes
+		std::string codeStr = tokens[j];
+
+		size_t code = utils::toSizeT(codeStr); // throw if empty string, not an number or size_t overflow
+		if (code < 300 || code > 599)
+			throw std::out_of_range("Invalid HTTP code: " + codeStr);
+		// Add to map (overrides value of existing codes)
+
+		_errorPages[code] = path;
+	}
 }
 
 /**
@@ -222,15 +248,11 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 void	LocationBlock::_setCgi(Tokens const& tokens) {
 	if (tokens.size() != 3)
 		throw std::runtime_error("Should have 3 arguments");
-	if (tokens[1].empty())
-		throw std::runtime_error("Extension is an empty string");
-	if (tokens[2].empty())
-		throw std::runtime_error("Executable is an empty string");
 	std::string extension = tokens[1], executable = tokens[2];
-	if (extension.empty() || executable.empty())
+	if (extension.empty())
 		throw std::runtime_error("Extension is an empty string");
 	if (executable.empty())
-		throw std::runtime_error("Executable path is an empty string");
+		throw std::runtime_error("Executable is an empty string");
     if (extension[0] != '.')
 		throw std::runtime_error("Extension must start with a dot: " + extension);
     if (_cgi.find(extension) != _cgi.end())
@@ -241,7 +263,7 @@ void	LocationBlock::_setCgi(Tokens const& tokens) {
 	_cgi[extension] = executable;
 }
 
-ServerBlock*	LocationBlock::getServer() const {
+ServerBlock const*	LocationBlock::getServer() const {
 	return _server;
 }
 
@@ -250,9 +272,9 @@ std::string const&	LocationBlock::getPath() const {
 }
 
 std::string const	LocationBlock::getRoot() const {
-	if (!_root.empty())
-		return _root;
-	return _server->getRoot(); // returns "" if server::_root is not set either
+	if (_root.empty() && _server)
+		return _server->getRoot(); // returns "" if server::_root is not set either
+	return _root;
 }
 
 std::string const	LocationBlock::getAutoindex() const {
@@ -269,10 +291,10 @@ std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
 	return _return;
 }
 
-unsigned long	LocationBlock::getClientMaxBodySize() const {
-	if (_isSetClientMaxBodySize)
-		return _clientMaxBodySize;
-	return _server->getClientMaxBodySize();
+size_t	LocationBlock::getClientMaxBodySize() const {
+	if (!_isSetClientMaxBodySize && _server)
+		return _server->getClientMaxBodySize();
+	return _clientMaxBodySize;
 }
 
 bool	LocationBlock::getClientMaxBodySizeSet() const {
@@ -284,9 +306,16 @@ CgiDirective const&	LocationBlock::getCgi() const {
 }
 
 std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
-	if (!_indexFiles.empty())
-		return _indexFiles;
-	return _server->getIndexFiles();
+	if (_indexFiles.empty() && _server)
+		return _server->getIndexFiles();
+	return _indexFiles;
+}
+
+ErrorPages const&	LocationBlock::getErrorPages() const {
+
+	if (_errorPages.empty() && _server)
+		return _server->getErrorPages();
+	return _errorPages;
 }
 
 std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
@@ -298,14 +327,39 @@ std::string const	LocationBlock::getCgiExecutor(std::string const& extension) co
 	return "";
 }
 
-bool	LocationBlock::isCgiLocation() const {
-	return !_cgi.empty();
+/**
+ * server can be NULL. The getters are built accordingly (security)
+ */
+LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server) {
+	static LocationBlock defaultLocation(server);
+    return defaultLocation;
 }
 
-bool	LocationBlock::isRedirectionLocation() const {
+bool	LocationBlock::isCgi(std::string const& extension) const {
+	if (extension.empty())
+		return false;
+	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); ++it) {
+		if (it->first == extension)
+			return true;
+	}
+	return false;
+}
+
+bool	LocationBlock::isRedirection() const {
 	return _return.first != -1 && !_return.second.empty();
 }
 
+bool	LocationBlock::isAllowedMethod(std::string const& method) const {
+	return _limitExcept.empty() || (_limitExcept.find(method) != _limitExcept.end());
+}
+
+bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& method) const {
+	static std::string const methodsWithBody[] = {"POST", "PUT", "PATCH"};
+    if (utils::isInArray(method, methodsWithBody)) {
+        return size <= getClientMaxBodySize();
+	}
+    return true; // GET, HEAD, DELETE, etc.
+}
 
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	std::string const in = "  "; // indentation
@@ -333,6 +387,11 @@ std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	os << in << "- index_files: " << indexFiles.size() << "\n";
 	for (size_t i = 0; i < indexFiles.size(); ++i)
 		os << in << "  - " << indexFiles[i] << "\n";
+
+	ErrorPages const& errorPages = rhs.getErrorPages();
+	os << in << "- error_page: " << errorPages.size() << "\n";
+	for (ErrorPages::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
+		os << in << "  - " << it->first << " -> " << it->second << "\n";
 
 	CgiDirective const& cgi = rhs.getCgi();
 	os << in << "- cgi: " << cgi.size() << "\n";

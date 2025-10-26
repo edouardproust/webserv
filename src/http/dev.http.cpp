@@ -4,9 +4,8 @@
 
 Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static RequestParser parser;
-	static Request request;
-	parser.parseRequest(request, rawRequest);
-	if (request.getStatus() != PARSE_SUCCESS) {
+	static Request request(rawRequest);
+	if (request.getStatus().getCode() != 200) {
 		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus()));
 	}
 	return (request);
@@ -68,10 +67,9 @@ void dev::runParserValidationTests()
 
 	const int numTests = sizeof(rawRequests) / sizeof(rawRequests[0]);
 	for (int i = 0; i < numTests; i++) {
-		Request request;
-		parser.parseRequest(request, rawRequests[i]);
+		Request request(rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
-			<< (request.getStatus() == PARSE_SUCCESS ? "PASS" : "FAIL")
+			<< (request.getStatus().getCode() == 200 ? "PASS" : "FAIL")
 			<< " (" << request.getStatus() << ")" << std::endl;
 	}
 }
@@ -110,12 +108,11 @@ void dev::runParsedContentTests()
         std::cout << "\n=== Test " << (i + 1) << ": " << tests[i].description << " ===" << std::endl;
         std::cout << "Raw request: " << tests[i].rawRequest << std::endl;
 
-        Request request;
-        parser.parseRequest(request, tests[i].rawRequest);
+        Request request(tests[i].rawRequest);
 
         std::cout << "Parse status: " << request.getStatus() << std::endl;
 
-        if (request.getStatus() == PARSE_SUCCESS)
+        if (request.getStatus().getCode() == 200)
 		{
             std::cout << "--- PARSED CONTENT ---" << std::endl;
             std::cout << request;
@@ -131,7 +128,7 @@ void dev::runResponseTests()
 
 	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
     Response response1;
-    response1.setStatusCode(200);
+    response1.setStatus(HttpStatus(200));
 	response1.setHeader("Content-Type", "text/html");
 	response1.setBody("<html><body><h1>Hello World</h1></body></html>");
     std::cout << response1.stringify() << std::endl;
@@ -143,7 +140,7 @@ void dev::runResponseTests()
 
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
 	Response response3;
-	response3.setStatusCode(200);
+	response3.setStatus(HttpStatus(200));
 	response3.setHeader("Content-Type", "text/plain");
 	response3.setHeader("Content-Length", "100");
 	response3.setBody("");
@@ -156,21 +153,21 @@ void dev::runResponseTests()
 
 	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
 	Response response5;
-	response5.setStatusCode(200);
+	response5.setStatus(HttpStatus(200));
 	response5.setHeader("Random-Header", "random value");
 	response5.setBody("Our Webserv is OP");
 	std::cout << response5.stringify() << std::endl;
 
 	std::cout << "\n---Test 6: 200 OK, random connection---" << std::endl << std::endl ;
 	Response response6;
-	response6.setStatusCode(200);
+	response6.setStatus(HttpStatus(200));
 	response6.setHeader("connection", "Random");
 	response6.setBody("Connection is either keep-alive or close, else keep-alive by default");
 	std::cout << response6.stringify() << std::endl;
 
 	std::cout << "\n---Test 7: 200 OK, random server---" << std::endl << std::endl ;
 	Response response7;
-	response7.setStatusCode(200);
+	response7.setStatus(HttpStatus(200));
 	response7.setHeader("Server", "Nginx");
 	response7.setBody("It must always be webserv/1.0!");
 	std::cout << response7.stringify() << std::endl;

@@ -1,4 +1,5 @@
 NAME = webserv
+NAME_DEV = $(NAME)_dev
 
 CXX = c++
 
@@ -13,10 +14,13 @@ BASE_SRC_FILES = \
 	config/LocationBlock.cpp \
 	config/HostPortPair.cpp \
 	config/ServerBlock.cpp \
+	http/HttpStatus.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
 	http/Response.cpp \
 	router/Router.cpp \
+	router/RoutingDecision.cpp \
+	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
 	cgi/CGIHandler.cpp
 
@@ -37,7 +41,6 @@ PROD_DEPS = $(PROD_OBJS:.o=.d)
 
 DEV_CXXFLAGS := $(CXXFLAGS) -DDEVMODE=1
 DEV_OBJ_DIR = $(OBJ_DIR)/dev
-DEV_TARGET = $(NAME)_dev
 DEV_SRCS = $(addprefix $(SRC_DIR)/, $(BASE_SRC_FILES) $(DEV_SRC_FILES))
 DEV_OBJS = $(addprefix $(DEV_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o) $(DEV_SRC_FILES:.cpp=.o))
 DEV_DEPS = $(DEV_OBJS:.o=.d)
@@ -60,13 +63,13 @@ all: $(NAME)
 $(NAME): $(PROD_OBJS)
 	$(CXX) $(PROD_OBJS) -o $@
 
-dev: $(DEV_TARGET)
+dev: $(NAME_DEV)
 
 $(PROD_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(PROD_CXXFLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
 
-$(DEV_TARGET): $(DEV_OBJS)
+$(NAME_DEV): $(DEV_OBJS)
 	$(CXX) $(DEV_OBJS) -o $@ $(DEV_CXXFLAGS)
 
 $(DEV_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
@@ -80,6 +83,6 @@ clean:
 	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	rm -f $(NAME)
+	rm -f $(NAME) $(NAME_DEV)
 
 re: fclean all

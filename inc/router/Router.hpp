@@ -1,45 +1,29 @@
 #ifndef ROUTER_HPP
 #define ROUTER_HPP
 
+#include "router/RoutingDecision.hpp"
+#include "router/RedirectionHandler.hpp"
+#include "config/Config.hpp"
 #include "http/Request.hpp"
-#include "http/Response.hpp"
-#include "config/ServerBlock.hpp"
-#include "typedefs.hpp"
+#include "http/HttpStatus.hpp"
+#include "static/StaticHandler.hpp"
+#include "cgi/CGIHandler.hpp"
 
 class Router
 {
-	Request const&					_request;
-	std::vector<ServerBlock> const&	_servers;
-	HostPortPair const&				_listeningOn;
-	LocationBlock const*			_location; // matching LocationBlock based on Request + Config
-
-	void		_setMatchingLocation(std::vector<LocationBlock> const&, std::string const&);
-	std::string	_resolveScriptPath(std::string const&, LocationBlock const*) const;
-	std::string _resolveFilePath(std::string const&, LocationBlock const*) const;
-	void		_sendResponse(Response const&) const;
-
 
 	// Not used
 	Router();
 	Router(Router const&);
 	Router&	operator=(Router const&);
+	~Router();
+
+	static std::string	_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath);
 
 	public:
 
-		Router(Request const&, std::vector<ServerBlock> const&, HostPortPair const&);
-		~Router();
-
-	ServerBlock const& _findMatchingServer() const;
-
-		void	dispatchRequest();
-
-		Request const&					getRequest() const;
-		std::vector<ServerBlock> const&	getServers() const;
-		HostPortPair const&				getListeningOn() const;
-		LocationBlock const*			getMatchingLocation() const;
+		static Response 	dispatchRequest(Config const&, Request const&, HostPortPair const&);
 
 };
-
-std::ostream&	operator<<(std::ostream&, Router const&);
 
 #endif

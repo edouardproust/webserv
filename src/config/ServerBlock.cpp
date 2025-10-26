@@ -9,35 +9,26 @@
 /**
  * May throw an std exception.
  */
-ServerBlock::ServerBlock()
-: _isSetClientBodySize(false),
-  _defaultLocation(LocationBlock(this))
-{}
+ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
 
 /**
  * May throw a std exception.
  *
  * If no listen directive in the server block: add "listen 0.0.0.0:80;"
  */
-ServerBlock::ServerBlock(std::string const& blockContent)
-: _isSetClientBodySize(false),
-  _defaultLocation(LocationBlock(this))
-{
+ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(false) {
 	_parse(blockContent); // throw
 	// set default listen directive if none exist after parsing
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0:80"));
 }
 
-ServerBlock::ServerBlock(const ServerBlock &other)
-: _isSetClientBodySize(false), _defaultLocation(this)
-{
+ServerBlock::ServerBlock(const ServerBlock &other): _isSetClientBodySize(false) {
 	*this = other;
 }
 
 ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
     if (this != &other) {
-        _defaultLocation.setServer(this);
         _root = other._root;
         _listen = other._listen;
         _clientMaxBodySize = other._clientMaxBodySize;
@@ -50,7 +41,6 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
             _locations.push_back(other._locations[i]);
             _locations.back().setServer(this);
         }
-		_defaultLocation = other._defaultLocation;
     }
     return *this;
 }
@@ -165,7 +155,7 @@ void	ServerBlock::_setRoot(Tokens const& tokens) {
 		throw std::runtime_error("Value is an empty string");
 	if (!utils::isAbsolutePath(root))
 		throw std::runtime_error("Not an absolute path: '" + root + "'");
-	_root = utils::normalizePath(root);
+	_root = Config::normalizePath(root);
 }
 
 /**
@@ -217,13 +207,10 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
 void	ServerBlock::_setErrorPages(Tokens const& tokens) {
 	if (tokens.size() < 3)
 		throw std::runtime_error("Should have at least 3 arguments");
-
 	// Check path (last argument)
 	std::string path = tokens.back();
 	if (!utils::isAbsolutePath(path)) // also checks if is an empty str
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
-	// TODO in Router: check if path exists
-
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
 		// Check each HTTP status codes
 		std::string codeStr = tokens[j];
@@ -255,10 +242,6 @@ std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
 	return _locations;
 }
 
-LocationBlock const&	ServerBlock::getDefaultLocation() const {
-	return _defaultLocation;
-}
-
 std::string const&	ServerBlock::getRoot() const {
 	return _root;
 }
@@ -276,7 +259,7 @@ size_t	ServerBlock::getClientMaxBodySize() const {
 	return _clientMaxBodySize;
 }
 
-std::map<int, std::string> const&	ServerBlock::getErrorPages() const {
+ErrorPages const&	ServerBlock::getErrorPages() const {
 	return _errorPages;
 }
 
@@ -294,9 +277,9 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 
-	std::map<int, std::string> const& errorPages = rhs.getErrorPages();
+	ErrorPages const& errorPages = rhs.getErrorPages();
 	os << "- error_pages: " << errorPages.size() << "\n";
-	for (std::map<int, std::string>::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
+	for (ErrorPages::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
 		os << "  - " << it->first << " -> " << it->second << "\n";
 
 	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();

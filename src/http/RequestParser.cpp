@@ -75,7 +75,7 @@ ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string
 	if (!_isValidPath(request.getPath()))
 		return PARSE_ERR_BAD_REQUEST;
 	if (!_isValidVersion(_version))
-		return PARSE_ERR_HTTP_VERSION_NOT_SUPPORTED;
+		return PARSE_ERR_VERSION_NOT_SUPPORTED;
 	request.setMethod(methodStr);
 	request.setVersion(_version);
 	return PARSE_SUCCESS;
