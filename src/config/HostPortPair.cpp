@@ -1,6 +1,4 @@
 #include "config/HostPortPair.hpp"
-#include "utils/utils.hpp"
-#include <netdb.h>
 
 /**
  * May throw an exception

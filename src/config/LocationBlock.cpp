@@ -1,11 +1,5 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
-#include "utils/utils.hpp"
-#include "http/Request.hpp"
-#include "constants.hpp"
-#include <stdexcept>
-#include <iostream>
-#include <cstdlib>
 
 LocationBlock::LocationBlock(ServerBlock const* server)
 : _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)

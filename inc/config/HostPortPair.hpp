@@ -1,8 +1,9 @@
 #ifndef HOST_PORT_PAIR_HPP
 #define HOST_PORT_PAIR_HPP
 
+#include "utils/utils.hpp"
 #include <string>
-#include <stdexcept>
+#include <netdb.h>
 
 class HostPortPair {
 

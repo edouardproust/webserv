@@ -4,7 +4,7 @@
 
 Response::Response() : _status(HttpStatus("ok"))
 {
-	_headers["server"] = "webserv/1.0";
+	_headers["server"] = SERVER_SOFTWARE;
 	_headers["date"] = getCurrentDate();
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
@@ -117,7 +117,7 @@ std::string Response::_generateErrorPage() const
 		 << "  </head>\n"
 		 << "  <body>\n"
 		 << "    <center><h1>" << _status.toString() << "</h1></center>\n"
-		 << "    <hr><center>webserv/1.0</center>\n"
+		 << "    <hr><center>" << SERVER_SOFTWARE << "</center>\n"
 		 << "  </body>\n"
 		 << "</html>";
 	return html.str();

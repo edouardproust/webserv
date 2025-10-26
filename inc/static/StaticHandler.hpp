@@ -1,14 +1,9 @@
 #ifndef STATIQ_HPP
 #define STATIQ_HPP
 
-#include "constants.hpp"
-#include "http/Request.hpp"
 #include "http/Response.hpp"
-#include "http/HttpStatus.hpp"
 #include "utils/utils.hpp"
-#include <string>
-#include <map>
-#include <vector>
+#include "typedefs.hpp"
 
 class StaticHandler {
 

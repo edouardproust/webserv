@@ -2,7 +2,6 @@
 # define REQUEST_HPP
 
 # include "http/HttpStatus.hpp"
-# include <string>
 # include <iostream>
 # include <map>
 # include <set>

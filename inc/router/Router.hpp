@@ -3,9 +3,6 @@
 
 #include "router/RoutingDecision.hpp"
 #include "router/RedirectionHandler.hpp"
-#include "config/Config.hpp"
-#include "http/Request.hpp"
-#include "http/HttpStatus.hpp"
 #include "static/StaticHandler.hpp"
 #include "cgi/CGIHandler.hpp"
 

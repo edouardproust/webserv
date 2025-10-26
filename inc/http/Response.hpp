@@ -3,7 +3,6 @@
 
 # include "http/RequestParser.hpp"
 # include "http/HttpStatus.hpp"
-# include <map>
 
 class Response
 {

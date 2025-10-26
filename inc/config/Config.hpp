@@ -2,9 +2,7 @@
 #define CONFIG_HPP
 
 #include "config/ServerBlock.hpp"
-#include <vector>
-
-
+#include <fstream>
 
 class Config {
 

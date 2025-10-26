@@ -2,11 +2,6 @@
 #define ROUTING_DECISION_HPP
 
 #include "config/Config.hpp"
-#include "http/Request.hpp"
-#include "http/HttpStatus.hpp"
-#include "config/ServerBlock.hpp"
-#include "config/LocationBlock.hpp"
-#include "utils/utils.hpp"
 
 class RoutingDecision {
 

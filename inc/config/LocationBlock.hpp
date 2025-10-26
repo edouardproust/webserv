@@ -2,8 +2,9 @@
 #define LOCATION_BLOCK_HPP
 
 class ServerBlock;
+#include "http/Request.hpp"
+#include "utils/utils.hpp"
 #include "typedefs.hpp"
-#include <set>
 
 class LocationBlock {
 

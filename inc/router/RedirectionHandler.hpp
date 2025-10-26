@@ -2,8 +2,6 @@
 #define REDIRECTION_HANDLER_HPP
 
 #include "http/Response.hpp"
-#include <string>
-#include <iostream> // DEBUG
 
 class RedirectionHandler {
 

@@ -2,6 +2,7 @@
 #define CONSTANTS_HPP
 
 #include <limits>
+#include <string>
 #include <cstddef>
 
 // global
@@ -10,8 +11,8 @@
 # define DEVMODE 0
 #endif
 
-size_t const	MAX_SIZE_T = std::numeric_limits<int>::max(); // ~ 2GB
-size_t const	MIN_SIZE_T = std::numeric_limits<int>::min(); // ~ -2GB
+size_t const		MAX_SIZE_T = std::numeric_limits<int>::max(); // ~ 2GB
+std::string const	SERVER_SOFTWARE = "webserv/1.0";
 
 // config
 

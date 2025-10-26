@@ -3,8 +3,8 @@
 
 #include "http/Request.hpp"
 #include "http/Response.hpp"
+#include "utils/utils.hpp"
 #include "typedefs.hpp"
-#include <string>
 
 class CGIHandler {
 
@@ -14,13 +14,15 @@ class CGIHandler {
 	~CGIHandler();
 	CGIHandler&	operator=(CGIHandler const&);
 
-	static std::string	_headerToEnvVar(const std::string&);
-	static void	_writeBodyToStdin(const std::string&);
-	static void	_executeScript(const std::string&, const std::string&);
+	static std::vector<char*>	_buildEnvp(Request const&, std::string const&);
+	static std::vector<char*>	_buildArgv(std::string const& executor, std::string const& scriptPath);
+	static std::string			_headerToEnvVar(std::string const&);
+	static void					_writeBodyToStdin(std::string const&);
+	static void					_executeScript(std::string const&, std::string const&);
 
 	public:
 
-		static Response handleRequest(Request, const std::string&, const std::string&);
+		static Response handleRequest(Request const&, std::string const&, std::string const&);
 
 };
 
