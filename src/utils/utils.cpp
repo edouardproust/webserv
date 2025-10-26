@@ -1,9 +1,4 @@
 #include "utils/utils.hpp"
-#include "constants.hpp"
-#include <sstream>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <cerrno>
 
 bool	utils::isInt(std::string const& str)
 {
@@ -18,38 +13,6 @@ bool	utils::isInt(std::string const& str)
 	return true;
 }
 
-bool	utils::isAccessibleDirectory(std::string const& path) {
-	// not empty and starts with '/'
-	if (path.empty() || path[0] != '/')
-		return false;
-	// check directory file type
-	struct stat fileinfo;
-	if (stat(path.c_str(), &fileinfo) == -1)
-		return false;
-	if (!S_ISDIR(fileinfo.st_mode))
-		return false;
-	// is accessible ?
-	if (access(path.c_str(), R_OK | X_OK) != 0)
-    	return false;
-	return true;
-}
-
-bool	utils::isExecutableFile(std::string const& path) {
-	// not empty and starts with '/'
-	if (path.empty() || path[0] != '/')
-		return false;
-	struct stat fileinfo;
-	if (stat(path.c_str(), &fileinfo) == -1)
-		return false;
-	// check regular file type
-	if (!S_ISREG(fileinfo.st_mode))
-		return false;
-	// check execute permission
-	if (access(path.c_str(), X_OK) != 0)
-		return false;
-	return true;
-}
-
 /**
  * Only checking for Linux distros (path starting by '/')
  */
@@ -57,6 +20,34 @@ bool	utils::isAbsolutePath(std::string const& path) {
 	if (path.empty() || path[0] != '/')
 		return false;
     return true;
+}
+
+static bool	_checkFileTypeAndAccess(std::string const& path, mode_t expectedType, int accessMode) {
+    if (path.empty() || path[0] != '/')
+        return false;
+	// is existing path?
+    struct stat st;
+    if (stat(path.c_str(), &st) == -1)
+        return false;
+	// is expected type?
+    if ((st.st_mode & S_IFMT) != expectedType)
+        return false;
+	// is accessible?
+    if (access(path.c_str(), accessMode) != 0)
+        return false;
+    return true;
+}
+
+bool	utils::isAccessibleDirectory(std::string const& path) {
+    return _checkFileTypeAndAccess(path, S_IFDIR, R_OK | X_OK);
+}
+
+bool	utils::isReadableFile(std::string const& path) {
+    return _checkFileTypeAndAccess(path, S_IFREG, R_OK);
+}
+
+bool	utils::isExecutableFile(std::string const& path) {
+    return _checkFileTypeAndAccess(path, S_IFREG, X_OK);
 }
 
 /**
@@ -134,4 +125,80 @@ char	utils::hexToChar(const std::string& hex)
 			return -1;
 	}
 	return static_cast<char>(value);
+}
+	
+/**
+ * Split a string into substrings separated by a given delimiter.
+ *
+ * Consecutive delimiters or leading/trailing delimiters are ignored,
+ * so empty substrings are skipped.
+ *
+ * Example: `split("a//b/c/", '/')` -> `{"a", "b", "c"}`
+ */
+std::vector<std::string>	utils::split(std::string const& s, char delim) {
+	std::vector<std::string> elems;
+	std::stringstream ss(s);
+	std::string item;
+	while (std::getline(ss, item, delim))
+		if (!item.empty()) elems.push_back(item);
+	return elems;
+}
+
+/**
+ * Merge two strings into a valid path.
+ *
+ * Trailing slashes are not trimmed.
+ *
+ * Examples:
+ * `joinPath("", "mydomain/index.htm")` -> `/mydomain/index.htm`
+ * `joinPath("var/www/html/", "")` -> `/var/www/html/`
+ * `joinPath("/var/www/html/", "/index.htm")` -> `/var/www/html/index.htm`
+ * `joinPath("/var/www/html", "test/")` -> `/var/www/html/test/`
+ * `joinPath("", "")` -> `/`
+ */
+std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
+	if (lhs.empty()) {
+		if (rhs.empty()) return "/";
+		return (!rhs.empty() && rhs[0] == '/') ? rhs : "/" + rhs;
+	}
+	std::string joinedPath = lhs;
+	if (!joinedPath.empty() && joinedPath[joinedPath.size() - 1] != '/')
+		joinedPath += '/';
+	if (!rhs.empty() && rhs[0] == '/')
+		joinedPath += rhs.substr(1);
+	else
+		joinedPath += rhs;
+	return joinedPath;
+}
+
+/**
+ * Normalize a path by:
+ * - Removing redundant '.' segments
+ * - Resolving '..' segments
+ * - Collapsing multiple consecutive '/' into a single '/'
+ * - Ensuring the path starts with a single '/'
+ * - Removing trailing '/' (except for the root '/')
+ *
+ * Examples:
+ * `_normalizePath("/var/www/html/.././index.html")` -> `/var/www/index.html`
+ * `_normalizePath("//var///www////html/test//")` -> `/var/www/html/test`
+ * `_normalizePath("/./././")` -> `/`
+ * `_normalizePath("/a/b/../../c/")` -> `/c`
+ */
+std::string utils::normalizePath(std::string const& path) {
+	std::vector<std::string> parts = utils::split(path, '/');
+	std::vector<std::string> clean;
+	for (size_t i = 0; i < parts.size(); ++i) {
+		if (parts[i] == "..") {
+			if (!clean.empty()) clean.pop_back();
+		} else if (parts[i] != "." && !parts[i].empty()) {
+			clean.push_back(parts[i]);
+		}
+	}
+	std::string normalized = "/";
+	for (size_t i = 0; i < clean.size(); ++i) {
+		normalized += clean[i];
+		if (i + 1 < clean.size()) normalized += "/";
+	}
+	return normalized;
 }

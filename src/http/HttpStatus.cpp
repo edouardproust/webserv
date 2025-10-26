@@ -12,27 +12,13 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{405, "Method Not Allowed", "method_not_allowed"},
 	{411, "Length Required", "length_required"},
 	{413, "Content Too Large", "content_too_large"},
-	{500, "Internal Server Error", "internal_server_error"},
+	{500, "Internal Server Error", "internal_server_error"}, // default (do not delete!)
 	{501, "Not Implemented", "not_implemented"},
 	{502, "Bad Gateway", "bad_gateway"},
 	{505, "HTTP Version Not Supported", "version_not_supported"},
 };
 
-const size_t HttpStatus::STATUS_TABLE_SIZE = sizeof(HttpStatus::STATUS_TABLE) / sizeof(HttpStatus::Entry);
-
-HttpStatus::Entry const*	HttpStatus::_findByCode(int code) {
-	for (size_t i = 0; i < STATUS_TABLE_SIZE; ++i)
-		if (STATUS_TABLE[i].code == code)
-			return &STATUS_TABLE[i];
-	return NULL;
-}
-
-HttpStatus::Entry const* HttpStatus::_findBySlug(std::string const& slug) {
-	for (size_t i = 0; i < STATUS_TABLE_SIZE; ++i)
-		if (STATUS_TABLE[i].slug == slug)
-			return &STATUS_TABLE[i];
-	return NULL;
-}
+// constructors
 
 /**
  * Build a `HttpStatus` from a HTTP status code.
@@ -42,10 +28,7 @@ HttpStatus::Entry const* HttpStatus::_findBySlug(std::string const& slug) {
  * - Any other code defaults to `500`
  */
 HttpStatus::HttpStatus(int code) {
-	const Entry* found = _findByCode(code);
-	_code = found ? found->code : 500;
-	_reason = found ? found->reason : "Internal Server Error";
-	_slug = found ? found->slug : "internal_server_error";
+	_initFromEntry(_findByCode(code));
 }
 
 /**
@@ -58,10 +41,7 @@ HttpStatus::HttpStatus(int code) {
  * - Any other slug will default to `internal_server_error`
  */
 HttpStatus::HttpStatus(std::string const& slug) {
-	const Entry* found = _findBySlug(slug);
-	_code = found ? found->code : 500;
-	_reason = found ? found->reason : "Internal Server Error";
-	_slug = found ? found->slug : "internal_server_error";
+	_initFromEntry(_findBySlug(slug));
 }
 
 HttpStatus::HttpStatus(HttpStatus const& other)
@@ -77,6 +57,8 @@ HttpStatus& HttpStatus::operator=(HttpStatus const& other) {
 }
 
 HttpStatus::~HttpStatus() {}
+
+// public
 
 int	HttpStatus::getCode() const {
 	return _code;
@@ -103,10 +85,33 @@ bool	HttpStatus::isError(int code) {
 }
 
 std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
-	os << "HttpStatus: "
-		<< "code=" << rhs.getCode()
-		<< "reason=\"" << rhs.getReason() << "\""
-		<< "slug=\"" << rhs.getSlug() << "\""
-		<< "\n";
+	os << "HttpStatus: {"<< rhs.getCode()
+		<< ", \"" << rhs.getReason() << "\", " << rhs.getSlug() << "}";
 	return os;
+}
+
+// private
+
+const size_t HttpStatus::STATUS_TABLE_SIZE = sizeof(HttpStatus::STATUS_TABLE) / sizeof(HttpStatus::Entry);
+
+HttpStatus::Entry const*	HttpStatus::_findByCode(int code) {
+	for (size_t i = 0; i < STATUS_TABLE_SIZE; ++i)
+		if (STATUS_TABLE[i].code == code)
+			return &STATUS_TABLE[i];
+	return NULL;
+}
+
+HttpStatus::Entry const* HttpStatus::_findBySlug(std::string const& slug) {
+	for (size_t i = 0; i < STATUS_TABLE_SIZE; ++i)
+		if (STATUS_TABLE[i].slug == slug)
+			return &STATUS_TABLE[i];
+	return NULL;
+}
+
+void	HttpStatus::_initFromEntry(const Entry* entry) {
+	if (!entry)
+		entry = _findByCode(500); // fallback to 500 Internal Server Error
+	_code = entry->code;
+	_reason = entry->reason;
+	_slug = entry->slug;
 }

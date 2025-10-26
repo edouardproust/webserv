@@ -20,7 +20,7 @@ class CGIHandler {
 
 	public:
 
-		static Response handleRequest(const std::string&, const std::string&, Request);
+		static Response handleRequest(Request, const std::string&, const std::string&);
 
 };
 

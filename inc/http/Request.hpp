@@ -25,6 +25,9 @@ class Request
 		std::map<std::string, std::string> _headers;
 		std::string	_contentType;
 		std::string	_body;
+		size_t		_bodySize;
+
+		Request(); // Not used
 
 	public:
 
@@ -33,8 +36,6 @@ class Request
 		Request(const Request& other);
 		Request& operator=(const Request& other);
 		~Request();
-
-		void	parse(std::string const& rawRequest);
 
 		static bool	isSupportedMethod(std::string const& method);
 		static bool	isExistingMethod(std::string const& method);
@@ -50,8 +51,9 @@ class Request
 		const std::map<std::string, std::string>&	getHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
+		size_t				getBodySize() const;
 
-		void	setStatus(HttpStatus status);
+		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
 		void	setRequestTarget(std::string const& requestTarget);
 		void	setPath(std::string const& path);

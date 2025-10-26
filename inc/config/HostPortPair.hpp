@@ -9,7 +9,6 @@ class HostPortPair {
 	std::string	_host;
 	size_t		_port;
 
-
 	void	_parseHostPort(std::string const&);
 
 	void	_setHost(std::string const&);
@@ -21,13 +20,15 @@ class HostPortPair {
 
 	public:
 
-		HostPortPair(std::string const& hostPortStr);
+		HostPortPair(std::string const&);
 		HostPortPair(HostPortPair const&);
 		HostPortPair& operator=(HostPortPair const&);
 		~HostPortPair();
 
 		const std::string&	getHost() const;
 		size_t				getPort() const;
+
+		bool	isWildcardFor(HostPortPair const& other) const;
 
 		bool	operator==(const HostPortPair&) const;
 		bool	operator<(const HostPortPair&) const;

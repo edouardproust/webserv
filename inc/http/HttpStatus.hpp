@@ -17,6 +17,8 @@ class HttpStatus {
 
 	static Entry const*	_findByCode(int code);
 	static Entry const*	_findBySlug(std::string const&);
+	void				_initFromEntry(const Entry* entry);
+
 
 	HttpStatus(); // Not used
 

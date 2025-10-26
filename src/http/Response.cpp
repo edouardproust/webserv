@@ -44,7 +44,7 @@ const std::string& Response::getBody() const
 	return _body;
 }
 
-void	Response::setStatusCode(int statusCode)
+void	Response::setStatus(const HttpStatus& status)
 {
 	_status = HttpStatus(statusCode);
 	if (statusCode == 204)
@@ -138,7 +138,7 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 			os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: '" << response.getBody() << "'\n";
+	os << "- Body: '" << response.getBody().empty() << "'\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
 	os << "- Raw HTTP Response Preview:\n";
 	std::string raw = response.stringify();

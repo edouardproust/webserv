@@ -13,7 +13,7 @@ class Config {
 	std::string	_extractFileContent(std::string const&);
 	void		_parse(std::string const&);
 	void		_parseBlock(std::vector<std::string>&, std::string const&, size_t&, int&);
-	void		_addServer(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth);
+	void		_addServer(Tokens const&, std::string const&, size_t& i, int&);
 	void		_validate() const;
 
 	// Not used
@@ -32,8 +32,10 @@ class Config {
 		static std::string	getBlockContent(std::string const&, size_t&, int&);
 		static void			skipComment(std::string const&, size_t&);
 		static size_t		parseSize(std::string const&);
+		static std::string& normalizePath(std::string& path);
 
 		std::vector<ServerBlock> const&	getServers() const;
+
 };
 
 std::ostream&	operator<<(std::ostream&, Config const&);
