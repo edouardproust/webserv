@@ -31,7 +31,6 @@ class HostPortPair {
 
 		bool	isWildcardFor(HostPortPair const& other) const;
 
-
 		bool	operator==(const HostPortPair&) const;
 		bool	operator<(const HostPortPair&) const;
 

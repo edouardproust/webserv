@@ -17,7 +17,7 @@ class LocationBlock {
 	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location.
 	std::string					_upload_store;			// TODO optional: uploads target directory (used if request method is POST and path is a static file)
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
-	ErrorPages	_errorPages;			// optional. Has priority over _server->getErrorPages()
+	ErrorPages					_errorPages;			// optional. Has priority over _server->getErrorPages()
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
 
 	LocationBlock(); // not used

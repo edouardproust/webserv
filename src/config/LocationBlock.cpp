@@ -30,6 +30,7 @@ LocationBlock::LocationBlock(const LocationBlock &other)
   _clientMaxBodySize(other._clientMaxBodySize),
   _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
   _indexFiles(other._indexFiles),
+  _errorPages(other._errorPages),
   _cgi(other._cgi)
 {}
 
@@ -44,6 +45,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_clientMaxBodySize = other._clientMaxBodySize;
 		_isSetClientMaxBodySize = other._isSetClientMaxBodySize;
 		_indexFiles = other._indexFiles;
+		_errorPages = other._errorPages;
 		_cgi = other._cgi;
 	}
 	return *this;
@@ -100,6 +102,8 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 			_setIndexFiles(tokens);
 		else if (directiveName == "cgi")
 			_setCgi(tokens);
+		else if (directiveName == "error_page")
+			_setErrorPages(tokens);
 		// -- additional directives can be added here --
 		else
 			throw std::runtime_error("Unsupported directive");
@@ -228,10 +232,12 @@ void	LocationBlock::_setErrorPages(Tokens const& tokens) {
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
 		// Check each HTTP status codes
 		std::string codeStr = tokens[j];
+
 		size_t code = utils::toSizeT(codeStr); // throw if empty string, not an number or size_t overflow
 		if (code < 300 || code > 599)
 			throw std::out_of_range("Invalid HTTP code: " + codeStr);
 		// Add to map (overrides value of existing codes)
+
 		_errorPages[code] = path;
 	}
 }
@@ -306,6 +312,7 @@ std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
 }
 
 ErrorPages const&	LocationBlock::getErrorPages() const {
+
 	if (_errorPages.empty() && _server)
 		return _server->getErrorPages();
 	return _errorPages;
@@ -380,6 +387,11 @@ std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	os << in << "- index_files: " << indexFiles.size() << "\n";
 	for (size_t i = 0; i < indexFiles.size(); ++i)
 		os << in << "  - " << indexFiles[i] << "\n";
+
+	ErrorPages const& errorPages = rhs.getErrorPages();
+	os << in << "- error_page: " << errorPages.size() << "\n";
+	for (ErrorPages::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
+		os << in << "  - " << it->first << " -> " << it->second << "\n";
 
 	CgiDirective const& cgi = rhs.getCgi();
 	os << in << "- cgi: " << cgi.size() << "\n";
