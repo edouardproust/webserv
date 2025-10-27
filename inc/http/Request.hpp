@@ -23,10 +23,10 @@ class Request
 		std::string	_body;
 		size_t		_bodySize;
 
-		Request(); // Not used
+		// Not used
 
 	public:
-
+		Request(); 
 		Request(std::string const& rawRequest);
 		Request(const Request& other);
 		Request& operator=(const Request& other);
@@ -44,7 +44,8 @@ class Request
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
 		size_t				getBodySize() const;
-
+		
+		void 	parse(std::string const& rawRequest);
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
 		void	setRequestTarget(std::string const& requestTarget);

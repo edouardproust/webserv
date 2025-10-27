@@ -1,11 +1,18 @@
 #include <network/Network.hpp>
 #include <network/Colors.hpp>
 #include <config/Config.hpp>
+#include <config/ServerBlock.hpp> // <--- ADICIONE
+#include <config/HostPortPair.hpp> // <--- ADICIONE
+#include "http/Request.hpp"
+#include "http/Response.hpp"
+#include "http/RequestParser.hpp" // Para enums de erro
+#include "router/Router.hpp"  
+#include <set> // <--- ADICIONE
 #include <errno.h>
 #include <cstring>
 #include <sstream>
 
-Network::Network(Config _config_file)
+Network::Network(Config const& _config_file) : _config_file(_config_file)
 {
 	// Initializes Ctrl + C signal handler
 	keep();
@@ -16,26 +23,38 @@ Network::Network(Config _config_file)
 		<< FT_HIGH_LIGHT_COLOR << "meu cu" << RESET_COLOR //TODO
 		<< " file."
 		<< std::endl;
-	std::cout << std::endl;
+	
+    // 1. Colete todos os HostPortPair únicos de todos os ServerBlocks
+    std::set<HostPortPair> unique_listens;
+    const std::vector<ServerBlock>& servers = _config_file.getServers(); //
+    
+    for (size_t i = 0; i < servers.size(); ++i)
+    {
+        const std::set<HostPortPair>& listens = servers[i].getListen(); //
+        unique_listens.insert(listens.begin(), listens.end());
+    }
 
+    // 2. Crie um Socket para cada HostPortPair único
+    for (std::set<HostPortPair>::const_iterator it = unique_listens.begin(); 
+         it != unique_listens.end() && keep(); ++it)
+    {
+        _connections.push_back(new Socket(*it)); // Usa o novo construtor do Socket
+    }
 
-	for (size_t i = 0; keep() && i < _config_file.size(); i++)
-		_connections.push_back(new Socket(_config_file.getServer(i)));
-
-	std::vector<Socket *>::iterator it;
-
-	for (it = _connections.begin(); it != _connections.end(); it++)
+	// 3. Faça Bind e Listen de todos os sockets criados
+	std::vector<Socket *>::iterator it_sock;
+	for (it_sock = _connections.begin(); it_sock != _connections.end(); it_sock++)
 	{
 		try
 		{
-			(*it)->bind();
-			(*it)->listen();
+			(*it_sock)->bind();
+			(*it_sock)->listen();
 		}
 		catch (Socket::BindException& e)
 		{
-			std::vector<Socket *>::iterator it;
-			for (it = _connections.begin(); it != _connections.end(); it++)
-				delete *it;
+			// Limpeza em caso de falha
+			for (std::vector<Socket *>::iterator it_del = _connections.begin(); it_del != _connections.end(); it_del++)
+				delete *it_del;
 			throw e;
 		}
 		std::cout << std::endl;
@@ -116,7 +135,16 @@ int Network::isServerSideEvent(int epoll_fd)
 	for (it = _connections.begin(); it != _connections.end() && keep(); it++)
 	{
 		if (epoll_fd == (*it)->getSock())
-			return ((*it)->accept());
+		{
+			int new_conn = (*it)->accept();
+            if (new_conn > 0)
+            {
+                // Mapeie o novo client_fd ao Socket* que o aceitou
+                _client_server_map[new_conn] = *it; 
+            }
+			return (new_conn);
+		}
+			
 	}
 	return (0);
 }
@@ -207,6 +235,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 		epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
 		return ;
 	}
+	_client_server_map.erase(client_fd);
 	events_setup.data.fd = client_fd;
 	epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 	close(client_fd);
@@ -220,22 +249,52 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 		<< FT_HIGH_LIGHT_COLOR << client_fd << RESET_COLOR
 		<< "." << std::endl;
 
+	Response response;
 	try 
 	{
-		//Request request(_request_list[client_fd]);
-		//Response response(request, _connections); //TODO
-		std::string msg = response.getResponse();
+        // --- INÍCIO DA MUDANÇA ---
+        // Em vez de:
+        // Request request;
+        // request.parse(_request_list[client_fd]);
+        //
+        // Use o construtor que faz o parse imediatamente:
+        Request request(_request_list[client_fd]); //
+        // --- FIM DA MUDANÇA ---
+
+
+        // 3. Encontre o HostPortPair de origem
+        if (_client_server_map.find(client_fd) == _client_server_map.end())
+            throw std::runtime_error("Network logic error: client_fd not in map.");
+        
+        Socket* serverSocket = _client_server_map.at(client_fd);
+        HostPortPair listenPair = serverSocket->getHostPortPair(); // (Do nosso refactor do Socket)
+
+        // 4. Chame o Router (ele próprio já trata dos erros de parse)
+        // (Como visto no Router.cpp, ele verifica o request.getStatus())
+        response = Router::dispatchRequest(_config_file, request, listenPair);
+    
+        // 5. Converta a Response para string (do Response.cpp)
+		std::string msg = response.stringify();
+
+        // 6. Envie
 		int ret = ::send(client_fd, msg.data(), msg.length(), 0);
 		if (ret == -1)
-			throw std::exception();
+			throw std::runtime_error("Send failed");
+
+        // 7. Limpeza (em caso de sucesso)
 		_request_list.erase(client_fd);
+        _client_server_map.erase(client_fd);
 		events_setup.data.fd = client_fd;
 		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 		close(client_fd);
 	}
 	catch (std::exception& e)
 	{
-		std::cout << FT_STATUS << e.what() << std::endl;
+		std::cout << FT_STATUS << "Error during send/dispatch: " << e.what() << std::endl;
+        
+        // 8. Limpeza (em caso de falha)
+        _request_list.erase(client_fd);
+        _client_server_map.erase(client_fd);
 		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 		close(client_fd);
 	}

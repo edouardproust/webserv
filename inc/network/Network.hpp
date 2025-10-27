@@ -19,9 +19,10 @@
 	class Network
 	{
 	private:
-		Config _config_file;
+		Config const& _config_file;
 		std::vector<Socket *> _connections;
 		std::map<int, std::string> _request_list;
+		std::map<int, Socket*> _client_server_map;
 		
 		int _epoll;
 
@@ -38,7 +39,7 @@
 
 	public:
 		Network();
-		Network(Config _config_file);
+		Network(Config const& _config_file);
 		~Network();
 		void start_servers();
 

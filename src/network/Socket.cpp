@@ -1,20 +1,21 @@
 #include <network/Socket.hpp>
 #include <config/ServerBlock.hpp>
+#include <utils/utils.hpp>
 
-Socket::Socket(const ServerBlock &server) : _server(server)
+Socket::Socket(const HostPortPair &listen_pair) : _listen_on(listen_pair)
 {
-	std::cout << FT_SETUP << "Setting up " << FT_HIGH_LIGHT_COLOR << "meu cu"<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;
+	std::cout << FT_SETUP << "Setting up socket on " << FT_HIGH_LIGHT_COLOR << _listen_on.getHost() << RESET_COLOR << " socket on port : " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort() << RESET_COLOR << "." << std::endl;
 
 	loadAddressInfo();
 	createSocket();
 
-	std::cout << FT_OK << FT_HIGH_LIGHT_COLOR << "meu cu" << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << " is in a nice." << std::endl;
+	std::cout << FT_OK << FT_HIGH_LIGHT_COLOR << _listen_on.getHost()  << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort()<< RESET_COLOR << " is in a nice." << std::endl;
 	std::cout << std::endl;
 }
 
 Socket::~Socket()
 {
-	std::cout << FT_CLOSE << "Closing " << FT_HIGH_LIGHT_COLOR << "meu cu"<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << this->_server.port << RESET_COLOR << "." << std::endl;
+	std::cout << FT_CLOSE << "Closing " << FT_HIGH_LIGHT_COLOR << _listen_on.getHost()<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort() << RESET_COLOR << "." << std::endl;
 }
 
 void Socket::setAddrStruct(void)
@@ -32,7 +33,15 @@ void Socket::loadAddressInfo()
 
 	setAddrStruct();//TODO trocar o server name para ipportpair sername vai ser o ip e port vai ser a port kkk
 
-	status = getaddrinfo(this->_server.server_names[0].c_str(), this->_server.port.c_str(), &_hints, &_servinfo);
+	// Converte size_t (porta) para C-string
+    std::string portStr = utils::toString(_listen_on.getPort());
+    
+    // Pega o host. Se for "0.0.0.0" ou "*", usamos NULL para getaddrinfo
+    std::string hostStr = _listen_on.getHost();
+    const char* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
+
+    // Use os valores de _listen_on
+	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
 
 	if (status)
 	{
@@ -87,7 +96,7 @@ void Socket::bind()
 	std::cout
 		<< FT_SETUP
 		<< "Binding Socket "
-		<< FT_HIGH_LIGHT_COLOR << getHosts()[0] << RESET_COLOR
+		<< FT_HIGH_LIGHT_COLOR << _listen_on.getHost()<< ":" << _listen_on.getPort() << RESET_COLOR
 		<< "." << std::endl;
 
 	status = ::bind(_sock, _servinfo->ai_addr, _servinfo->ai_addrlen);
@@ -113,7 +122,7 @@ void Socket::listen()
 	std::cout
 		<< FT_SETUP
 		<< "Putting Socket "
-		<< FT_HIGH_LIGHT_COLOR << getHosts()[0] << RESET_COLOR
+		<< FT_HIGH_LIGHT_COLOR << _listen_on.getHost() << _listen_on.getPort() << RESET_COLOR
 		<< " in Listen Mode."
 		<< std::endl;
 
@@ -144,30 +153,9 @@ int Socket::accept()
 	return (new_socket);
 }
 
-std::string Socket::getPort()
+const HostPortPair& Socket::getHostPortPair() const
 {
-	return (_server.port); //TODO , mesma coisa,. trocar o port pra usar somente o IPPORTPAIR
-}
-
-std::vector<std::string> Socket::getHosts()
-{
-	std::string host;
-	std::vector<std::string> hosts;
-
-	for (long unsigned int i = 0; i < _server.server_names.size(); i++)
-	{
-		host = "";
-		host.append(_server.server_names[i]);
-		host.append(":");
-		host.append(_server.port);
-		hosts.push_back(host);
-	}
-	return (hosts);
-}
-
-ServerBlock Socket::getServer()
-{
-	return (_server);
+    return (_listen_on);
 }
 
 const char *Socket::GetAddrInfoException::what() const throw()
