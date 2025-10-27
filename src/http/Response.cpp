@@ -164,6 +164,6 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 	os << "- Body: '" << response.getBody().empty() << "'\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
 	os << "- Raw HTTP Response Preview:\n";
-	os << "'" << response.stringify() << "'\n";
+	os << "------\n" << response.stringify() << "------\n";
 	return os;
 }

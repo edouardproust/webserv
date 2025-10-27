@@ -15,7 +15,7 @@ class Router
 	Router&	operator=(Router const&);
 	~Router();
 
-	static std::string	_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath);
+	static std::string	_buildFilePath(std::string const&, std::string const&, std::string const&);
 
 	public:
 

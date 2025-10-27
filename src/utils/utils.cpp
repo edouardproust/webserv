@@ -70,7 +70,11 @@ size_t	utils::toSizeT(std::string const& str)
 }
 
 /**
- * Returns empty string "" in cse of failure.
+ * Returns the file extension, including the dot
+ *
+ * - path "/whatever/test.php" -> returns ".php"
+ * - path "https://mydomaine/index.py" -> returns ".py"
+ * - path "/test" or "/test." -> returns "" (empty string)
  */
 std::string	utils::getFileExtension(std::string const& path) {
 	size_t dotPos = path.rfind('.');

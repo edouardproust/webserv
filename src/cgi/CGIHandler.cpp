@@ -3,16 +3,28 @@
 
 CGIHandler::CGIHandler() {}
 
-Response	CGIHandler::handleRequest(Request const& req, std::string const& scriptPath, std::string const& executor)
-{
-	std::vector<char*> envp = _buildEnvp(req, scriptPath);
-	std::vector<char*> argv = _buildArgv(executor, scriptPath);
+CGIHandler::~CGIHandler() {}
+
+/**
+ * Throw a runtime exception if fork() or pipe() fail.
+ */
+Response	CGIHandler::handleRequest(Request const& req, LocationBlock const* loc, std::string const& filePath) {
+	_filePath = filePath;
+	_extension = utils::getFileExtension(_filePath);
+	_executor = loc->getCgiExecutor(_extension);
 
 	// Pipes
 	int stdinPipe[2];
 	int stdoutPipe[2];
 	if (pipe(stdinPipe) == -1 || pipe(stdoutPipe) == -1)
 		throw std::runtime_error("pipe() failed"); // TODO
+
+	// Variables for execve
+	_buildEnvp(req, filePath, loc->getRoot());
+	_buildArgv(_executor, _filePath);
+	std::vector<char*> envp = _toCharPtrArray(_envp);
+	std::vector<char*> argv = _toCharPtrArray(_argv);
+
 	// Fork
 	pid_t pid = fork();
 	if (pid == -1)
@@ -28,7 +40,7 @@ Response	CGIHandler::handleRequest(Request const& req, std::string const& script
 		dup2(stdoutPipe[1], STDOUT_FILENO);
 		close(stdoutPipe[1]);
 		// execute CGI script
-		execve(executor.c_str(), argv.data(), envp.data());
+		execve(_executor.c_str(), argv.data(), envp.data());
 		//perror("execve"); // TODO
 		_exit(1);
 	} else { // Parent process
@@ -39,50 +51,52 @@ Response	CGIHandler::handleRequest(Request const& req, std::string const& script
 			write(stdinPipe[1], req.getBody().c_str(), req.getBody().size());
 		close(stdinPipe[1]);
 		// reading CGI's output
-		std::string cgiOutput;
 		char buffer[4096];
 		ssize_t n;
 		while ((n = read(stdoutPipe[0], buffer, sizeof(buffer))) > 0)
-			cgiOutput.append(buffer, n);
+			_cgiOutput.append(buffer, n);
 		close(stdoutPipe[0]);
-		std::cout << "[DEBUG] cgiOutput: " << cgiOutput << std::endl; // DEBUG
 		int status;
 		waitpid(pid, &status, 0);
-		return Response(); // DEBUG Return an empty Response for now to allow compilation
-	}
-}
 
-std::vector<char*>	CGIHandler::_buildEnvp(Request const& req, std::string const& scriptPath) {
-	std::vector<std::string> tmp;
-	// Essential CGI env. variables
-	tmp.push_back("REQUEST_METHOD=" + req.getMethod());
-	tmp.push_back("QUERY_STRING=" + req.getQueryString());
-	tmp.push_back("CONTENT_TYPE=" + req.getContentType());
-	tmp.push_back("CONTENT_LENGTH=" + utils::toString(req.getBody().length()));
-	tmp.push_back("SCRIPT_FILENAME=" + scriptPath);
-	tmp.push_back("SCRIPT_NAME=" + utils::trimDomain(req.getPath()));
-	// Other important env. variables
-	tmp.push_back("GATEWAY_INTERFACE=CGI/1.1");
-	tmp.push_back("SERVER_PROTOCOL=HTTP/" + req.getVersion());
-	tmp.push_back("SERVER_SOFTWARE=" + SERVER_SOFTWARE);
-	// Conversion of HTTP headers into env. variables (CGI standard)
+		// TODO Parse Response!
+		return Response();
+	}
+	}
+
+	void	CGIHandler::_buildEnvp(Request const& req, std::string const& filePath, std::string const& locRoot) {
+	_envp.clear(); // security
+	std::map<std::string, std::string> tmp;
+	// Essential CGI environment variables
+	tmp["REQUEST_METHOD"] = req.getMethod();
+	tmp["QUERY_STRING"] = req.getQueryString();
+	tmp["CONTENT_TYPE"] = req.getContentType();
+	tmp["CONTENT_LENGTH"] = utils::toString(req.getBody().length());
+	tmp["SCRIPT_FILENAME"] = filePath;
+	tmp["SCRIPT_NAME"] = utils::trimDomain(req.getPath());
+	tmp["DOCUMENT_ROOT"] = locRoot;
+	// Server protocol information
+	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
+	tmp["SERVER_PROTOCOL"] = req.getVersion();
+	tmp["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
+	// HTTP headers (prefixed with HTTP_)
 	Headers headers = req.getHeaders();
 	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)
-        tmp.push_back(_headerToEnvVar(it->first) + "=" + it->second);
-	// Convert envVars to char* for execve
-	std::vector<char*> envp ;
-	for (size_t i = 0; i < tmp.size(); ++i)
-		envp.push_back(const_cast<char*>(tmp[i].c_str()));
-	envp.push_back(NULL);
-	return envp;
+		tmp[_headerToEnvVar(it->first)] = it->second;
+	// PHP specific variables
+	if (utils::getFileExtension(req.getPath()) == ".php") {
+		tmp["REDIRECT_STATUS"] = "200";
+		tmp["PHP_SELF"] = req.getPath();
+	}
+	// Build "KEY=VALUE" strings in persistent storage
+	for (std::map<std::string, std::string>::const_iterator it = tmp.begin(); it != tmp.end(); ++it)
+		_envp.push_back(it->first + "=" + it->second);
 }
 
-std::vector<char*>	CGIHandler::_buildArgv(std::string const& executor, std::string const& scriptPath) {
-	std::vector<char*> argv;
-	argv.push_back(const_cast<char*>(executor.c_str())); // eg. /usr/bin/php-cgi
-	argv.push_back(const_cast<char*>(scriptPath.c_str())); // eg. /var/www/html/hello.php
-	argv.push_back(NULL);
-	return argv;
+void	CGIHandler::_buildArgv(std::string const& executor, std::string const& filePath) {
+    _argv.clear(); // security
+	_argv.push_back(executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
+	_argv.push_back(filePath); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
 }
 
 std::string	CGIHandler::_headerToEnvVar(const std::string& headerName) {
@@ -97,13 +111,52 @@ std::string	CGIHandler::_headerToEnvVar(const std::string& headerName) {
 	return result;
 }
 
-void	CGIHandler::_writeBodyToStdin(std::string const& body) {
-	std::cout << "[TODO: Writing body to CGI stdin]" << body << std::endl;
-	(void)body; // to silence unused parameter warning
+std::vector<char*>	CGIHandler::_toCharPtrArray(const std::vector<std::string>& src) {
+	std::vector<char*> result;
+	result.reserve(src.size() + 1);
+	for (size_t i = 0; i < src.size(); ++i)
+		result.push_back(const_cast<char*>(src[i].c_str()));
+	result.push_back(NULL);
+	return result;
 }
 
-void	CGIHandler::_executeScript(std::string const& executor, std::string const& scriptPath) {
-	std::cout << "[TODO: Executing CGI script]" << std::endl;
-	std::cout << "Executor: " << executor << std::endl;
-	std::cout << "Script Path: " << scriptPath << std::endl;
+std::string const&	CGIHandler::getFilePath() const {
+	return _filePath;
 }
+
+std::string const&	CGIHandler::getExecutor() const {
+	return _executor;
+}
+
+std::vector<std::string> const&	CGIHandler::getEnvp() const {
+	return _envp;
+}
+
+std::vector<std::string> const&	CGIHandler::getArgv() const {
+	return _argv;
+}
+
+std::string const&	CGIHandler::getCgiOutput() const {
+	return _cgiOutput;
+}
+
+std::ostream&	operator<<(std::ostream& os, CGIHandler const& rhs) {
+	os << "CGIHandler:\n"
+		<< "- filePath: '" << rhs.getFilePath() << "'\n"
+		<< "- executor: '" << rhs.getExecutor() << "'\n";
+
+		std::vector<std::string> envp = rhs.getEnvp();
+		os << "- envp: " << envp.size() << "\n";
+		for (size_t i = 0; i < envp.size(); ++i)
+			os << "  - " << envp[i] << "\n";
+
+		std::vector<std::string> argv = rhs.getArgv();
+		os << "- argv: " << argv.size() << "\n";
+		for (size_t i = 0; i < argv.size(); ++i)
+			os << "  - " << argv[i] << "\n";
+
+	os << "- cgiOutput:\n------\n" << rhs.getCgiOutput() << "------\n";
+
+	return os;
+}
+
