@@ -24,10 +24,10 @@ int main(int argc, char** argv)
         // Passamos 'config' por referência constante para o construtor do Network.
         // O construtor do Network já cria e faz bind/listen dos sockets.
         Network webserver(config);
-
         // 4. Iniciar o loop principal do servidor (epoll_wait, recv, send)
         // Esta função só retorna quando 'keep()' for falso (Ctrl+C).
         webserver.start_servers();
+        
 
     } 
     catch (const std::exception& e) 

@@ -36,12 +36,17 @@
 
 		int			getRequestTotalLength(std::string request);
 		std::string getBoundry(std::string request);
+		
 
 	public:
 		Network();
 		Network(Config const& _config_file);
 		~Network();
 		void start_servers();
+		int getEpollFd() const { return _epoll; }
+    	const std::vector<Socket*>& getConnections() const { return _connections; }
+    	const std::map<int, std::string>& getRequestList() const { return _request_list; }
+   	 	const std::map<int, Socket*>& getClientServerMap() const { return _client_server_map; }
 
 		class EpollException : public std::exception
 		{
@@ -73,5 +78,7 @@
 			const char *what() const throw();
 		};
 	};
+
+	std::ostream& operator<<(std::ostream& os, const Network& rhs);
 
 #endif // WEBSERVER_HPP
