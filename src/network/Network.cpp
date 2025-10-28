@@ -16,7 +16,7 @@ Network::Network(Config const& _config_file) : _config_file(_config_file)
 {
 	// Initializes Ctrl + C signal handler
 	keep();
-    // 1. GET HoSTpORTpAIr
+    //  GET HoSTpORTpAIr
     std::set<HostPortPair> unique_listens;
     const std::vector<ServerBlock>& servers = _config_file.getServers(); //
     
@@ -26,14 +26,14 @@ Network::Network(Config const& _config_file) : _config_file(_config_file)
         unique_listens.insert(listens.begin(), listens.end());
     }
 
-    // 2. create socket for each HostPortPair
+    //  create socket for each HostPortPair
     for (std::set<HostPortPair>::const_iterator it = unique_listens.begin(); 
          it != unique_listens.end() && keep(); ++it)
     {
         _connections.push_back(new Socket(*it)); // Usa o novo construtor do Socket
     }
 
-	// 3. bind and listen to each socket created
+	//  bind and listen to each socket created
 	std::vector<Socket *>::iterator it_sock;
 	for (it_sock = _connections.begin(); it_sock != _connections.end(); it_sock++)
 	{
@@ -176,10 +176,7 @@ int Network::isServerSideEvent(int epoll_fd)
 
 // Em Network.cpp
 
-// REMOVA AS FUNÇÕES getBoundry e getRequestTotalLength
-// ...
 
-// SUBSTITUA A SUA FUNÇÃO RECV POR ESTA:
 void Network::recv(int client_fd, struct epoll_event &events_setup)
 {
 	std::cout
@@ -201,7 +198,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 
 		if (bytes > 0)
 		{
-            // Dados recebidos, adicione ao string
+            // receivng data
 			std::cout << FT_EVENT << "Receiving " << bytes
 					  << ((bytes <= 1) ? " byte." : " bytes.")
 					  << std::endl;
@@ -209,45 +206,36 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 		}
 		else if (bytes == 0)
 		{
-            // Cliente desconectou-se (conexão fechada)
+            // client disconnected
 			std::cout << FT_EVENT << "Client " << client_fd << " disconnected." << std::endl;
 			_client_server_map.erase(client_fd);
-			_request_list.erase(client_fd); // Limpe o request inacabado
+			_request_list.erase(client_fd); // clean up the request
 			epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 			close(client_fd);
-			return; // Saia da função
+			return;
 		}
 		else // bytes == -1
 		{
-            // Erro ou não há mais dados
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-                // Não há mais dados para ler *agora* (normal para non-blocking)
-				break; // Saia do loop while
-			}
+				break; // No more data to read right now
 			else
 			{
-                // Um erro real de recv
+				// error occurred
 				std::cout << FT_WARNING << "recv error on client " << client_fd << ": " << strerror(errno) << std::endl;
 				_client_server_map.erase(client_fd);
-				_request_list.erase(client_fd); // Limpe o request
+				_request_list.erase(client_fd); 
 				epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 				close(client_fd);
-				return; // Saia da função
+				return; 
 			}
 		}
-	} // Fim do loop while
-
-    // Se lemos alguns dados (o string não está vazio), mude para EPOLLOUT
-    // para que a função send() possa processá-lo.
-	if (!total_request.empty())
+	} 
+	if (!total_request.empty()) // not empty change to EPOLLOUT to send response
 	{
 		events_setup.data.fd = client_fd;
 		events_setup.events = EPOLLOUT;
 		epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
 	}
-    // Se não lemos nada (total_request.empty()), não fazemos nada.
-    // O epoll continuará a esperar por EPOLLIN.
 }
 
 void Network::send(int client_fd, struct epoll_event &events_setup)
