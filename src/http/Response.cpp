@@ -46,8 +46,8 @@ const std::string& Response::getBody() const
 
 void	Response::setStatus(const HttpStatus& status)
 {
-	_status = HttpStatus(statusCode);
-	if (statusCode == 204)
+	_status = status;
+	if (status.getCode() == 204)
 		setBody("");
 }
 

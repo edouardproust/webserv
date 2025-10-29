@@ -18,7 +18,6 @@ BASE_SRC_FILES = \
 	http/Request.cpp \
 	http/RequestParser.cpp \
 	http/Response.cpp \
-	http/HttpStatus.cpp \
 	router/Router.cpp \
 	router/RoutingDecision.cpp \
 	router/RedirectionHandler.cpp \

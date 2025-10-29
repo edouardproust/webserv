@@ -31,9 +31,11 @@ namespace utils {
 	bool	isAccessibleDirectory(std::string const& path);
 	bool	isReadableFile(std::string const& path);
 	bool	isExecutableFile(std::string const& path);
+	bool	fileExists(std::string const& path);
 
 	size_t	toSizeT(std::string const&);
 	size_t	hexToSizeT(const std::string& hexStr);
+	char	hexToChar(const std::string& hex);
 
 	std::string		getFileExtension(std::string const&);
 	std::string		toLowerCase(const std::string&);
@@ -41,7 +43,6 @@ namespace utils {
 	std::string		joinPath(std::string const&, std::string const&);
 	std::string		normalizePath(std::string const&);
 
-	char	hexToChar(const std::string& hex);
 }
 
 #include "../src/utils/utils.tpp"

@@ -133,9 +133,9 @@ void dev::runResponseTests()
 	response1.setBody("<html><body><h1>Hello World</h1></body></html>");
     std::cout << response1.stringify() << std::endl;
 
-	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
-	Response response2 = StaticHandler::handleError(HttpStatus(404));
-	std::cout << response2.stringify() << std::endl;
+//	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
+//	Response response2 = StaticHandler::handleError(HttpStatus(404)); signature function will prob change
+//	std::cout << response2.stringify() << std::endl;
 
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
 	Response response3;
@@ -145,9 +145,9 @@ void dev::runResponseTests()
 	response3.setBody("");
 	std::cout << response3.stringify() << std::endl;
 
-	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
-	Response response4 = StaticHandler::handleError(HttpStatus(500));
-	std::cout << response4.stringify() << std::endl;
+//	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
+//	Response response4 = StaticHandler::handleError(HttpStatus(500)); signature function will prob change
+//	std::cout << response4.stringify() << std::endl;
 
 	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
 	Response response5;

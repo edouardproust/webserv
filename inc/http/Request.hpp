@@ -16,7 +16,6 @@ class Request
 		static std::set<std::string> _supportedMethods;
 		static std::set<std::string> _existingMethods;
 		static std::set<std::string> _supportedVersions;
-		static std::set<std::string> _existingVersions;
 		std::string	_method;
 		std::string	_requestTarget;
 		std::string _path;
@@ -25,9 +24,6 @@ class Request
 		std::map<std::string, std::string> _headers;
 		std::string	_contentType;
 		std::string	_body;
-		size_t		_bodySize;
-
-		Request(); // Not used
 
 	public:
 
@@ -51,7 +47,6 @@ class Request
 		const std::map<std::string, std::string>&	getHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
-		size_t				getBodySize() const;
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);

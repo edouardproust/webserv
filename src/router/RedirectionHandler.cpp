@@ -8,6 +8,7 @@ Response	RedirectionHandler::handleRedirection(int code, std::string const& path
 		<< "- path: " << path << std::endl;
 	// Dummy response
 	Response response;
-	response.setError(code);
+	response.setStatus(HttpStatus(code));
+	response.setHeader("Location", path); // Needed : Location header for redirect
 	return response;
 }

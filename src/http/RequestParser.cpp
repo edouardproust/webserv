@@ -74,8 +74,12 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 	 	return result;
 	if (!_isValidMethod(methodStr))
 		return HttpStatus(400);
+	if (Request::isExistingMethod(methodStr))
+		return HttpStatus(501);
 	if (!_isValidVersion(versionStr))
 		return HttpStatus(400);;
+	if (!Request::isSupportedVersion(versionStr))
+		return HttpStatus(505);
 	request.setMethod(methodStr);
 	request.setVersion(versionStr);
 	return HttpStatus(200);
@@ -307,7 +311,13 @@ bool	RequestParser::_isValidVersion(const std::string& versionStr) const
 		return false;
 	if (versionStr.length() <= 5)
 		return false;
-	return (Request::isSupportedVersion(versionStr) || Request::isExistingVersion(versionStr));
+	std::string versionNum = versionStr.substr(5);
+	for (size_t i = 0; i < versionNum.length(); i++)
+	{
+		if (!std::isdigit(versionNum[i]) && versionNum[i] != '.')
+			return false;
+	}
+	return true;
 }
 
 bool	RequestParser::_isValidHeaderName(const std::string& name) const

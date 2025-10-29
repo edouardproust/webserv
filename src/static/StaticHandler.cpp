@@ -6,7 +6,7 @@
 #include <sstream>
 #include <cctype>
 
-/*std::map<std::string, std::string> StaticHandler::_mimeTypes = StaticHandler::_initMimeTypes();
+std::map<std::string, std::string> StaticHandler::_mimeTypes = StaticHandler::_initMimeTypes();
 
 std::map<std::string, std::string> StaticHandler::_initMimeTypes()
 {
@@ -54,6 +54,22 @@ std::string	StaticHandler::_readFile(const std::string& path)
 	return buffer.str();
 }
 
+Response	StaticHandler::_serveFile(std::string const& filePath)
+{
+	size_t fileSize = _getFileSize(filePath);
+	if (fileSize > MAX_FILE_SIZE)
+		return handleError(HttpStatus(413), "", ErrorPages());
+	std::string content = _readFile(filePath);
+	if (content.empty() && fileSize > 0)
+		return handleError(HttpStatus(500), "", ErrorPages());
+	std::string contentType = _getMimeType(filePath);
+	Response response;
+	response.setStatus(200);
+	response.setHeader("Content-Type", contentType);
+	response.setBody(content);
+	return response;
+}
+
 std::string StaticHandler::_generateErrorPage(int statusCode, const std::string& reasonPhrase)
 {
 	std::stringstream html;
@@ -70,69 +86,11 @@ std::string StaticHandler::_generateErrorPage(int statusCode, const std::string&
 	return html.str();
 }
 
-Response StaticHandler::_handleFileUpload(const std::string& filePath, const Request& request) {
-    // 1. Check if upload directory exists and is writable
-    std::string uploadDir = _getUploadDirectory(filePath);
-    if (!_isDirectoryWritable(uploadDir)) {
-        return handleError(HttpStatus(403));
-    }
-    
-    // 2. Generate unique filename (prevent overwrites)
-    std::string finalPath = _generateUploadPath(uploadDir, filePath);
-    
-    // 3. Save the file
-    if (_saveFile(finalPath, request.getBody())) {
-        Response response;
-        response.setStatusCode(201); // Created
-        response.setBody("File uploaded successfully");
-        return response;
-    } else {
-        return handleError(HttpStatus(500));
-    }
-}
-
-Response	StaticHandler::handleGet(std::string const& filePath, Request const& request)
-{
-	(void)request;
-	size_t fileSize = _getFileSize(filePath);
-	if (fileSize > MAX_FILE_SIZE)
-		return handleError(HttpStatus(413));
-	std::string content = _readFile(filePath);
-	if (content.empty() && fileSize > 0)
-		return handleError(HttpStatus(500));
-	std::string contentType = _getMimeType(filePath);
-	Response response;
-	response.setStatusCode(200);
-	response.setHeader("Content-Type", contentType);
-	response.setBody(content);
-	return response;
-}
-
-Response	StaticHandler::handleDelete(std::string const& filePath, Request const& request)
-{
-	(void)request;
-	if (std::remove(filePath.c_str()) == 0)
-	{
-		Response response;
-		response.setStatusCode(204);
-		return response;
-	}
-	else
-		return handleError(HttpStatus(403));
-}
-
-Response	StaticHandler::handleError(const HttpStatus& status)
-{
-	Response response;
-	response.setStatusCode(status.getCode());
-	std::string errorPage = _generateErrorPage(status.getCode(), status.getReason());
-	response.setBody(errorPage);
-	response.setHeader("Content-Type", "text/html");
-
-/**
+/*
  * Else, build a standard error page with `HttpStatus->toString()`.
  */
-Response	StaticHandler::handleError(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages) {
+Response	StaticHandler::handleError(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages)
+{
 	std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- action: Error\n"
 		<< "- status: " << status.toString() << "\n"
@@ -144,18 +102,32 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 
 	// If one of `locErrorPages` corresponds to `HttpStatus->getCode()`, get its content.
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
-	if (search != locErrorPages.end()) {
+	if (search != locErrorPages.end())
+	{
 		std::string errorPath = utils::joinPath(locRoot, search->second);
 		// if errorPath exists and is a readable file: return a response with its content
 		// else return a Reponse with content of a built error page (not_found or forbidden)
+		if (utils::isReadableFile(errorPath))
+		{
+			std::string content = _readFile(errorPath);
+			Response response;
+			response.setStatus(status);
+			response.setBody(content);
+			response.setHeader("Content-Type", "text/html");
+			return response;
+		}
 	}
 	// return a Response with the content of a built error page
 	Response response;
 	response.setStatus(status);
+	std::string errorPage = _generateErrorPage(status.getCode(), status.getReason());
+	response.setBody(errorPage);
+	response.setHeader("Content-Type", "text/html");
 	return response;
 }
 
-Response	StaticHandler::handleGet(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes) {
+Response	StaticHandler::handleGet(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes)
+{
 	std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- handle: Get\n"
 		<< "- method: " << request.getMethod() << "\n"
@@ -165,7 +137,6 @@ Response	StaticHandler::handleGet(Request const& request, std::string const& pat
 	for (size_t i = 0; i < locIndexes.size(); ++i)
 		std::cout << "  - " << locIndexes[i] << "\n";
 	std::cout << std::endl;
-
 	/*
 	if path is a directory:
 		if isAutoIndex: loop over indexes and build indexPath = utils::joinPath(path, indexes[i]). If a indexPath is a readable file: return a Response with its content
@@ -174,18 +145,46 @@ Response	StaticHandler::handleGet(Request const& request, std::string const& pat
 		if is an existing and readable file: return a Response with its content
 		else: return a Response with a built error page (not_found or forbidden)
 	*/
-	Response response;
-	return response;
+	if (utils::isAccessibleDirectory(path))
+	{
+		if (isAutoindex)
+		{
+			for (size_t i = 0; i < locIndexes.size(); ++i)
+			{
+				std::string indexPath = utils::joinPath(path, locIndexes[i]);
+				if (utils::isReadableFile(indexPath))
+				return _serveFile(indexPath);
+			}
+			return handleError(HttpStatus(404), path, ErrorPages());
+		}	
+		else
+			return handleError(HttpStatus(404), path, ErrorPages());
+	}
+	else if (utils::isReadableFile(path))
+		return _serveFile(path);
+	else
+		return handleError(HttpStatus(404), path, ErrorPages());
 }
 
-Response	StaticHandler::handleDelete(Request const& request, std::string const& path) {
+Response	StaticHandler::handleDelete(Request const& request, std::string const& path)
+{
+	(void)request;
 	std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- handle: Delete\n"
 		<< "- method: " << request.getMethod() << "\n"
 		<< "- file path: " << path << "\n"
 		<< std::endl;
-
-	Response response;
-	return response;
+	if (!utils::fileExists(path))
+		return handleError(HttpStatus(404), "", ErrorPages());
+	std::string dir = path.substr(0, path.find_last_of('/'));
+	if (access(dir.c_str(), W_OK) != 0)
+		return handleError(HttpStatus(403), "", ErrorPages());
+	if (std::remove(path.c_str()) == 0)
+	{
+		Response response;
+		response.setStatus(204);
+		return response;
+	}
+	else
+		return handleError(HttpStatus(500), "", ErrorPages());
 }
-

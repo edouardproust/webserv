@@ -4,7 +4,17 @@
 std::set<std::string> Request::_supportedMethods;
 std::set<std::string> Request::_existingMethods;
 std::set<std::string> Request::_supportedVersions;
-std::set<std::string> Request::_existingVersions;
+
+Request::Request()
+: _status(HttpStatus(200)),
+  _method(""),
+  _requestTarget(""),
+  _path(""),
+  _queryString(""),
+  _version(""),
+  _contentType(""),
+  _body("")
+{}
 
 Request::Request(std::string const& rawRequest)
 : _status(HttpStatus(200)),
@@ -14,8 +24,7 @@ Request::Request(std::string const& rawRequest)
   _queryString(""),
   _version(""),
   _contentType(""),
-  _body(""),
-  _bodySize(DEFAULT_MAX_CLIENT_BODY_SIZE) // TODO Ava: implement de logic to calculate and set _bodySize
+  _body("")
 {
 	static RequestParser parser;
 	parser.parseRequest(*this, rawRequest);
@@ -38,7 +47,6 @@ Request& Request::operator=(const Request& other)
 		this->_headers = other._headers;
 		this->_contentType = other._contentType;
 		this->_body = other._body;
-		this->_bodySize = other._bodySize;
 	}
 	return (*this);
 }
@@ -72,16 +80,6 @@ bool	Request::isSupportedVersion(std::string const& version) {
 		_supportedVersions.insert("HTTP/1.1");
 	}
 	return _supportedVersions.find(version) != _supportedVersions.end();
-}
-
-bool	Request::isExistingVersion(std::string const& version) {
-	if (_existingVersions.empty()) {
-		_existingVersions.insert("HTTP/0.9");
-		_existingVersions.insert("HTTP/1.0");
-		_existingVersions.insert("HTTP/2");
-		_existingVersions.insert("HTTP/3");
-	}
-	return _existingVersions.find(version) != _existingVersions.end();
 }
 
 const HttpStatus& Request::getStatus() const
@@ -127,11 +125,6 @@ const std::string& Request::getContentType() const
 const std::string& Request::getBody() const
 {
 	return this->_body;
-}
-
-size_t	Request::getBodySize() const
-{
-	return this->_bodySize;
 }
 
 void	Request::setStatus(HttpStatus const& status)
@@ -184,7 +177,7 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "Request:\n";
 	HttpStatus const& status = request.getStatus();
 	os << "- Status: ";
-	if (status.getCode() != 500) os << status << "\n";
+	if (status.getCode() != 200) os << status << "\n";
 	else os << "[empty]\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";

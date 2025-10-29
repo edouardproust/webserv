@@ -28,7 +28,7 @@ class Response
 	const std::map<std::string, std::string>& getHeaders() const;
 	const std::string& getBody() const;
 
-	void	setStatus(const HttpStatus& status);
+	void	setStatus(const HttpStatus& statusCode);
 	void	setHeader(const std::string& name, const std::string& value);
 	void	setBody(const std::string& body);
 

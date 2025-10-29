@@ -50,6 +50,14 @@ bool	utils::isExecutableFile(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFREG, X_OK);
 }
 
+bool	utils::fileExists(std::string const& path)
+{
+	if (path.empty() || path[0] != '/')
+		return false;
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0);
+}
+
 /**
  * Convert a string into an unsigned int only if the string
  * contains digits or start with + or -.
@@ -83,10 +91,24 @@ size_t	utils::hexToSizeT(const std::string& hexStr)
 	return result;
 }
 
-std::string& utils::normalizePath(std::string& path) {
-	if (path.size() > 1 && path[path.size() - 1] == '/')
-		path.erase(path.size() - 1);
-	return path;
+char	utils::hexToChar(const std::string& hex)
+{
+	if (hex.length() != 2)
+		return -1;
+	int value = 0;
+	for (size_t i = 0; i < 2; i++)
+	{
+		char c = hex[i];
+		if (c >= '0' && c <= '9')
+			value = value * 16 + (c - '0');
+		else if (c >= 'A' && c <= 'F')
+			value = value * 16 + (c - 'A' + 10);
+		else if (c >= 'a' && c <= 'f')
+			value = value * 16 + (c - 'a' + 10);
+		else
+			return -1;
+	}
+	return static_cast<char>(value);
 }
 
 /**
@@ -107,26 +129,6 @@ std::string	utils::toLowerCase(const std::string& str)
 	return normalized;
 }
 
-char	utils::hexToChar(const std::string& hex)
-{
-	if (hex.length() != 2)
-		return -1;
-	int value = 0;
-	for (size_t i = 0; i < 2; i++)
-	{
-		char c = hex[i];
-		if (c >= '0' && c <= '9')
-			value = value * 16 + (c - '0');
-		else if (c >= 'A' && c <= 'F')
-			value = value * 16 + (c - 'A' + 10);
-		else if (c >= 'a' && c <= 'f')
-			value = value * 16 + (c - 'a' + 10);
-		else
-			return -1;
-	}
-	return static_cast<char>(value);
-}
-	
 /**
  * Split a string into substrings separated by a given delimiter.
  *
