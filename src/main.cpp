@@ -15,7 +15,8 @@ int main(int argc, char** argv) {
 
 		// To be moved into 'network' listening loop:
 			std::cout << config << std::endl;
-			Request request("GET /cgi-bin/test.php HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: WebservTest/1.0\r\n\r\n");
+			Request request("POST /cgi-bin/form.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 13\r\n\r\nname=John Doe");
+			//Request request("GET /cgi-bin/test.php HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: WebservTest/1.0\r\n\r\n");
 			if (DEVMODE) std::cout << request << std::endl;
 			Response const response = Router::dispatchRequest(config, request, HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
 			if (DEVMODE) std::cout << response << std::endl;

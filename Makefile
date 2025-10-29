@@ -22,7 +22,7 @@ BASE_SRC_FILES = \
 	router/RoutingDecision.cpp \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
-	cgi/CGIHandler.cpp
+	cgi/CgiHandler.cpp
 
 DEV_SRC_FILES = \
 	http/dev.http.cpp

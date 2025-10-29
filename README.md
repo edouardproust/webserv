@@ -8,12 +8,15 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 
 ## TODO
 - General:
+	- Add "explicit" keyword to constructors declaration with only 1 argument
 	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
 - Config parsing:
+	- Handle 411 error (length required for POST and PUT)
 	- Accept `ssl` option in `listen` directive ?
 	- check if `clientMaxBodySize` is well formated ?
 	- Support IPv6 ?
 - CGI:
+	- Now using `_exit()` in CGIHandler. It is NOT in the list af allowed functions -> How to do ?
 	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
 - Network:
 	- What socket(s) to open if only "0.0.0.0" is defined as an open port in config file ?

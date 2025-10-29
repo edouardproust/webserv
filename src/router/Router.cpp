@@ -15,7 +15,7 @@ Router::~Router() {}
  * - It is the role of StaticHandler to check if the requested file or directory is accesible.
  *   It also checks "autoindex" and "index" directives in config, in order to serve a directory
  *   listing page if needed.
- * - It is the role of CGIHandler to check if the script exists and is executable.
+ * - It is the role of CgiHandler to check if the script exists and is executable.
  */
 Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen) {
 	RoutingDecision rd(config, req, listen);
@@ -28,39 +28,40 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	// error, redirection
 	HttpStatus const& reqStatus = req.getStatus();
 	if (reqStatus.getSlug() != "ok")
-		return StaticHandler::handleError(HttpStatus(reqStatus), locRoot, locErrorPages);
+		return StaticHandler::error(HttpStatus(reqStatus), locRoot, locErrorPages);
 
 	if (decision == RoutingDecision::ERROR)
-		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()), locRoot, locErrorPages);
+		return StaticHandler::error(HttpStatus(rd.getErrorSlug()), locRoot, locErrorPages);
 	if (decision == RoutingDecision::REDIRECTION) {
 		std::pair<int, std::string> const& ret = loc->getReturn();
-		return RedirectionHandler::handleRedirection(ret.first, ret.second);
+		return RedirectionHandler::run(ret.first, ret.second);
 	}
 	// cgi, static
 	std::string filePath = _buildFilePath(loc->getRoot(), loc->getPath(), req.getPath());
 	if (decision == RoutingDecision::CGI) {
-		CGIHandler cgi;
 		try {
-			Response resp = cgi.handleRequest(req, loc, filePath);
-			if (DEVMODE) std::cout << cgi << std::endl;
-			return resp;
-		} catch (std::exception& e) {
-			std::cerr << "Error: CGI failed for script " << filePath << ": " << e.what() << std::endl;
-			return StaticHandler::handleError(HttpStatus("internal_server_error"), locRoot, locErrorPages);
-		}
+			CgiHandler handler; // TODO: do a constructor directly: CgiHandler(Request const& req, LocationBlock const* loc, std::string const& filePath)
+			return handler.run(req, loc, filePath);
+		} catch (CgiHandler::ExecException& e) {
+			std::cerr << "[Warning] CGI (" << filePath << "): " << e.what() << std::endl;
+			return StaticHandler::error(HttpStatus("internal_server_error"), locRoot, locErrorPages);
+		} //catch (Response::RawException& e) { // TODO
+		//	std::cerr << "[Warning] CGI (" << filePath << "): " << e.what() << std::endl;
+		//	return StaticHandler::error(HttpStatus("bad_gateway"), locRoot, locErrorPages);
+		//}
 	}
 	if (decision == RoutingDecision::STATIC) {
 		std::string const&	method = req.getMethod();
 		if (method == "GET")
-			return StaticHandler::handleGet(req, filePath, loc->getAutoindex() == "on", loc->getIndexFiles());
+			return StaticHandler::get(req, filePath, loc->getAutoindex() == "on", loc->getIndexFiles());
 		else if (method == "DELETE")
-			return StaticHandler::handleDelete(req, filePath);
+			return StaticHandler::del(req, filePath);
 		// -- additional supported methods can be added here -- // TODO PUT method
 		else
-			return StaticHandler::handleError(HttpStatus("method_not_allowed"), locRoot, locErrorPages);
+			return StaticHandler::error(HttpStatus("method_not_allowed"), locRoot, locErrorPages);
 	}
 	// fallback
-	return StaticHandler::handleError(HttpStatus("internal_server_error"), locRoot, locErrorPages);
+	return StaticHandler::error(HttpStatus("internal_server_error"), locRoot, locErrorPages);
 }
 
 std::string	Router::_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath) {

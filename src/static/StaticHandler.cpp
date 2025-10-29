@@ -3,7 +3,7 @@
 /**
  * Else, build a standard error page with `HttpStatus->toString()`.
  */
-Response	StaticHandler::handleError(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages) {
+Response	StaticHandler::error(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages) {
 	std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- action: Error\n"
 		<< "- status: " << status.toString() << "\n"
@@ -26,7 +26,7 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 	return response;
 }
 
-Response	StaticHandler::handleGet(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes) {
+Response	StaticHandler::get(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes) {
 	std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- handle: Get\n"
 		<< "- method: " << request.getMethod() << "\n"
@@ -49,7 +49,7 @@ Response	StaticHandler::handleGet(Request const& request, std::string const& pat
 	return response;
 }
 
-Response	StaticHandler::handleDelete(Request const& request, std::string const& path) {
+Response	StaticHandler::del(Request const& request, std::string const& path) {
 	std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- handle: Delete\n"
 		<< "- method: " << request.getMethod() << "\n"

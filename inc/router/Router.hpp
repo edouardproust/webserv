@@ -4,7 +4,7 @@
 #include "router/RoutingDecision.hpp"
 #include "router/RedirectionHandler.hpp"
 #include "static/StaticHandler.hpp"
-#include "cgi/CGIHandler.hpp"
+#include "cgi/CgiHandler.hpp"
 
 class Router
 {

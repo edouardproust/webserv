@@ -1,6 +1,6 @@
 #include "router/RedirectionHandler.hpp"
 
-Response	RedirectionHandler::handleRedirection(int code, std::string const& path) {
+Response	RedirectionHandler::run(int code, std::string const& path) {
 	// TODO
 	std::cout << "[DEBUG] RedirectionHandler:\n"
 		<< "- handle: Redirection\n"

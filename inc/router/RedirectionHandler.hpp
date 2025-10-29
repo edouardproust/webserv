@@ -13,7 +13,7 @@ class RedirectionHandler {
 
 	public:
 
-	static Response	handleRedirection(int code, std::string const& path);
+	static Response	run(int code, std::string const& path);
 
 };
 
