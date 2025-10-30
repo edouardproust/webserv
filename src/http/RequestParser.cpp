@@ -77,8 +77,8 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 	if (Request::isExistingMethod(methodStr))
 		return HttpStatus(501);
 	if (!_isValidVersion(versionStr))
-		return HttpStatus(400);;
-	if (!Request::isSupportedVersion(versionStr))
+		return HttpStatus(400);
+	if (versionStr != "HTTP/1.1")
 		return HttpStatus(505);
 	request.setMethod(methodStr);
 	request.setVersion(versionStr);
@@ -312,11 +312,41 @@ bool	RequestParser::_isValidVersion(const std::string& versionStr) const
 	if (versionStr.length() <= 5)
 		return false;
 	std::string versionNum = versionStr.substr(5);
-	for (size_t i = 0; i < versionNum.length(); i++)
+	if (versionNum.empty())
+		return false;
+	if (versionNum[0] == '.' || versionNum[versionNum.length() - 1] == '.')
+		return false;
+	size_t dotPos = versionNum.find('.');
+	if (dotPos != std::string::npos)
 	{
-		if (!std::isdigit(versionNum[i]) && versionNum[i] != '.')
+		if (dotPos == 0 || dotPos == versionNum.length() - 1)
+			return false;
+		std::string majorStr = versionNum.substr(0, dotPos);
+		std::string minorStr = versionNum.substr(dotPos + 1);
+		if (minorStr.find('.') != std::string::npos)
+			return false;
+		if (!_isValidVersionNumber(majorStr) || !_isValidVersionNumber(minorStr))
 			return false;
 	}
+	else
+	{
+		if (!_isValidVersionNumber(versionNum))
+			return false;
+	}
+	return true;
+}
+
+bool	RequestParser::_isValidVersionNumber(const std::string& numStr) const
+{
+	if (numStr.empty())
+		return false;
+	for (size_t i = 0; i < numStr.length(); i++)
+	{
+		if (!std::isdigit(numStr[i]))
+			return false;
+	}	
+	if (numStr.length() > 1 && numStr[0] == '0')
+			return false;
 	return true;
 }
 

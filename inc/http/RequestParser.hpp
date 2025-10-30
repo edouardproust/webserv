@@ -23,6 +23,7 @@ class RequestParser
 	bool				_isValidMethod(const std::string& _method) const;
 	bool				_isValidPath(const std::string& _path) const;
 	bool				_isValidVersion(const std::string& _version) const;
+	bool				_isValidVersionNumber(const std::string& numStr) const;
 	bool				_isValidHeaderName(const std::string& name) const;
 	bool				_isValidHeaderValue(const std::string& value) const;
 	bool				_isValidContentType(const std::string& contentType) const;

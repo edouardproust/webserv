@@ -3,7 +3,6 @@
 
 std::set<std::string> Request::_supportedMethods;
 std::set<std::string> Request::_existingMethods;
-std::set<std::string> Request::_supportedVersions;
 
 Request::Request()
 : _status(HttpStatus(200)),
@@ -73,13 +72,6 @@ bool	Request::isExistingMethod(std::string const& method) {
 		_existingMethods.insert("TRACE");
 	}
 	return _existingMethods.find(method) != _existingMethods.end();
-}
-
-bool	Request::isSupportedVersion(std::string const& version) {
-	if (_supportedVersions.empty()) {
-		_supportedVersions.insert("HTTP/1.1");
-	}
-	return _supportedVersions.find(version) != _supportedVersions.end();
 }
 
 const HttpStatus& Request::getStatus() const

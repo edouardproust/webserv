@@ -15,7 +15,6 @@ class Request
 		HttpStatus	_status;
 		static std::set<std::string> _supportedMethods;
 		static std::set<std::string> _existingMethods;
-		static std::set<std::string> _supportedVersions;
 		std::string	_method;
 		std::string	_requestTarget;
 		std::string _path;
