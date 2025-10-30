@@ -65,9 +65,6 @@ std::string StaticHandler::_generateErrorPage(int statusCode, const std::string&
 	return html.str();
 }
 
-/*
- * Else, build a standard error page with `HttpStatus->toString()`.
- */
 Response	StaticHandler::handleError(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages)
 {
 	std::cout << "[DEBUG] StaticHandler:\n"
@@ -79,13 +76,10 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 		std::cout << "  - " << it->first << " -> " << it->second << "\n";
 	std::cout << std::endl;
 
-	// If one of `locErrorPages` corresponds to `HttpStatus->getCode()`, get its content.
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (search != locErrorPages.end())
 	{
 		std::string errorPath = utils::joinPath(locRoot, search->second);
-		// if errorPath exists and is a readable file: return a response with its content
-		// else return a Reponse with content of a built error page (not_found or forbidden)
 		if (utils::isReadableFile(errorPath))
 		{
 			std::string content = utils::readFile(errorPath);
@@ -96,7 +90,6 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 			return response;
 		}
 	}
-	// return a Response with the content of a built error page
 	Response response;
 	response.setStatus(status);
 	std::string errorPage = _generateErrorPage(status.getCode(), status.getReason());
@@ -116,14 +109,7 @@ Response	StaticHandler::handleGet(Request const& request, std::string const& pat
 	for (size_t i = 0; i < locIndexes.size(); ++i)
 		std::cout << "  - " << locIndexes[i] << "\n";
 	std::cout << std::endl;
-	/*
-	if path is a directory:
-		if isAutoIndex: loop over indexes and build indexPath = utils::joinPath(path, indexes[i]). If a indexPath is a readable file: return a Response with its content
-		else: return a Reponse with the content of a built directory index page
-	else if is a regular file:
-		if is an existing and readable file: return a Response with its content
-		else: return a Response with a built error page (not_found or forbidden)
-	*/
+
 	if (utils::isAccessibleDirectory(path))
 	{
 		if (isAutoindex)
