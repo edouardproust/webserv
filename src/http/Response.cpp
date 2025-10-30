@@ -1,18 +1,20 @@
 #include "http/Response.hpp"
-#include "utils/utils.hpp"
-#include <ctime>
 
 Response::Response() : _status(HttpStatus("ok"))
 {
-	_headers["server"] = SERVER_SOFTWARE;
-	_headers["date"] = getCurrentDate();
-	_headers["connection"] = "keep-alive";
-	_headers["content-length"] = "0";
+	_initDefaultHeaders();
+}
+
+/**
+ * May throw a RawException.
+ */
+Response::Response(std::string const& rawResponse): _status(HttpStatus("ok")) {
+	_initDefaultHeaders();
+	_parseRawResponse(rawResponse); // throw
 }
 
 Response::Response(const Response& other)
 	: _status(other._status),
-	  _reasonPhrase(other._reasonPhrase),
 	  _headers(other._headers),
 	  _body(other._body) {}
 
@@ -21,7 +23,6 @@ Response& Response::operator=(const Response& other)
 	if (this != &other)
 	{
 		_status = other._status;
-		_reasonPhrase = other._reasonPhrase;
 		_headers = other._headers;
 		_body = other._body;
 	}
@@ -29,6 +30,16 @@ Response& Response::operator=(const Response& other)
 }
 
 Response::~Response() {}
+
+Response::RawException::RawException(std::string const& msg)
+: std::runtime_error(msg) {}
+
+void	Response::_initDefaultHeaders() {
+	_headers["server"] = SERVER_SOFTWARE;
+	_headers["date"] = getCurrentDate();
+	_headers["connection"] = "keep-alive";
+	_headers["content-length"] = "0";
+}
 
 std::string	Response::stringify() const
 {
@@ -107,6 +118,14 @@ std::string Response::getCurrentDate() const
 	return buffer;
 }
 
+bool	Response::hasHeader(const std::string& keyLowcase) const {
+	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
+		if (utils::toLowerCase(it->first) == keyLowcase)
+			return true;
+	}
+	return false;
+}
+
 std::string Response::_generateErrorPage() const
 {
 	std::stringstream html;
@@ -166,3 +185,67 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 	os << "- Raw HTTP Response Preview:\n[" << response.stringify() << "]\n";
 	return os;
 }
+
+// static utils
+
+/**
+ * Construct a Response from a raw CGI output.
+ *
+ * Expected format:
+ * 	`Status: 200 OK\r\n`
+ * 	`Content-Type: text/html\r\n`
+ * 	`Other-Header: value\r\n`
+ * 	`\r\n`
+ * 	`<body>`
+ *
+ * Throws Response::RawException if headers are malformed or missing Content-Type.
+ */
+void	Response::_parseRawResponse(const std::string& rawResponse)
+{
+	if (rawResponse.empty())
+		throw RawException("raw response is empty");
+
+	// Split headers and body
+	size_t headerEnd = rawResponse.find("\r\n\r\n");
+	if (headerEnd == std::string::npos)
+		throw RawException("malformed raw response: missing header/body separator");
+	std::string headersPart = rawResponse.substr(0, headerEnd);
+	std::string bodyPart = rawResponse.substr(headerEnd + 4);
+
+	// Set Response attributes
+	int statusCode = _setHeaders(headersPart);
+	if (!hasHeader("content-type"))
+		throw RawException("missing Content-Type header");
+	setStatus(HttpStatus(statusCode));
+	setBody(bodyPart);
+}
+
+int	Response::_setHeaders(const std::string& headersPart) {
+	std::istringstream headersStream(headersPart);
+	std::string line;
+	int statusCode = 200; // default if no Status header found
+
+	while (std::getline(headersStream, line)) {
+		if (!line.empty() && line[line.size() - 1] == '\r')
+			line.erase(line.size() - 1);
+		if (line.empty())
+			continue;
+
+		size_t colonPos = line.find(':');
+		if (colonPos == std::string::npos)
+			throw RawException("invalid header line: " + line);
+
+		std::string name = line.substr(0, colonPos);
+		std::string value = line.substr(colonPos + 1);
+		value = utils::trim(value);
+		std::string lname = utils::toLowerCase(name);
+		std::istringstream iss(value);
+		if (lname == "status") { // eg. "Status: 404 Not Found"
+			iss >> statusCode; // if fail: keep default value 200
+			continue;
+		}
+		setHeader(name, value);
+	}
+	return statusCode;
+}
+

@@ -69,6 +69,20 @@ size_t	utils::toSizeT(std::string const& str)
 	return static_cast<size_t>(value);
 }
 
+
+std::string	utils::trim(const std::string& str)
+{
+	size_t start = 0;
+
+	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
+		start++;
+
+	size_t end = str.size();
+	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
+		end--;
+	return str.substr(start, end - start);
+}
+
 /**
  * Returns the file extension, including the dot
  *

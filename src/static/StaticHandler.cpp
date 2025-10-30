@@ -4,7 +4,8 @@
  * Else, build a standard error page with `HttpStatus->toString()`.
  */
 Response	StaticHandler::error(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages) {
-	std::cout << "[DEBUG] StaticHandler:\n"
+	if (DEVMODE) { // DEBUG start
+		std::cout << "[DEBUG] StaticHandler:\n"
 		<< "- action: Error\n"
 		<< "- status: " << status.toString() << "\n"
 		<< "- location root: " << locRoot << "\n"
@@ -12,6 +13,7 @@ Response	StaticHandler::error(HttpStatus const& status, std::string const& locRo
 	for (ErrorPages::const_iterator it = locErrorPages.begin(); it != locErrorPages.end(); ++it)
 		std::cout << "  - " << it->first << " -> " << it->second << "\n";
 	std::cout << std::endl;
+	} // DEBUG end
 
 	// If one of `locErrorPages` corresponds to `HttpStatus->getCode()`, get its content.
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
@@ -23,6 +25,15 @@ Response	StaticHandler::error(HttpStatus const& status, std::string const& locRo
 	// return a Response with the content of a built error page
 	Response response;
 	response.setStatus(status);
+	response.setBody(
+		"<html>"
+			"<head><title>" + status.toString() + "</title></head>"
+			"<body>"
+				"<center><h1>" + status.toString() + "</h1></center>"
+				"<hr><center>" + SERVER_SOFTWARE + "</center>"
+			"</body>"
+		"</html>"
+	);
 	return response;
 }
 
@@ -50,7 +61,7 @@ Response	StaticHandler::get(Request const& request, std::string const& path, boo
 }
 
 Response	StaticHandler::del(Request const& request, std::string const& path) {
-	std::cout << "[DEBUG] StaticHandler:\n"
+	std::cout << "StaticHandler:\n"
 		<< "- handle: Delete\n"
 		<< "- method: " << request.getMethod() << "\n"
 		<< "- file path: " << path << "\n"

@@ -94,8 +94,10 @@ void	CgiHandler::_communicateWithChild(Request const& req) {
 	close(_stderrPipe[1]); // writing stderr
 
 	// write body in CGI's stdin (if PUT/POST)
-	if (req.getMethod() == "POST" || req.getMethod() == "PUT")
-		write(_stdinPipe[1], req.getBody().c_str(), req.getBody().size());
+	if (req.getMethod() == "POST" || req.getMethod() == "PUT") {
+		ssize_t n = write(_stdinPipe[1], req.getBody().c_str(), req.getBody().size());
+		(void)n; // mute compiler error
+	}
 	close(_stdinPipe[1]);
 
 	// Read from pipes
@@ -111,24 +113,20 @@ void	CgiHandler::_communicateWithChild(Request const& req) {
 	close(_stderrPipe[0]);
 }
 
-// TODO test this function returns a Response 4040 if the raw response has a 404 status
+// TODO test this function returns a Response 404 if the raw response has a 404 status
+// TODO test this function with reauest POST of content-length 0 with empty body
 Response	CgiHandler::_handleStatus(int status) {
 	if (WIFEXITED(status)) {
+		if (!_cgiOutput.empty()) {
+			Response res(_cgiOutput); // throw Response::RawException (raw response invalid syntax)
+			if (!_cgiError.empty()) // warning
+				std::cerr << "[Warning] CGI (" << _executor << "): " << _cgiError << std::endl;
+			return res;
+		}
 		int exitCode = WEXITSTATUS(status);
 		if (exitCode != 0) // error
 			throw ExecException(_cgiError.empty() ? ("Error code " + utils::toString(exitCode)) : _cgiError);
-		else if (!_cgiError.empty()) // warning
-			std::cerr << "[Warning] CGI (" << _executor << "): " << _cgiError << std::endl;
-		return Response(); // TODO Delete this dummy line once todos below are done
-		//return Response res(_cgiOutput); // TODO constructor `Response::Response(std::string const& rawResponse)` | May throw a Response::RawException
-		// TODO add at the begenning of Response constructor:
-			//if (rawResponse.empty())
-			//	throw Response::RawException("raw response is empty");
-		// TODO make Response::_getHeader(std::string const& key) (key is lowcase: add in method's doc) method + add the following lines at the end of Response constructor:
-			//if (_rawRequest.getHeader("content-type").empty())
-			//	throw RawException("raw response is missing Content-Type header"); // TODO Response::RawException)
-			//if (_rawRequest.getHeader("status").empty()) // TODO mov()
-			//	_status = HttpStatus("ok").getCode();
+		throw ExecException("exited with no output"); // improbable fallback
 	} else if (WIFSIGNALED(status)) {
 		int signal = WTERMSIG(status);
 		throw ExecException("process killed by signal " + utils::toString(signal));

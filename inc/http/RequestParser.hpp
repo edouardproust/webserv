@@ -19,7 +19,6 @@ class RequestParser
 	bool				_isValidPath(const std::string& _path) const;
 	bool				_isValidVersion(const std::string& _version) const;
 	bool				_isValidHeaderName(const std::string& name) const;
-	static std::string	_trimOWS(const std::string& str);
 	bool				_hasBody(const std::string& rawRequest, size_t headersEnd) const;
 	std::string			_normalizeHeaderName(const std::string& name) const;
 

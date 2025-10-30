@@ -11,6 +11,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Add "explicit" keyword to constructors declaration with only 1 argument
 	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
 - Config parsing:
+	- Add a default index.html page for location "/" + redirect to it
 	- Handle 411 error (length required for POST and PUT)
 	- Accept `ssl` option in `listen` directive ?
 	- check if `clientMaxBodySize` is well formated ?

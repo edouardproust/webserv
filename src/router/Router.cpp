@@ -39,16 +39,16 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	// cgi, static
 	std::string filePath = _buildFilePath(loc->getRoot(), loc->getPath(), req.getPath());
 	if (decision == RoutingDecision::CGI) {
+		CgiHandler handler;
 		try {
-			CgiHandler handler; // TODO: do a constructor directly: CgiHandler(Request const& req, LocationBlock const* loc, std::string const& filePath)
 			return handler.run(req, loc, filePath);
 		} catch (CgiHandler::ExecException& e) {
 			std::cerr << "[Warning] CGI (" << filePath << "): " << e.what() << std::endl;
 			return StaticHandler::error(HttpStatus("internal_server_error"), locRoot, locErrorPages);
-		} //catch (Response::RawException& e) { // TODO
-		//	std::cerr << "[Warning] CGI (" << filePath << "): " << e.what() << std::endl;
-		//	return StaticHandler::error(HttpStatus("bad_gateway"), locRoot, locErrorPages);
-		//}
+		} catch (Response::RawException& e) {
+			std::cerr << "[Warning] CGI (" << filePath << "): " << e.what() << std::endl;
+			return StaticHandler::error(HttpStatus("bad_gateway"), locRoot, locErrorPages);
+		}
 	}
 	if (decision == RoutingDecision::STATIC) {
 		std::string const&	method = req.getMethod();

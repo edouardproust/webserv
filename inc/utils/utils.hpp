@@ -31,7 +31,7 @@ namespace utils {
 	bool	isExecutableFile(std::string const&);
 
 	size_t	toSizeT(std::string const&);
-
+	std::string	 	trim(const std::string& str);
 	std::string		getFileExtension(std::string const&);
 	std::string		toLowerCase(std::string const&);
 	std::vector<std::string>	split(std::string const&, char);
