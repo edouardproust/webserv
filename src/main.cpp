@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
 
 		// To be moved into 'network' listening loop:
 			std::cout << config << std::endl;
-			Request request("GET /images/hello.jpg HTTP/1\r\nHost: localhost:8080\r\n\r\n");
+			Request request("GET /images/hello.jpg HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r\n9\r\nWebserver\r\n0\r\n\r\n");
 			if (DEVMODE) std::cout << request << std::endl;
 			Response const response = Router::dispatchRequest(config, request, HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
 			if (DEVMODE) std::cout << response << std::endl;

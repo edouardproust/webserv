@@ -16,8 +16,6 @@ class StaticHandler
 
 	static std::map<std::string, std::string> _initMimeTypes();
 	static std::string 	_getMimeType(const std::string& filePath);
-	static size_t		_getFileSize(const std::string& path);
-	static std::string	_readFile(const std::string& path);
 	static Response		_serveFile(const std::string& filePath);
 	static std::string	_generateErrorPage(int statusCode, const std::string& reasonPhrase);
 

@@ -2,9 +2,6 @@
 #include "http/HttpStatus.hpp"
 #include "constants.hpp"
 #include "utils/utils.hpp"
-#include <fstream>
-#include <sstream>
-#include <cctype>
 
 std::map<std::string, std::string> StaticHandler::_mimeTypes = StaticHandler::_initMimeTypes();
 
@@ -36,30 +33,12 @@ std::string	StaticHandler::_getMimeType(const std::string& filePath)
 	 return "application/octet-stream";
 }
 
-size_t	StaticHandler::_getFileSize(const std::string& path)
-{
-	std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
-	if (!file.is_open())
-		return 0;
-	return file.tellg();
-}
-
-std::string	StaticHandler::_readFile(const std::string& path)
-{
-	std::ifstream file(path.c_str(), std::ios::binary);
-	if (!file.is_open())
-		return "";
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-	return buffer.str();
-}
-
 Response	StaticHandler::_serveFile(std::string const& filePath)
 {
-	size_t fileSize = _getFileSize(filePath);
+	size_t fileSize = utils::getFileSize(filePath);
 	if (fileSize > MAX_FILE_SIZE)
 		return handleError(HttpStatus(413), "", ErrorPages());
-	std::string content = _readFile(filePath);
+	std::string content = utils::readFile(filePath);
 	if (content.empty() && fileSize > 0)
 		return handleError(HttpStatus(500), "", ErrorPages());
 	std::string contentType = _getMimeType(filePath);
@@ -109,7 +88,7 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 		// else return a Reponse with content of a built error page (not_found or forbidden)
 		if (utils::isReadableFile(errorPath))
 		{
-			std::string content = _readFile(errorPath);
+			std::string content = utils::readFile(errorPath);
 			Response response;
 			response.setStatus(status);
 			response.setBody(content);

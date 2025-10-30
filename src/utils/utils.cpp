@@ -58,6 +58,14 @@ bool	utils::fileExists(std::string const& path)
 	return (stat(path.c_str(), &buffer) == 0);
 }
 
+size_t	utils::getFileSize(const std::string& path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
+	if (!file.is_open())
+		return 0;
+	return file.tellg();
+}
+
 /**
  * Convert a string into an unsigned int only if the string
  * contains digits or start with + or -.
@@ -109,6 +117,16 @@ char	utils::hexToChar(const std::string& hex)
 			return -1;
 	}
 	return static_cast<char>(value);
+}
+
+std::string	utils::readFile(const std::string& path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary);
+	if (!file.is_open())
+		return "";
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	return buffer.str();
 }
 
 /**

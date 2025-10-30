@@ -9,6 +9,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fstream>
 #include <cerrno>
 
 namespace utils {
@@ -33,10 +34,12 @@ namespace utils {
 	bool	isExecutableFile(std::string const& path);
 	bool	fileExists(std::string const& path);
 
+	size_t	getFileSize(const std::string& path);
 	size_t	toSizeT(std::string const&);
 	size_t	hexToSizeT(const std::string& hexStr);
 	char	hexToChar(const std::string& hex);
 
+	std::string		readFile(const std::string& path);
 	std::string		getFileExtension(std::string const&);
 	std::string		toLowerCase(const std::string&);
 	std::vector<std::string>	split(std::string const&, char);
