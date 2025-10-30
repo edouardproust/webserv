@@ -113,14 +113,13 @@ void	CgiHandler::_communicateWithChild(Request const& req) {
 	close(_stderrPipe[0]);
 }
 
-// TODO test this function returns a Response 404 if the raw response has a 404 status
 // TODO test this function with reauest POST of content-length 0 with empty body
 Response	CgiHandler::_handleStatus(int status) {
 	if (WIFEXITED(status)) {
 		if (!_cgiOutput.empty()) {
 			Response res(_cgiOutput); // throw Response::RawException (raw response invalid syntax)
 			if (!_cgiError.empty()) // warning
-				std::cerr << "[Warning] CGI (" << _executor << "): " << _cgiError << std::endl;
+				std::cerr << "[warning] CGI (" << _executor << "): " << _cgiError << std::endl;
 			return res;
 		}
 		int exitCode = WEXITSTATUS(status);

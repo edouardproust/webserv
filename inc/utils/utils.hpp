@@ -30,7 +30,7 @@ namespace utils {
 	bool	isReadableFile(std::string const&);
 	bool	isExecutableFile(std::string const&);
 
-	size_t	toSizeT(std::string const&);
+	size_t			toSizeT(std::string const&);
 	std::string	 	trim(const std::string& str);
 	std::string		getFileExtension(std::string const&);
 	std::string		toLowerCase(std::string const&);

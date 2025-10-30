@@ -1,8 +1,5 @@
-#include <config/Config.hpp>
-#include "constants.hpp"
-#include "http/dev.http.hpp"
-#include "router/Router.hpp"
-#include <iostream>
+#include "network/Network.hpp"
+#include "config/Config.hpp"
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
@@ -12,16 +9,9 @@ int main(int argc, char** argv) {
 
 	try {
 		Config config(argv[1]);
-
-		// To be moved into 'network' listening loop:
-			if (DEVMODE) std::cout << config << std::endl;
-			Request request("GET /cgi-bin/test.py HTTP/1.1\r\nHost: localhost:8080\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 13\r\n\r\nname=John Doe");
-			//Request request("GET /cgi-bin/test.php HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: WebservTest/1.0\r\n\r\n");
-			if (DEVMODE) std::cout << request << std::endl;
-			Response const response = Router::dispatchRequest(config, request, HostPortPair("localhost:8080")); // DEBUG using default ip:port pair until `network` module is done
-			if (DEVMODE) std::cout << response << std::endl;
-			//Network::_sendResponse(response);
-
+		if (DEVMODE) std::cout << config << std::endl;
+		Network network(config);
+		network.run();
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;

@@ -36,4 +36,6 @@ class HostPortPair {
 
 };
 
+std::ostream&	operator<<(std::ostream&, HostPortPair const&);
+
 #endif
