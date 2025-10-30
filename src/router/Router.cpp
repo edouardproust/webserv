@@ -43,10 +43,10 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 		try {
 			return handler.run(req, loc, filePath);
 		} catch (CgiHandler::ExecException& e) {
-			std::cerr << "[warning] CGI (" << filePath << "): " << e.what() << std::endl;
+			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
 			return StaticHandler::error(HttpStatus("internal_server_error"), locRoot, locErrorPages);
 		} catch (Response::RawException& e) {
-			std::cerr << "[warning] CGI (" << filePath << "): " << e.what() << std::endl;
+			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
 			return StaticHandler::error(HttpStatus("bad_gateway"), locRoot, locErrorPages);
 		}
 	}

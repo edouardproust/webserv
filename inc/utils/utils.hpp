@@ -38,6 +38,7 @@ namespace utils {
 	std::string		joinPath(std::string const&, std::string const&);
 	std::string		normalizePath(std::string const&);
 	std::string		trimDomain(std::string const&);
+	std::string		excerpt(size_t, std::string const&);
 
 }
 

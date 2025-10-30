@@ -25,8 +25,7 @@ BASE_SRC_FILES = \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp
 
-DEV_SRC_FILES = \
-	http/dev.http.cpp
+DEV_SRC_FILES =
 
 SRC_DIR = src
 

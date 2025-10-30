@@ -15,6 +15,7 @@ class Network {
 
 	void	_onCatchRequest(HostPortPair const&, std::string const&) const;
 	void	_sendResponse(HostPortPair const&, Response const& response) const;
+	void	_runManualTests() const;
 
 	public:
 

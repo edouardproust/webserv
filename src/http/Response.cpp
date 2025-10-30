@@ -180,9 +180,9 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 			os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: '" << response.getBody().empty() << "'\n";
+	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n[" << response.stringify() << "]\n";
+	os << "- Raw HTTP Response Preview:\n[" << utils::excerpt(EXCERPT_LENGTH, response.stringify()) << "]\n";
 	return os;
 }
 

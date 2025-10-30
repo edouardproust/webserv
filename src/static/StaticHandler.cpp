@@ -38,16 +38,17 @@ Response	StaticHandler::error(HttpStatus const& status, std::string const& locRo
 }
 
 Response	StaticHandler::get(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes) {
-	std::cout << "[DEBUG] StaticHandler:\n"
-		<< "- handle: Get\n"
-		<< "- method: " << request.getMethod() << "\n"
-		<< "- file path: " << path << "\n"
-		<< "- autoindex: " << (isAutoindex ? "true" : "false") << "\n"
-		<< "- location indexes: " << locIndexes.size() << "\n";
-	for (size_t i = 0; i < locIndexes.size(); ++i)
-		std::cout << "  - " << locIndexes[i] << "\n";
-	std::cout << std::endl;
-
+	if (DEVMODE) {
+			std::cout << "[DEBUG] StaticHandler:\n"
+			<< "- handle: Get\n"
+			<< "- method: " << request.getMethod() << "\n"
+			<< "- file path: " << path << "\n"
+			<< "- autoindex: " << (isAutoindex ? "true" : "false") << "\n"
+			<< "- location indexes: " << locIndexes.size() << "\n";
+		for (size_t i = 0; i < locIndexes.size(); ++i)
+			std::cout << "  - " << locIndexes[i] << "\n";
+		std::cout << std::endl;
+	}
 	/*
 	if path is a directory:
 		if isAutoIndex: loop over indexes and build indexPath = utils::joinPath(path, indexes[i]). If a indexPath is a readable file: return a Response with its content
@@ -61,11 +62,13 @@ Response	StaticHandler::get(Request const& request, std::string const& path, boo
 }
 
 Response	StaticHandler::del(Request const& request, std::string const& path) {
-	std::cout << "StaticHandler:\n"
-		<< "- handle: Delete\n"
-		<< "- method: " << request.getMethod() << "\n"
-		<< "- file path: " << path << "\n"
-		<< std::endl;
+	if (DEVMODE) {
+		std::cout << "[DEBUG} StaticHandler:\n"
+			<< "- handle: Delete\n"
+			<< "- method: " << request.getMethod() << "\n"
+			<< "- file path: " << path << "\n"
+			<< std::endl;
+	}
 
 	Response response;
 	return response;

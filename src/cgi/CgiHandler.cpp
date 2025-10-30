@@ -113,13 +113,13 @@ void	CgiHandler::_communicateWithChild(Request const& req) {
 	close(_stderrPipe[0]);
 }
 
-// TODO test this function with reauest POST of content-length 0 with empty body
+// TODO test this function with request POST of content-length 0 with empty body
 Response	CgiHandler::_handleStatus(int status) {
 	if (WIFEXITED(status)) {
 		if (!_cgiOutput.empty()) {
 			Response res(_cgiOutput); // throw Response::RawException (raw response invalid syntax)
 			if (!_cgiError.empty()) // warning
-				std::cerr << "[warning] CGI (" << _executor << "): " << _cgiError << std::endl;
+				std::cerr << "[WARNING] CGI (" << _executor << "): " << _cgiError << std::endl;
 			return res;
 		}
 		int exitCode = WEXITSTATUS(status);
@@ -191,7 +191,7 @@ std::ostream&	operator<<(std::ostream& os, CgiHandler const& rhs) {
 		os << "  - " << argv[i] << "\n";
 
 	os << "- CGI error: [" << (rhs.getCgiError().empty() ? "empty" : rhs.getCgiError()) << "]\n";
-	os << "- CGI raw response:\n[" << rhs.getCgiOutput() << "]\n";
+	os << "- CGI raw response:\n[" << utils::excerpt(EXCERPT_LENGTH, rhs.getCgiOutput()) << "]\n";
 
 	return os;
 }

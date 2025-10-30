@@ -167,7 +167,7 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 		os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: '" << request.getBody() << "'\n";
+	os << "- Body: [" << utils::excerpt(EXCERPT_LENGTH, request.getBody()) << "]\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
     return os;
 }

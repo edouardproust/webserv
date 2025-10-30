@@ -189,3 +189,13 @@ std::string	utils::trimDomain(std::string const& url)
 		return "/";
 	return url.substr(start);
 }
+
+/**
+ * Truncate a string as an excerpt, up to`n` chars. Will display `... (x bytes total)` after a truncated text.
+ */
+std::string	utils::excerpt(size_t n, std::string const& str) {
+	std::string excerpt = str.substr(0, n);
+	if (str.size() > n)
+    	excerpt += "... (" + toString(str.size()) + " bytes total)";
+	return excerpt;
+}
