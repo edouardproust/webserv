@@ -49,6 +49,22 @@ bool	utils::isExecutableFile(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFREG, X_OK);
 }
 
+bool	utils::fileExists(std::string const& path)
+{
+	if (path.empty() || path[0] != '/')
+		return false;
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0);
+}
+
+size_t	utils::getFileSize(const std::string& path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
+	if (!file.is_open())
+		return 0;
+	return file.tellg();
+}
+
 /**
  * Convert a string into an unsigned int only if the string
  * contains digits or start with + or -.
@@ -69,18 +85,46 @@ size_t	utils::toSizeT(std::string const& str)
 	return static_cast<size_t>(value);
 }
 
-
-std::string	utils::trim(const std::string& str)
+size_t	utils::hexToSizeT(const std::string& hexStr)
 {
-	size_t start = 0;
+	if (hexStr.empty())
+		return static_cast<size_t>(-1);
+	size_t result;
+	std::stringstream ss;
+	ss << std::hex << hexStr;
+	if (!(ss >> result))
+		 return static_cast<size_t>(-1);
+	return result;
+}
 
-	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
-		start++;
+char	utils::hexToChar(const std::string& hex)
+{
+	if (hex.length() != 2)
+		return -1;
+	int value = 0;
+	for (size_t i = 0; i < 2; i++)
+	{
+		char c = hex[i];
+		if (c >= '0' && c <= '9')
+			value = value * 16 + (c - '0');
+		else if (c >= 'A' && c <= 'F')
+			value = value * 16 + (c - 'A' + 10);
+		else if (c >= 'a' && c <= 'f')
+			value = value * 16 + (c - 'a' + 10);
+		else
+			return -1;
+	}
+	return static_cast<char>(value);
+}
 
-	size_t end = str.size();
-	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
-		end--;
-	return str.substr(start, end - start);
+std::string	utils::readFile(const std::string& path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary);
+	if (!file.is_open())
+		return "";
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	return buffer.str();
 }
 
 /**
@@ -181,6 +225,31 @@ std::string utils::normalizePath(std::string const& path) {
 	return normalized;
 }
 
+/**
+ * Delete leading and trailing space and tab chars from a string.
+ */
+std::string	utils::trim(const std::string& str)
+{
+	size_t start = 0;
+
+	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
+		start++;
+
+	size_t end = str.size();
+	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
+		end--;
+	return str.substr(start, end - start);
+}
+
+/**
+ * Remove the domain of a URL.
+ *
+ * Examples:
+ * - `https://mydomain.com/path/file.txt` -> `/path/file.txt`
+ * - `anything://mydomain.com/file.txt -> `/file.txt`
+ * - `/path/file.txt` -> `/path/file.txt`
+ * - `http://mydomain.com` -> empty string
+ */
 std::string	utils::trimDomain(std::string const& url)
 {
 	size_t pos = url.find("://");
@@ -191,7 +260,9 @@ std::string	utils::trimDomain(std::string const& url)
 }
 
 /**
- * Truncate a string as an excerpt, up to`n` chars. Will display `... (x bytes total)` after a truncated text.
+ * Truncate a string as an excerpt, up to`n` chars.
+ *
+ * Will display `... (x bytes total)` after a truncated text.
  */
 std::string	utils::excerpt(size_t n, std::string const& str) {
 	std::string excerpt = str.substr(0, n);

@@ -20,84 +20,128 @@ RequestParser::~RequestParser() {}
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
 	if (rawRequest.empty())
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus("bad_request"));
 	size_t requestStart;
 	if (!_isValidStart(rawRequest, requestStart))
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus("bad_request"));
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus("bad_request"));
 	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
-		return request.setStatus(PARSE_ERR_BAD_REQUEST);
+		return request.setStatus(HttpStatus("bad_request"));
 	std::string	requestLine = partBeforeBody.substr(0, requestLineEnd);
 	std::string	headersPart = partBeforeBody.substr(requestLineEnd + 2);
-	ParseStatus	result = _parseRequestLine(request, requestLine);
-	if (result != PARSE_SUCCESS)
+	HttpStatus	result = _parseRequestLine(request, requestLine);
+	if (result.getSlug() != "ok")
 		return request.setStatus(result);
 	bool hasBody = _hasBody(rawRequest, headersEnd);
 	result = _parseHeaders(request, headersPart, hasBody);
-	if (result != PARSE_SUCCESS)
+	if (result.getSlug() != "ok")
 		return request.setStatus(result);
 	size_t bodyStart = headersEnd + 4;
 	if (hasBody)
 	{
 		std::string body = rawRequest.substr(bodyStart);
 		request.setBody(body);
-		ParseStatus bodyResult = _validateBody(request);
-		if (bodyResult != PARSE_SUCCESS)
+		HttpStatus bodyResult = _validateBody(request);
+		if (bodyResult.getSlug() != "ok")
 			return request.setStatus(bodyResult);
 	}
-	request.setStatus(PARSE_SUCCESS);
+	request.setStatus(HttpStatus("ok"));
 }
 
-ParseStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
 {
 	for (size_t i = 0; i < line.length(); i++)
 	{
 		if (line[i] != ' ' && std::isspace(line[i]))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus("bad_request");
 	}
 	std::istringstream	requestLineStream(line);
-	std::string	methodStr, _requestTarget, _version;
-	if (!(requestLineStream >> methodStr >> _requestTarget >> _version))
-		return PARSE_ERR_BAD_REQUEST;
+	std::string	methodStr, _requestTarget, versionStr;
+	if (!(requestLineStream >> methodStr >> _requestTarget >> versionStr))
+		return HttpStatus("bad_request");
 	char c;
 	while (requestLineStream.get(c))
 	{
 		if (c != ' ')
-			 return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus("bad_request");
 	}
-	_parseRequestTarget(request, _requestTarget);
+	HttpStatus result = _parseRequestTarget(request, _requestTarget);
+	if (result.getSlug() != "ok")
+	 	return result;
 	if (!_isValidMethod(methodStr))
-		return PARSE_ERR_BAD_REQUEST;
-	if (!_isValidPath(request.getPath()))
-		return PARSE_ERR_BAD_REQUEST;
-	if (!_isValidVersion(_version))
-		return PARSE_ERR_VERSION_NOT_SUPPORTED;
+		return HttpStatus("bad_request");
+	if (Request::isExistingMethod(methodStr))
+		return HttpStatus("not_implemented");
+	if (!_isValidVersion(versionStr))
+		return HttpStatus("bad_request");
+	if (versionStr != "HTTP/1.1")
+		return HttpStatus("version_not_supported");
 	request.setMethod(methodStr);
-	request.setVersion(_version);
-	return PARSE_SUCCESS;
+	request.setVersion(versionStr);
+	return HttpStatus("ok");
 }
 
-void 	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget) const
+HttpStatus	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget)
 {
 	request.setRequestTarget(_requestTarget);
 	size_t queryPos = _requestTarget.find('?');
 	if (queryPos != std::string::npos)
 	{
-		request.setPath(_requestTarget.substr(0, queryPos));
-		request.setQueryString(_requestTarget.substr(queryPos + 1));
+		std::string path = _requestTarget.substr(0, queryPos);
+		std::string query = _requestTarget.substr(queryPos + 1);
+		if (!_isValidPath(path))
+			return HttpStatus("bad_request");
+		std::string decodedPath, decodedQuery;
+		if (_parseUrl(decodedPath, path).getSlug() != "ok")
+			return HttpStatus("bad_request");
+		if (_parseUrl(decodedQuery, query).getSlug() != "ok")
+			return HttpStatus("bad_request");
+		request.setPath(decodedPath);
+		request.setQueryString(decodedQuery);
 	}
 	else
 	{
-		request.setPath(_requestTarget);
+		if (!_isValidPath(_requestTarget))
+			return HttpStatus("bad_request");
+		std::string decodedPath;
+		if (_parseUrl(decodedPath, _requestTarget).getSlug() != "ok")
+			return HttpStatus("bad_request");
+		request.setPath(decodedPath);
 		request.setQueryString("");
 	}
+	return HttpStatus("ok");
 }
 
-ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
+HttpStatus RequestParser::_parseUrl(std::string& result, const std::string& encoded)
+{
+	result.clear();
+	for (size_t i = 0; i < encoded.length(); i++)
+	{
+		if (encoded[i] == '%' && i + 2 < encoded.length())
+		{
+			std::string hex = encoded.substr(i + 1, 2);
+			if (!std::isxdigit(hex[0]) || !std::isxdigit(hex[1]))
+				return HttpStatus("bad_request");
+			char decodedChar = utils::hexToChar(hex);
+			if (decodedChar == '\0' || decodedChar == '\r' || decodedChar == '\n' ||
+				decodedChar == '\t' || decodedChar == '\v' || decodedChar == '\f')
+				return HttpStatus("bad_request");
+			result += decodedChar;
+			i += 2;
+		}
+		else if (encoded[i] == '+')
+			result += ' ';
+		else
+			result += encoded[i];
+	}
+	return HttpStatus("ok");
+}
+
+HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
@@ -108,48 +152,104 @@ ParseStatus RequestParser::_parseHeaders(Request& request, const std::string& he
 		if (line.empty())
 			break ;
 		if (std::isspace(line[0]))
-			return PARSE_ERR_BAD_REQUEST;
-		ParseStatus result = _parseHeaderLine(request, line);
-		if (result != PARSE_SUCCESS)
+			return HttpStatus("bad_request");
+		HttpStatus result = _parseHeaderLine(request, line);
+		if (result.getSlug() != "ok")
 			return result;
 	}
 	std::map<std::string, std::string> headers = request.getHeaders();
+	if (headers.find("content-length") != headers.end() &&
+		headers.find("transfer-encoding") != headers.end())
+			return HttpStatus("bad_request");
 	if (headers.find("host") == headers.end())
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus("bad_request");
 	if (hasBody)
 	{
-		if (headers.find("content-length") == headers.end())
-			return PARSE_ERR_LENGTH_REQUIRED;
+		if ((headers.find("content-length") == headers.end()) &&
+			headers.find("transfer-encoding") == headers.end())
+			return HttpStatus("length_required");
 	}
-	return PARSE_SUCCESS;
+	return HttpStatus("ok");
 }
 
-ParseStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus("bad_request");
 	std::string	name = line.substr(0, colonPos);
 	std::string	value = line.substr(colonPos + 1);
 	if (!name.empty() && std::isspace(name[name.length() - 1]))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus("bad_request");
 	if (name.empty())
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus("bad_request");
 	if (!_isValidHeaderName(name))
-		return PARSE_ERR_BAD_REQUEST;
+		return HttpStatus("bad_request");
 	value = utils::trim(value);
-
+	if (!_isValidHeaderValue(value))
+		return HttpStatus("bad_request");
 	std::string normalizedName = _normalizeHeaderName(name);
-	request.addHeader(normalizedName, value);
-	if (normalizedName == "content-type") {
-    	request.setContentType(value);
+	if (normalizedName == "content-type")
+	{
+		if (!_isValidContentType(value))
+			return HttpStatus("bad_request");
+		request.setContentType(value);
 	}
-	// -- additional check/set for specific headers can be added here --
-
-	return PARSE_SUCCESS;
+	if (normalizedName == "transfer-encoding")
+	{
+		std::string normalizedValue = utils::toLowerCase(value);
+		if (normalizedValue == "gzip" || normalizedValue == "deflate" ||
+			normalizedValue == "compress" || normalizedValue == "br")
+			return HttpStatus("not_implemented");
+		else if (normalizedValue != "chunked")
+			return HttpStatus("bad_request");
+	}
+	request.addHeader(normalizedName, value);
+	return HttpStatus("ok");
 }
 
-ParseStatus	RequestParser::_validateBody(const Request& request)
+HttpStatus	RequestParser::_parseChunkedBody(Request& request)
+{
+	std::string chunkedData = request.getBody();
+	std::stringstream unchunkedBody;
+	size_t pos = 0;
+	const size_t dataLength = chunkedData.length();
+
+	while (pos < dataLength)
+	{
+		size_t lineEnd = chunkedData.find("\r\n", pos);
+		if (lineEnd == std::string::npos)
+			return HttpStatus("bad_request");
+		std::string chunkSizeStr = chunkedData.substr(pos, lineEnd - pos);
+		if (chunkSizeStr.empty())
+			return HttpStatus("bad_request");
+		for (size_t i = 0; i < chunkSizeStr.length(); i++)
+		{
+			if (!std::isxdigit(chunkSizeStr[i]))
+				return HttpStatus("bad_request");
+		}
+		size_t chunkSize = utils::hexToSizeT(chunkSizeStr);
+		if (chunkSize == static_cast<size_t>(-1))
+			return HttpStatus("bad_request");
+		pos = lineEnd + 2;
+		if (chunkSize == 0)
+		 	break ;
+		if (pos + chunkSize + 2 > dataLength)
+			return HttpStatus("bad_request");
+		std::string chunkData = chunkedData.substr(pos, chunkSize);
+		unchunkedBody << chunkData;
+		size_t dataEnd = pos + chunkSize;
+		if (chunkedData.substr(dataEnd, 2) != "\r\n")
+			return HttpStatus("bad_request");
+		pos = dataEnd + 2;
+	}
+	if (pos + 2 != dataLength || chunkedData.substr(pos, 2) != "\r\n")
+		return HttpStatus("bad_request");
+	request.setBody(unchunkedBody.str());
+	return HttpStatus("ok");
+}
+
+HttpStatus	RequestParser::_validateBody(Request& request)
 {
 	std::map<std::string, std::string> headers = request.getHeaders();
 
@@ -159,11 +259,13 @@ ParseStatus	RequestParser::_validateBody(const Request& request)
 		unsigned long contentLength;
 		std::istringstream contentLengthStream(contentLengthStr);
 		if (!(contentLengthStream >> contentLength))
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus("bad_request");
 		if (request.getBody().length() != contentLength)
-			return PARSE_ERR_BAD_REQUEST;
+			return HttpStatus("bad_request");
 	}
-	return PARSE_SUCCESS;
+	if (headers.find("transfer-encoding") != headers.end())
+			return _parseChunkedBody(request);
+	return HttpStatus("ok");
 }
 
 bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& requestStart) const
@@ -189,7 +291,7 @@ bool	RequestParser::_isValidMethod(const std::string& methodStr) const
 		if (!std::isalpha(methodStr[i]) || !std::isupper(methodStr[i]))
 			return false;
     }
-	return (Request::isSupportedMethod(methodStr));
+	return (Request::isSupportedMethod(methodStr) || Request::isExistingMethod(methodStr));
 }
 
 bool	RequestParser::_isValidPath(const std::string& _path) const
@@ -201,11 +303,51 @@ bool	RequestParser::_isValidPath(const std::string& _path) const
 	return true;
 }
 
-bool	RequestParser::_isValidVersion(const std::string& _version) const
+bool	RequestParser::_isValidVersion(const std::string& versionStr) const
 {
-	if (_version.empty())
+	if (versionStr.empty())
 		return false;
-	 return _version == "HTTP/1.1";
+	if (versionStr.compare(0, 5, "HTTP/") != 0)
+		return false;
+	if (versionStr.length() <= 5)
+		return false;
+	std::string versionNum = versionStr.substr(5);
+	if (versionNum.empty())
+		return false;
+	if (versionNum[0] == '.' || versionNum[versionNum.length() - 1] == '.')
+		return false;
+	size_t dotPos = versionNum.find('.');
+	if (dotPos != std::string::npos)
+	{
+		if (dotPos == 0 || dotPos == versionNum.length() - 1)
+			return false;
+		std::string majorStr = versionNum.substr(0, dotPos);
+		std::string minorStr = versionNum.substr(dotPos + 1);
+		if (minorStr.find('.') != std::string::npos)
+			return false;
+		if (!_isValidVersionNumber(majorStr) || !_isValidVersionNumber(minorStr))
+			return false;
+	}
+	else
+	{
+		if (!_isValidVersionNumber(versionNum))
+			return false;
+	}
+	return true;
+}
+
+bool	RequestParser::_isValidVersionNumber(const std::string& numStr) const
+{
+	if (numStr.empty())
+		return false;
+	for (size_t i = 0; i < numStr.length(); i++)
+	{
+		if (!std::isdigit(numStr[i]))
+			return false;
+	}
+	if (numStr.length() > 1 && numStr[0] == '0')
+			return false;
+	return true;
 }
 
 bool	RequestParser::_isValidHeaderName(const std::string& name) const
@@ -215,6 +357,42 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 	for (size_t i = 0; i < name.length(); i++)
 	{
 		if (!std::isalnum(name[i]) && validChars.find(name[i]) == std::string::npos)
+			return false;
+	}
+	return true;
+}
+
+bool	RequestParser::_isValidHeaderValue(const std::string& value) const
+{
+	for (size_t i = 0; i < value.length(); i++)
+	{
+		if (value[i] == '\0')
+			return false;
+		if (value[i] < 0x20 || value[i] == 0x7F)
+			return false;
+	}
+	return true;
+}
+
+bool	RequestParser::_isValidContentType(const std::string& contentType) const
+{
+	if (contentType.empty())
+		return false;
+	size_t slashPos = contentType.find('/');
+	if (slashPos == std::string::npos || slashPos == 0)
+		return false;
+	if (contentType.find('\0') != std::string::npos)
+		return false;
+	return true;
+}
+
+bool	RequestParser::_isValidContentLength(const std::string& contentLength) const
+{
+	if (contentLength.empty())
+		return false;
+	for (size_t i = 0; i < contentLength.length(); i++)
+	{
+		if (contentLength[i] < '0' || contentLength[i] > '9')
 			return false;
 	}
 	return true;

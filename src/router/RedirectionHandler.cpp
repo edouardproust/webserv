@@ -10,6 +10,7 @@ Response	RedirectionHandler::run(int code, std::string const& path) {
 	}
 	// Dummy response
 	Response response;
-	response.setError(code);
+	response.setStatus(HttpStatus(code));
+	response.setHeader("Location", path); // Needed : Location header for redirect
 	return response;
 }

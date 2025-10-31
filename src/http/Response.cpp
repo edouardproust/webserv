@@ -36,7 +36,7 @@ Response::RawException::RawException(std::string const& msg)
 
 void	Response::_initDefaultHeaders() {
 	_headers["server"] = SERVER_SOFTWARE;
-	_headers["date"] = getCurrentDate();
+	_headers["date"] = _getCurrentDate();
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
 }
@@ -71,6 +71,8 @@ const std::string& Response::getBody() const
 void	Response::setStatus(const HttpStatus& status)
 {
 	_status = status;
+	if (status.getCode() == 204)
+		setBody("");
 }
 
 void	Response::setHeader(const std::string& name, const std::string& value)
@@ -101,15 +103,7 @@ void	Response::setBody(const std::string& body)
 		_headers.erase("content-type");
 }
 
-void	Response::setError(const HttpStatus& status)
-{
-	setStatus(status);
-	setHeader("Content-Type", "text/html");
-	std::string errorBody = _generateErrorPage();
-	setBody(errorBody);
-}
-
-std::string Response::getCurrentDate() const
+std::string Response::_getCurrentDate() const
 {
 	time_t now = time(0);
 	struct tm* timeinfo = gmtime(&now);
@@ -118,7 +112,7 @@ std::string Response::getCurrentDate() const
 	return buffer;
 }
 
-bool	Response::hasHeader(const std::string& keyLowcase) const {
+bool	Response::_hasHeader(const std::string& keyLowcase) const {
 	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
 		if (utils::toLowerCase(it->first) == keyLowcase)
 			return true;
@@ -126,27 +120,11 @@ bool	Response::hasHeader(const std::string& keyLowcase) const {
 	return false;
 }
 
-std::string Response::_generateErrorPage() const
-{
-	std::stringstream html;
-
-	html << "<html>\n"
-		 << "  <head>\n"
-		 << "    <title>" << _status.toString() << "</title>\n"
-		 << "  </head>\n"
-		 << "  <body>\n"
-		 << "    <center><h1>" << _status.toString() << "</h1></center>\n"
-		 << "    <hr><center>" << SERVER_SOFTWARE << "</center>\n"
-		 << "  </body>\n"
-		 << "</html>";
-	return html.str();
-}
-
 std::string Response::_buildStatusLine() const
 {
 	std::stringstream statusLine;
 
-	statusLine << "HTTP/1.1 " << _status.toString() << "\r\n";
+	statusLine << "HTTP/1.1 " << _status.getCode() << " " << _status.getReason() << "\r\n";
 	return statusLine.str();
 }
 
@@ -174,7 +152,7 @@ std::string Response::_buildHeaders() const
 std::ostream& operator<<(std::ostream& os, const Response& response)
 {
 	os << "Response:\n";
-	os << "- Status: " << response.getStatus().toString() << "\n";
+	os << "- Status: " << response.getStatus().getCode() << " " << response.getStatus().getReason() << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = response.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
@@ -214,7 +192,7 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 
 	// Set Response attributes
 	int statusCode = _setHeaders(headersPart);
-	if (!hasHeader("content-type"))
+	if (!_hasHeader("content-type"))
 		throw RawException("missing Content-Type header");
 	setStatus(HttpStatus(statusCode));
 	setBody(bodyPart);

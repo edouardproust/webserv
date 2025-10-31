@@ -11,7 +11,7 @@
 build/
 .vscode/
 
-# Specitif files
+# Specific files
 webserv
 webserv_dev
 log*

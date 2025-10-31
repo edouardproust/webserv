@@ -22,16 +22,14 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	if (DEVMODE) std::cout << rd << std::endl;
 	RoutingDecision::Decision decision = rd.getDecision();
 	LocationBlock const* loc = rd.getLocation();
-	std::string const& locRoot = loc->getRoot();
-	ErrorPages const& locErrorPages = loc->getErrorPages();
 
 	// error, redirection
 	HttpStatus const& reqStatus = req.getStatus();
 	if (reqStatus.getSlug() != "ok")
-		return StaticHandler::error(HttpStatus(reqStatus), locRoot, locErrorPages);
+		return StaticHandler::handleError(HttpStatus(reqStatus), loc);
 
 	if (decision == RoutingDecision::ERROR)
-		return StaticHandler::error(HttpStatus(rd.getErrorSlug()), locRoot, locErrorPages);
+		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()), loc);
 	if (decision == RoutingDecision::REDIRECTION) {
 		std::pair<int, std::string> const& ret = loc->getReturn();
 		return RedirectionHandler::run(ret.first, ret.second);
@@ -44,24 +42,24 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 			return handler.run(req, loc, filePath);
 		} catch (CgiHandler::ExecException& e) {
 			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
-			return StaticHandler::error(HttpStatus("internal_server_error"), locRoot, locErrorPages);
+			return StaticHandler::handleError(HttpStatus("internal_server_error"), loc);
 		} catch (Response::RawException& e) {
 			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
-			return StaticHandler::error(HttpStatus("bad_gateway"), locRoot, locErrorPages);
+			return StaticHandler::handleError(HttpStatus("bad_gateway"), loc);
 		}
 	}
 	if (decision == RoutingDecision::STATIC) {
 		std::string const&	method = req.getMethod();
 		if (method == "GET")
-			return StaticHandler::get(req, filePath, loc->getAutoindex() == "on", loc->getIndexFiles());
+			return StaticHandler::handleGet(req, filePath, loc);
 		else if (method == "DELETE")
-			return StaticHandler::del(req, filePath);
+			return StaticHandler::handleDelete(req, filePath, loc);
 		// -- additional supported methods can be added here -- // TODO PUT method
 		else
-			return StaticHandler::error(HttpStatus("method_not_allowed"), locRoot, locErrorPages);
+			return StaticHandler::handleError(HttpStatus("method_not_allowed"), loc);
 	}
 	// fallback
-	return StaticHandler::error(HttpStatus("internal_server_error"), locRoot, locErrorPages);
+	return StaticHandler::handleError(HttpStatus("internal_server_error"), loc);
 }
 
 std::string	Router::_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath) {

@@ -1,13 +1,23 @@
-#ifndef STATIQ_HPP
-#define STATIQ_HPP
+#ifndef STATICHANDLER_HPP
+#define STATICHANDLER_HPP
 
 #include "http/Response.hpp"
+#include "config/LocationBlock.hpp"
 #include "utils/utils.hpp"
 #include "typedefs.hpp"
 
-class StaticHandler {
+class StaticHandler
+{
+	private:
 
-	// Not used
+	static std::map<std::string, std::string> _mimeTypes;
+
+	static std::map<std::string, std::string> _initMimeTypes();
+	static std::string 	_getMimeType(const std::string& filePath);
+	static Response		_serveFile(const std::string& filePath, LocationBlock const*);
+	static std::string	_generateErrorPage(HttpStatus const& status);
+
+	// TODO make canonical
 	StaticHandler();
 	StaticHandler(StaticHandler const&);
 	~StaticHandler();
@@ -15,9 +25,10 @@ class StaticHandler {
 
 	public:
 
-		static Response	error(HttpStatus const&, std::string const&, ErrorPages const&);
-		static Response	get(Request const&, std::string const&, bool, std::vector<std::string> const&);
-		static Response	del(Request const&, std::string const&);
+	static Response	handleGet(Request const&, std::string const&, LocationBlock const*);
+	static Response	handleDelete(Request const&, std::string const&, LocationBlock const*);
+	//static Response	handlePut(std::string const&, Request const&);
+	static Response	handleError(HttpStatus const&, LocationBlock const*);
 
 };
 

@@ -7,6 +7,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fstream>
 #include <cerrno>
 
 namespace utils {
@@ -26,17 +27,23 @@ namespace utils {
 
 	bool	isInt(std::string const&);
 	bool	isAbsolutePath(std::string const&);
-	bool	isAccessibleDirectory(std::string const&);
-	bool	isReadableFile(std::string const&);
-	bool	isExecutableFile(std::string const&);
+	bool	isAccessibleDirectory(std::string const& path);
+	bool	isReadableFile(std::string const& path);
+	bool	isExecutableFile(std::string const& path);
+	bool	fileExists(std::string const& path);
 
-	size_t			toSizeT(std::string const&);
-	std::string	 	trim(const std::string& str);
+	size_t	getFileSize(const std::string& path);
+	size_t	toSizeT(std::string const&);
+	size_t	hexToSizeT(const std::string& hexStr);
+	char	hexToChar(const std::string& hex);
+
+	std::string		readFile(const std::string& path);
 	std::string		getFileExtension(std::string const&);
 	std::string		toLowerCase(std::string const&);
 	std::vector<std::string>	split(std::string const&, char);
 	std::string		joinPath(std::string const&, std::string const&);
 	std::string		normalizePath(std::string const&);
+	std::string	 	trim(const std::string& str);
 	std::string		trimDomain(std::string const&);
 	std::string		excerpt(size_t, std::string const&);
 

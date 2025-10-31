@@ -13,6 +13,7 @@ class Request
 
 		HttpStatus	_status;
 		static std::set<std::string> _supportedMethods;
+		static std::set<std::string> _existingMethods;
 		std::string	_method;
 		std::string	_requestTarget;
 		std::string _path;
@@ -21,18 +22,19 @@ class Request
 		std::map<std::string, std::string> _headers;
 		std::string	_contentType;
 		std::string	_body;
-		size_t		_bodySize;
-
-		Request(); // Not used
 
 	public:
 
-		Request(std::string const& rawRequest);
+		Request();
+		Request(std::string  const& rawRequest);
 		Request(const Request& other);
 		Request& operator=(const Request& other);
 		~Request();
 
 		static bool	isSupportedMethod(std::string const& method);
+		static bool	isExistingMethod(std::string const& method);
+		static bool	isSupportedVersion(std::string const& version);
+		static bool	isExistingVersion(std::string const& version);
 
 		const HttpStatus&	getStatus() const;
 		const std::string&	getMethod() const;
@@ -43,7 +45,6 @@ class Request
 		const std::map<std::string, std::string>&	getHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
-		size_t				getBodySize() const;
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
