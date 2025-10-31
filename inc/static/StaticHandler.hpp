@@ -25,8 +25,8 @@ class StaticHandler
 
 	public:
 
-	static Response	handleGet(Request const&, std::string const&, LocationBlock const*);
-	static Response	handleDelete(Request const&, std::string const&, LocationBlock const*);
+	static Response	handleGet(std::string const&, LocationBlock const*);
+	static Response	handleDelete(std::string const&, LocationBlock const*);
 	//static Response	handlePut(std::string const&, Request const&);
 	static Response	handleError(HttpStatus const&, LocationBlock const*);
 

@@ -70,15 +70,6 @@ Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock cons
 	std::string const& locRoot = loc->getRoot();
 	ErrorPages const& locErrorPages = loc->getErrorPages();
 
-	std::cout << "StaticHandler:\n"
-		<< "- action: Error\n"
-		<< "- status: " << status.toString() << "\n"
-		<< "- location root: " << locRoot << "\n"
-		<< "- error pages: " << locErrorPages.size() << "\n";
-	for (ErrorPages::const_iterator it = locErrorPages.begin(); it != locErrorPages.end(); ++it)
-		std::cout << "  - " << it->first << " -> " << it->second << "\n";
-	std::cout << std::endl;
-
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (search != locErrorPages.end())
 	{
@@ -101,20 +92,10 @@ Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock cons
 	return response;
 }
 
-Response	StaticHandler::handleGet(Request const& request, std::string const& path, LocationBlock const* loc)
+Response	StaticHandler::handleGet(std::string const& path, LocationBlock const* loc)
 {
 	std::vector<std::string> locIndexes = loc->getIndexFiles();
 	bool isAutoindex = loc->getAutoindex() == "on";
-
-	std::cout << "StaticHandler:\n"
-		<< "- handle: Get\n"
-		<< "- method: " << request.getMethod() << "\n"
-		<< "- file path: " << path << "\n"
-		<< "- autoindex: " << (isAutoindex ? "true" : "false") << "\n"
-		<< "- location indexes: " << locIndexes.size() << "\n";
-	for (size_t i = 0; i < locIndexes.size(); ++i)
-		std::cout << "  - " << locIndexes[i] << "\n";
-	std::cout << std::endl;
 
 	if (utils::isAccessibleDirectory(path))
 	{
@@ -137,19 +118,14 @@ Response	StaticHandler::handleGet(Request const& request, std::string const& pat
 		return handleError(HttpStatus("not_found"), loc);
 }
 
-Response	StaticHandler::handleDelete(Request const& request, std::string const& path, LocationBlock const* loc)
+Response	StaticHandler::handleDelete(std::string const& path, LocationBlock const* loc)
 {
-	std::cout << "StaticHandler:\n"
-		<< "- handle: Delete\n"
-		<< "- method: " << request.getMethod() << "\n"
-		<< "- file path: " << path << "\n"
-		<< std::endl;
 	if (!utils::fileExists(path))
 		return handleError(HttpStatus("not_found"), loc);
 	std::string dir = path.substr(0, path.find_last_of('/'));
 	if (access(dir.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"), loc);
-	if (std::remove(path.c_str()) == 0)
+	if (std::remove(path.c_str()) == 0) // TODO Method std::remove is allowed ?
 	{
 		Response response;
 		response.setStatus(HttpStatus("no_content"));

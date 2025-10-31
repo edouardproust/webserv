@@ -36,6 +36,8 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	}
 	// cgi, static
 	std::string filePath = _buildFilePath(loc->getRoot(), loc->getPath(), req.getPath());
+	if (DEVMODE)
+		std::cout << "Router:\n- filePath: " << filePath << "\n" << std::endl;
 	if (decision == RoutingDecision::CGI) {
 		CgiHandler handler;
 		try {
@@ -51,9 +53,9 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	if (decision == RoutingDecision::STATIC) {
 		std::string const&	method = req.getMethod();
 		if (method == "GET")
-			return StaticHandler::handleGet(req, filePath, loc);
+			return StaticHandler::handleGet(filePath, loc);
 		else if (method == "DELETE")
-			return StaticHandler::handleDelete(req, filePath, loc);
+			return StaticHandler::handleDelete(filePath, loc);
 		// -- additional supported methods can be added here -- // TODO PUT method
 		else
 			return StaticHandler::handleError(HttpStatus("method_not_allowed"), loc);

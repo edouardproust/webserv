@@ -9,7 +9,7 @@
 class Router
 {
 
-	// Not used
+	// TODO make canonical
 	Router();
 	Router(Router const&);
 	Router&	operator=(Router const&);
