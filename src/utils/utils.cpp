@@ -193,6 +193,27 @@ std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
 	return joinedPath;
 }
 
+std::string utils::joinRelativePath(const std::string& path) {
+	if (path.empty())
+		throw std::runtime_error("empty relative path");
+
+	if (path.rfind("./", 0) != 0)
+		throw std::runtime_error("relative path must start with './'");
+
+	char cwd[PATH_MAX];
+	if (!getcwd(cwd, sizeof(cwd)))
+		throw std::runtime_error("failed to get current working directory to join relative path)");
+
+	std::string rel = path.substr(2); // remove "./"
+	std::string fullPath = cwd;
+
+	if (!rel.empty() && rel[0] != '/')
+		fullPath += "/";
+	fullPath += rel;
+
+	return normalizePath(fullPath);
+}
+
 /**
  * Normalize a path by:
  * - Removing redundant '.' segments

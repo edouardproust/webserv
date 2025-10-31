@@ -111,7 +111,7 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 void	LocationBlock::_setPath(std::string& path) {
 	if (!utils::isAbsolutePath(path))
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
-	_path = Config::normalizePath(path);
+	_path = utils::normalizePath(path);
 }
 
 void	LocationBlock::setServer(ServerBlock* server) {
@@ -127,8 +127,12 @@ void	LocationBlock::_setRoot(Tokens const& tokens) {
 	std::string root = tokens[1];
 	if (root.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (!utils::isAbsolutePath(root))
-		throw std::runtime_error("Not an absolute path: '" + root + "'");
+	if (!utils::isAbsolutePath(root)) {
+		if (root.rfind("./", 0) == 0)
+			root = utils::joinRelativePath(root);
+		else
+			throw std::runtime_error("Not an absolute or './' path: '" + root + "'");
+	}
 	_root = root;
 }
 
@@ -322,7 +326,7 @@ std::string const	LocationBlock::getCgiExecutor(std::string const& extension) co
 }
 
 /**
- * server can be NULL. The getters are built accordingly (security)
+ * If server is NULL, it may lead to unexpected behaviour
  */
 LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server) {
 	static LocationBlock defaultLocation(server);

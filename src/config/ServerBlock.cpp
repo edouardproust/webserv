@@ -83,7 +83,7 @@ void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t
 		else
 			throw std::runtime_error("Unsupported block: " + tokens[0]);
 	} catch (std::exception& e) {
-		throw std::runtime_error(blockName + ": " + e.what()); // wrap error msg with the block name
+		throw std::runtime_error(blockName + (blockName == "location" && tokens.size() > 1 ? " " + tokens[1] : "") + ": " + e.what()); // wrap error msg with the block name
 	}
 	tokens.clear();
 }
@@ -148,9 +148,13 @@ void	ServerBlock::_setRoot(Tokens const& tokens) {
 	std::string root = tokens[1];
 	if (root.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (!utils::isAbsolutePath(root))
-		throw std::runtime_error("Not an absolute path: '" + root + "'");
-	_root = Config::normalizePath(root);
+	if (!utils::isAbsolutePath(root)) {
+		if (root.rfind("./", 0) == 0)
+			root = utils::joinRelativePath(root);
+		else
+			throw std::runtime_error("Not an absolute or './' path: '" + root + "'");
+	}
+	_root = utils::normalizePath(root);
 }
 
 /**

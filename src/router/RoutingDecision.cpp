@@ -66,7 +66,7 @@ void	RoutingDecision::_setLocation() {
 			}
 		}
 	}
-	_location = best ? best : &LocationBlock::getDefaultLocation(NULL);
+	_location = best ? best : &LocationBlock::getDefaultLocation(_server);
 }
 
 void	RoutingDecision::_setError(std::string const& errorSlug) {
