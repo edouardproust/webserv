@@ -4,9 +4,10 @@
 
 Request const&	dev::parseRequest(std::string const& rawRequest) {
 	static RequestParser parser;
-	static Request request(rawRequest);
+	static Request request;
+	parser.parseRequest(request, rawRequest);
 	if (request.getStatus().getCode() != 200) {
-		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus()));
+		throw std::runtime_error("Error parsing request: " + utils::toString(request.getStatus().getCode()));
 	}
 	return (request);
 }
@@ -70,7 +71,7 @@ void dev::runParserValidationTests()
 		Request request(rawRequests[i]);
 		std::cout << "Test " << (i + 1) << ": " << descriptions[i] << " - "
 			<< (request.getStatus().getCode() == 200 ? "PASS" : "FAIL")
-			<< " (" << request.getStatus() << ")" << std::endl;
+			<< " (" << request.getStatus().getCode() << ")" << std::endl;
 	}
 }
 
@@ -110,7 +111,7 @@ void dev::runParsedContentTests()
 
         Request request(tests[i].rawRequest);
 
-        std::cout << "Parse status: " << request.getStatus() << std::endl;
+        std::cout << "Parse status: " << request.getStatus().getCode() << std::endl;
 
         if (request.getStatus().getCode() == 200)
 		{
@@ -125,7 +126,6 @@ void dev::runParsedContentTests()
 
 void dev::runResponseTests()
 {
-
 	std::cout << "---Test 1: 200 OK, with body---" << std::endl << std::endl ;
     Response response1;
     response1.setStatus(HttpStatus(200));
@@ -133,10 +133,9 @@ void dev::runResponseTests()
 	response1.setBody("<html><body><h1>Hello World</h1></body></html>");
     std::cout << response1.stringify() << std::endl;
 
-	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
-    Response response2;
-	response2.setError(404);
-	std::cout << response2.stringify() << std::endl;
+//	std::cout << "\n---Test 2: 404, with body---" << std::endl << std::endl ;
+//	Response response2 = StaticHandler::handleError(HttpStatus(404)); signature function will prob change
+//	std::cout << response2.stringify() << std::endl;
 
 	std::cout << "\n---Test 3: 200 OK, with no body---" << std::endl << std::endl ;
 	Response response3;
@@ -146,10 +145,9 @@ void dev::runResponseTests()
 	response3.setBody("");
 	std::cout << response3.stringify() << std::endl;
 
-	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
-	Response response4;
-	response4.setError(500);
-	std::cout << response4.stringify() << std::endl;
+//	std::cout << "\n---Test 4: 500---" << std::endl << std::endl ;
+//	Response response4 = StaticHandler::handleError(HttpStatus(500)); signature function will prob change
+//	std::cout << response4.stringify() << std::endl;
 
 	std::cout << "\n---Test 5: 200 OK, random header---" << std::endl << std::endl ;
 	Response response5;

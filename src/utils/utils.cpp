@@ -50,6 +50,22 @@ bool	utils::isExecutableFile(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFREG, X_OK);
 }
 
+bool	utils::fileExists(std::string const& path)
+{
+	if (path.empty() || path[0] != '/')
+		return false;
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0);
+}
+
+size_t	utils::getFileSize(const std::string& path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
+	if (!file.is_open())
+		return 0;
+	return file.tellg();
+}
+
 /**
  * Convert a string into an unsigned int only if the string
  * contains digits or start with + or -.
@@ -69,6 +85,48 @@ size_t	utils::toSizeT(std::string const& str)
 		|| value < static_cast<long>(MIN_SIZE_T))
 		throw std::runtime_error("Numeric value out of range: " + str);
 	return static_cast<size_t>(value);
+}
+
+size_t	utils::hexToSizeT(const std::string& hexStr)
+{
+	if (hexStr.empty())
+		return static_cast<size_t>(-1);
+	size_t result;
+	std::stringstream ss;
+	ss << std::hex << hexStr;
+	if (!(ss >> result))
+		 return static_cast<size_t>(-1);
+	return result;
+}
+
+char	utils::hexToChar(const std::string& hex)
+{
+	if (hex.length() != 2)
+		return -1;
+	int value = 0;
+	for (size_t i = 0; i < 2; i++)
+	{
+		char c = hex[i];
+		if (c >= '0' && c <= '9')
+			value = value * 16 + (c - '0');
+		else if (c >= 'A' && c <= 'F')
+			value = value * 16 + (c - 'A' + 10);
+		else if (c >= 'a' && c <= 'f')
+			value = value * 16 + (c - 'a' + 10);
+		else
+			return -1;
+	}
+	return static_cast<char>(value);
+}
+
+std::string	utils::readFile(const std::string& path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary);
+	if (!file.is_open())
+		return "";
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	return buffer.str();
 }
 
 /**

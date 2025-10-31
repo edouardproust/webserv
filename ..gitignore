@@ -10,9 +10,10 @@
 build/
 subject/
 tests/
+test_files/
 .vscode/
 
-# Specitif files
+# Specific files
 webserv
 webserv_dev
 README.md

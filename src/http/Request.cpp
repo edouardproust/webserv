@@ -2,17 +2,28 @@
 #include "http/RequestParser.hpp"
 
 std::set<std::string> Request::_supportedMethods;
+std::set<std::string> Request::_existingMethods;
 
-Request::Request(std::string const& rawRequest)
-: _status(HttpStatus("bad_request")),
+Request::Request()
+: _status(HttpStatus(200)),
   _method(""),
   _requestTarget(""),
   _path(""),
   _queryString(""),
   _version(""),
   _contentType(""),
-  _body(""),
-  _bodySize(DEFAULT_MAX_CLIENT_BODY_SIZE) // TODO Ava: implement de logic to calculate and set _bodySize
+  _body("")
+{}
+
+Request::Request(std::string const& rawRequest)
+: _status(HttpStatus(200)),
+  _method(""),
+  _requestTarget(""),
+  _path(""),
+  _queryString(""),
+  _version(""),
+  _contentType(""),
+  _body("")
 {
 	static RequestParser parser;
 	parser.parseRequest(*this, rawRequest);
@@ -35,7 +46,6 @@ Request& Request::operator=(const Request& other)
 		this->_headers = other._headers;
 		this->_contentType = other._contentType;
 		this->_body = other._body;
-		this->_bodySize = other._bodySize;
 	}
 	return (*this);
 }
@@ -50,6 +60,18 @@ bool	Request::isSupportedMethod(std::string const& method) {
 		// More supported methods can be added here
 	}
 	return _supportedMethods.find(method) != _supportedMethods.end();
+}
+
+bool	Request::isExistingMethod(std::string const& method) {
+	if (_existingMethods.empty()) {
+		_existingMethods.insert("HEAD");
+		_existingMethods.insert("PUT");
+		_existingMethods.insert("OPTIONS");
+		_existingMethods.insert("PATCH");
+		_existingMethods.insert("CONNECT");
+		_existingMethods.insert("TRACE");
+	}
+	return _existingMethods.find(method) != _existingMethods.end();
 }
 
 const HttpStatus& Request::getStatus() const
@@ -89,19 +111,13 @@ const std::map<std::string, std::string>& Request::getHeaders() const
 
 const std::string& Request::getContentType() const
 {
-    return _contentType;
+    return this->_contentType;
 }
 
 const std::string& Request::getBody() const
 {
 	return this->_body;
 }
-
-size_t	Request::getBodySize() const
-{
-	return this->_bodySize;
-}
-
 
 void	Request::setStatus(HttpStatus const& status)
 {
@@ -140,7 +156,7 @@ void	Request::addHeader(const std::string& name, const std::string& value)
 
 void Request::setContentType(const std::string& value)
 {
-    _contentType = value;
+    this->_contentType = value;
 }
 
 void	Request::setBody(const std::string& _body)
@@ -153,7 +169,7 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "Request:\n";
 	HttpStatus const& status = request.getStatus();
 	os << "- Status: ";
-	if (status.getCode() != 500) os << status << "\n";
+	if (status.getCode() != 200) os << status << "\n";
 	else os << "[empty]\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";

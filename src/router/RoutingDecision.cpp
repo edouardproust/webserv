@@ -19,7 +19,7 @@ void	RoutingDecision::_makeDecision() {
 		_setError("internal_server_error");
 	else if (!_location->isAllowedMethod(_request.getMethod()))
 		_setError("method_not_allowed");
-	else if (!_location->isAllowedClientBodySize(_request.getBodySize(), _request.getMethod()))
+	else if (!_location->isAllowedClientBodySize(_request.getBody().length(), _request.getMethod()))
 		_setError("content_too_large");
 	else if (_location->isRedirection())
 		_decision = REDIRECTION;
