@@ -8,7 +8,7 @@
 // global
 
 #ifndef DEVMODE
-# define DEVMODE 1
+# define DEVMODE 0
 #endif
 
 size_t const		MAX_SIZE_T = std::numeric_limits<int>::max(); // ~ 2GB
