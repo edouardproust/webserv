@@ -49,6 +49,15 @@ Response	StaticHandler::_serveFile(std::string const& filePath, LocationBlock co
 	return response;
 }
 
+// TODO: Ava
+Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationBlock const* loc) {
+	(void)dirPath; (void) loc;
+	if (DEVMODE)
+		std::cout << "[TODO] StaticHandler: _serveAutoindex()" << std::endl;
+	// Return default Response for compilation
+	return Response();
+}
+
 std::string StaticHandler::_generateErrorPage(HttpStatus const& status)
 {
 	std::stringstream html;
@@ -99,18 +108,18 @@ Response	StaticHandler::handleGet(std::string const& path, LocationBlock const* 
 
 	if (utils::isAccessibleDirectory(path))
 	{
-		if (isAutoindex)
+		// Trying serving index files
+		for (size_t i = 0; i < locIndexes.size(); ++i)
 		{
-			for (size_t i = 0; i < locIndexes.size(); ++i)
-			{
-				std::string indexPath = utils::joinPath(path, locIndexes[i]);
-				if (utils::isReadableFile(indexPath))
-				return _serveFile(indexPath, loc);
-			}
-			return handleError(HttpStatus("not_found"), loc);
+			std::string indexPath = utils::joinPath(path, locIndexes[i]);
+			if (utils::isReadableFile(indexPath))
+			return _serveFile(indexPath, loc);
 		}
+		// No index file found
+		if (isAutoindex)
+			return _generateAutoindex(path, loc); // Generate HTML listing
 		else
-			return handleError(HttpStatus("not_found"), loc);
+			return handleError(HttpStatus("forbidden"), loc);
 	}
 	else if (utils::isReadableFile(path))
 		return _serveFile(path, loc);

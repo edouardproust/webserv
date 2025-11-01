@@ -38,12 +38,12 @@ void	Network::_runManualTests() const {
 
 	// --- BASIC ROUTES ---
 	_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+	_onCatchRequest(srcPort, "GET /index.html?query=test HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
 	_onCatchRequest(srcPort, "GET /doesnotexist HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // 404 expected
 	_onCatchRequest(srcPort, "GET /dir/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // autoindex test
 
 	// --- METHOD TESTS ---
-	_onCatchRequest(srcPort, "POST /cgi-bin/test.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 12\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nname=webserv");
+	_onCatchRequest(srcPort, "POST /cgi-bin/test.php?name=John%20Doe&age=23 HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 12\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nname=webserv");
 	_onCatchRequest(srcPort, "POST /cgi-bin/test.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 0\r\n\r\n"); // empty body + content-length 0
 	_onCatchRequest(srcPort, "DELETE /upload/test.txt HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // test DELETE route
 	// Unsupported method

@@ -13,7 +13,7 @@
 
 size_t const		MAX_SIZE_T = std::numeric_limits<int>::max(); // ~ 2GB
 std::string const	SERVER_SOFTWARE = "webserv/1.0";
-size_t const		EXCERPT_LENGTH = 200;
+size_t const		EXCERPT_LENGTH = 500;
 size_t const		PATH_MAX = 4096;
 
 // config

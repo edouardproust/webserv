@@ -174,9 +174,10 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
 	os << "- Request Target: " << request.getRequestTarget() << "\n";
-	os << "- Path: " << request.getPath() << "\n";
-	if (!request.getQueryString().empty())
-		os << "- Query String: " << request.getQueryString() << "\n";
+	if (!request.getQueryString().empty()) {
+		os << "  - Path: " << request.getPath() << "\n";
+		os << "  - Query String: " << request.getQueryString() << "\n";
+	}
 	os << "- Version: " << request.getVersion() << "\n";
 	os << "- Headers: " << request.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = request.getHeaders();
