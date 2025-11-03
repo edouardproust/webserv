@@ -35,7 +35,7 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 		return RedirectionHandler::run(ret.first, ret.second);
 	}
 	// cgi, static
-	std::string filePath = _buildFilePath(loc->getRoot(), loc->getPath(), req.getPath());
+	std::string filePath = utils::joinPath(loc->getRoot(), req.getUri());
 	if (DEVMODE)
 		std::cout << "Router:\n- filePath: " << filePath << "\n" << std::endl;
 	if (decision == RoutingDecision::CGI) {
@@ -62,13 +62,4 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	}
 	// fallback
 	return StaticHandler::handleError(HttpStatus("internal_server_error"), loc);
-}
-
-std::string	Router::_buildFilePath(std::string const& locRoot, std::string const& locPath, std::string const& reqPath) {
-	std::string relativeReqPath = utils::trimDomain(reqPath);
-	if (reqPath.find(locPath) == 0)
-		relativeReqPath = reqPath.substr(locPath.length());
-	if (relativeReqPath.empty()) relativeReqPath = "/";
-	std::string joinedPath = utils::joinPath(locRoot, relativeReqPath);
-	return utils::normalizePath(joinedPath);
 }

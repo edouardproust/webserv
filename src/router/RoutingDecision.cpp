@@ -66,7 +66,12 @@ void	RoutingDecision::_setLocation() {
 			}
 		}
 	}
-	_location = best ? best : &LocationBlock::getDefaultLocation(_server);
+	if (!best) {
+		std::cerr << "[WARNING] No matching location for request path '" << reqPath
+				  << "' in server with root '" << _server->getRoot() << "'. Using default location." << std::endl;
+		best = &LocationBlock::getDefaultLocation(_server);
+	}
+	_location = best;
 }
 
 void	RoutingDecision::_setError(std::string const& errorSlug) {

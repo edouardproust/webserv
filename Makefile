@@ -56,7 +56,7 @@ DEPS_FLAGS = -MMD -MP
 
 # ------- Rules -------
 
-.PHONY: all clean fclean re dev
+.PHONY: all clean fclean re dev test test_dev
 
 all: $(NAME)
 
@@ -86,3 +86,9 @@ fclean: clean
 	rm -f $(NAME) $(NAME_DEV)
 
 re: fclean all
+
+test: all
+	./$(NAME) ./tests/config/test.config > log 2>&1
+
+test_dev: dev
+	./$(NAME_DEV) ./tests/config/test.config > log 2>&1

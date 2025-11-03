@@ -37,10 +37,10 @@ void	Network::_runManualTests() const {
 	HostPortPair srcPort("localhost:80");
 
 	// --- BASIC ROUTES ---
-	_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /index.html?query=test HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /doesnotexist HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // 404 expected
-	_onCatchRequest(srcPort, "GET /dir/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // autoindex test
+	_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // 403 Forbidden -> ✅
+	_onCatchRequest(srcPort, "GET /index.html?query=test HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // 200 OK -> ✅
+	_onCatchRequest(srcPort, "GET /doesnotexist HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // 404 Not Found (custom error page) -> ✅
+	_onCatchRequest(srcPort, "GET /dir/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // 200 OK (autoindex listing) -> ❌ TODO implement autoindex listing generation in StaticHandler
 
 	// --- METHOD TESTS ---
 	_onCatchRequest(srcPort, "POST /cgi-bin/test.php?name=John%20Doe&age=23 HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 12\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nname=webserv");
@@ -66,7 +66,7 @@ void	Network::_runManualTests() const {
 
 	// --- CGI TESTS ---
 	_onCatchRequest(srcPort, "GET /cgi-bin/env.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // affiche variables d'env
-	_onCatchRequest(srcPort, "POST /cgi-bin/form.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 19\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nusername=test&pwd=42");
+	_onCatchRequest(srcPort, "POST /cgi-bin/form.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 20\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nusername=test&pwd=42");
 	_onCatchRequest(srcPort, "GET /cgi-bin/timeout.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // test de timeout CGI
 	_onCatchRequest(srcPort, "GET /cgi-bin/segfault.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // script qui crashe -> 500
 

@@ -14,10 +14,10 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Test chunked request
 	- test URL decoding / encoding
 - Config parsing:
-	- Add a default index.html page for location "/" + redirect to it
 	- Handle 411 error (length required for POST and PUT)
 	- Accept `ssl` option in `listen` directive ?
 	- check if `clientMaxBodySize` is well formated ?
+	- Support `alias` directive in `location` block ?
 	- Support IPv6 ?
 - CGI:
 	- Now using `_exit()` in CGIHandler. It is NOT in the list af allowed functions -> How to do ?

@@ -193,7 +193,7 @@ std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
 	return joinedPath;
 }
 
-std::string utils::joinRelativePath(const std::string& path) {
+std::string utils::buildRelativePath(const std::string& path) {
 	if (path.empty())
 		throw std::runtime_error("empty relative path");
 

@@ -87,7 +87,7 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 
 HttpStatus	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget)
 {
-	request.setRequestTarget(_requestTarget);
+	request.setUri(_requestTarget);
 	size_t queryPos = _requestTarget.find('?');
 	if (queryPos != std::string::npos)
 	{
@@ -100,7 +100,7 @@ HttpStatus	RequestParser::_parseRequestTarget(Request& request, const std::strin
 			return HttpStatus("bad_request");
 		if (_parseUrl(decodedQuery, query).getSlug() != "ok")
 			return HttpStatus("bad_request");
-		request.setPath(decodedPath);
+		request.setUri(decodedPath);
 		request.setQueryString(decodedQuery);
 	}
 	else
@@ -110,7 +110,7 @@ HttpStatus	RequestParser::_parseRequestTarget(Request& request, const std::strin
 		std::string decodedPath;
 		if (_parseUrl(decodedPath, _requestTarget).getSlug() != "ok")
 			return HttpStatus("bad_request");
-		request.setPath(decodedPath);
+		request.setUri(decodedPath);
 		request.setQueryString("");
 	}
 	return HttpStatus("ok");

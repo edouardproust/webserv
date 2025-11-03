@@ -1,6 +1,9 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
 
+/**
+ * Default location block (path = "/"). Used if not location matches the request URI.
+ */
 LocationBlock::LocationBlock(ServerBlock const* server)
 : _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)
 {}
@@ -108,14 +111,14 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 	tokens.clear();
 }
 
+void	LocationBlock::setServer(ServerBlock* server) {
+	_server = server;
+}
+
 void	LocationBlock::_setPath(std::string& path) {
 	if (!utils::isAbsolutePath(path))
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
 	_path = utils::normalizePath(path);
-}
-
-void	LocationBlock::setServer(ServerBlock* server) {
-	_server = server;
 }
 
 /**
@@ -129,7 +132,7 @@ void	LocationBlock::_setRoot(Tokens const& tokens) {
 		throw std::runtime_error("Value is an empty string");
 	if (!utils::isAbsolutePath(root)) {
 		if (root.rfind("./", 0) == 0)
-			root = utils::joinRelativePath(root);
+			root = utils::buildRelativePath(root);
 		else
 			throw std::runtime_error("Not an absolute or './' path: '" + root + "'");
 	}

@@ -43,7 +43,7 @@ namespace utils {
 	std::vector<std::string>	split(std::string const&, char);
 
 	std::string	joinPath(std::string const&, std::string const&);
-	std::string	joinRelativePath(const std::string&);
+	std::string	buildRelativePath(const std::string&);
 	std::string	normalizePath(std::string const&);
 
 	std::string	trim(const std::string& str);
