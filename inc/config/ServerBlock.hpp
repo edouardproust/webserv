@@ -19,6 +19,7 @@ class ServerBlock {
 	void	_parseBlock(Tokens&, std::string const&, size_t&, int&, bool);
 	void	_parseDirective(std::string&, Tokens&, bool);
 	void	_addLocation(Tokens const&, std::string const&, size_t&, int&);
+	void	_setDefaultIndexFiles();
 
 	void	_setRoot(Tokens const&);
 	void	_setListen(Tokens const&);

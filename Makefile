@@ -9,6 +9,7 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
 BASE_SRC_FILES = \
 	main.cpp \
+	network/Network.cpp \
 	utils/utils.cpp \
 	config/Config.cpp \
 	config/LocationBlock.cpp \
@@ -22,10 +23,9 @@ BASE_SRC_FILES = \
 	router/RoutingDecision.cpp \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
-	cgi/CGIHandler.cpp
+	cgi/CgiHandler.cpp
 
-DEV_SRC_FILES = \
-	http/dev.http.cpp
+DEV_SRC_FILES =
 
 SRC_DIR = src
 
@@ -56,7 +56,7 @@ DEPS_FLAGS = -MMD -MP
 
 # ------- Rules -------
 
-.PHONY: all clean fclean re dev
+.PHONY: all clean fclean re dev test test_dev
 
 all: $(NAME)
 
@@ -86,3 +86,9 @@ fclean: clean
 	rm -f $(NAME) $(NAME_DEV)
 
 re: fclean all
+
+test: all
+	./$(NAME) ./tests/webserv.config > log 2>&1
+
+test_dev: dev
+	./$(NAME_DEV) ./tests/webserv.config > log 2>&1

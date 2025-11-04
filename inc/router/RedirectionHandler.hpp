@@ -2,8 +2,6 @@
 #define REDIRECTION_HANDLER_HPP
 
 #include "http/Response.hpp"
-#include <string>
-#include <iostream> // DEBUG
 
 class RedirectionHandler {
 
@@ -15,7 +13,7 @@ class RedirectionHandler {
 
 	public:
 
-	static Response	handleRedirection(int code, std::string const& path);
+	static Response	run(int code, std::string const& path);
 
 };
 

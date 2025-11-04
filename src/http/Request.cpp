@@ -5,9 +5,9 @@ std::set<std::string> Request::_supportedMethods;
 std::set<std::string> Request::_existingMethods;
 
 Request::Request()
-: _status(HttpStatus(200)),
+: _status(HttpStatus("ok")),
   _method(""),
-  _requestTarget(""),
+  _uri(""),
   _path(""),
   _queryString(""),
   _version(""),
@@ -16,9 +16,9 @@ Request::Request()
 {}
 
 Request::Request(std::string const& rawRequest)
-: _status(HttpStatus(200)),
+: _status(HttpStatus("ok")),
   _method(""),
-  _requestTarget(""),
+  _uri(""),
   _path(""),
   _queryString(""),
   _version(""),
@@ -39,7 +39,7 @@ Request& Request::operator=(const Request& other)
 	{
 		this->_status = other._status;
 		this->_method = other._method;
-		this->_requestTarget = other._requestTarget;
+		this->_uri = other._uri;
 		this->_path = other._path;
 		this->_queryString = other._queryString;
 		this->_version = other._version;
@@ -74,6 +74,7 @@ bool	Request::isExistingMethod(std::string const& method) {
 	return _existingMethods.find(method) != _existingMethods.end();
 }
 
+
 const HttpStatus& Request::getStatus() const
 {
 	return (this->_status);
@@ -84,14 +85,15 @@ const std::string& Request::getMethod() const
 	return this->_method;
 }
 
-const std::string& Request::getRequestTarget() const
+const std::string& Request::getUri() const
 {
-	return this->_requestTarget;
+	return this->_uri;
 }
 
 const std::string& Request::getPath() const
 {
-	return this->_path;
+	static const std::string root("/");
+	return _path.empty() ? root : _path;
 }
 
 const std::string& Request::getQueryString() const
@@ -124,29 +126,29 @@ void	Request::setStatus(HttpStatus const& status)
 	this->_status = status;
 }
 
-void	Request::setMethod(std::string const& _method)
+void	Request::setMethod(std::string const& method)
 {
-	this->_method = _method;
+	this->_method = method;
 }
 
-void	Request::setRequestTarget(const std::string& _requestTarget)
+void	Request::setUri(const std::string& uri)
 {
-	this->_requestTarget = _requestTarget;
+	this->_uri = uri;
 }
 
-void	Request::setPath(const std::string& _path)
+void	Request::setPath(const std::string& path)
 {
-	this->_path = _path;
+	this->_path = path;
 }
 
-void	Request::setQueryString(const std::string& _queryString)
+void	Request::setQueryString(const std::string& queryString)
 {
-	this->_queryString = _queryString;
+	this->_queryString = queryString;
 }
 
-void	Request::setVersion(const std::string& _version)
+void	Request::setVersion(const std::string& version)
 {
-	this->_version = _version;
+	this->_version = version;
 }
 
 void	Request::addHeader(const std::string& name, const std::string& value)
@@ -159,31 +161,29 @@ void Request::setContentType(const std::string& value)
     this->_contentType = value;
 }
 
-void	Request::setBody(const std::string& _body)
+void	Request::setBody(const std::string& body)
 {
-	this->_body = _body;
+	this->_body = body;
 }
 
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
-	HttpStatus const& status = request.getStatus();
-	os << "- Status: ";
-	if (status.getCode() != 200) os << status << "\n";
-	else os << "[empty]\n";
+	os << "- Status: " << request.getStatus() << "\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
-	os << "- Request Target: " << request.getRequestTarget() << "\n";
-	os << "- Path: " << request.getPath() << "\n";
-	if (!request.getQueryString().empty())
-		os << "- Query String: " << request.getQueryString() << "\n";
+	os << "- URI: " << request.getUri() << "\n";
+	if (!request.getQueryString().empty()) {
+		os << "  - Path: " << request.getPath() << "\n";
+		os << "  - Query String: " << request.getQueryString() << "\n";
+	}
 	os << "- Version: " << request.getVersion() << "\n";
 	os << "- Headers: " << request.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = request.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 		os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: '" << request.getBody() << "'\n";
+	os << "- Body: [" << utils::excerpt(EXCERPT_LENGTH, request.getBody()) << "]\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
     return os;
 }

@@ -7,8 +7,7 @@ bool	utils::isInt(std::string const& str)
 	char* endptr = NULL;
 	errno = 0;
 	long value = std::strtol(str.c_str(), &endptr, 10);
-	if (*endptr != '\0' || errno == ERANGE
-		|| value > static_cast<long>(MAX_SIZE_T) || value < static_cast<long>(MIN_SIZE_T))
+	if (*endptr != '\0' || errno == ERANGE || value > static_cast<long>(MAX_SIZE_T) || value < 0)
 		return false;
 	return true;
 }
@@ -81,8 +80,7 @@ size_t	utils::toSizeT(std::string const& str)
 	long value = std::strtol(str.c_str(), &endptr, 10);
 	if (*endptr != '\0')
 		throw std::runtime_error("Invalid numeric value: " + str);
-	if (errno == ERANGE || value > static_cast<long>(MAX_SIZE_T)
-		|| value < static_cast<long>(MIN_SIZE_T))
+	if (errno == ERANGE || value > static_cast<long>(MAX_SIZE_T) || value < 0)
 		throw std::runtime_error("Numeric value out of range: " + str);
 	return static_cast<size_t>(value);
 }
@@ -130,7 +128,11 @@ std::string	utils::readFile(const std::string& path)
 }
 
 /**
- * Returns empty string "" in cse of failure.
+ * Returns the file extension, including the dot
+ *
+ * - path "/whatever/test.php" -> returns ".php"
+ * - path "https://mydomaine/index.py" -> returns ".py"
+ * - path "/test" or "/test." -> returns "" (empty string)
  */
 std::string	utils::getFileExtension(std::string const& path) {
 	size_t dotPos = path.rfind('.');
@@ -191,6 +193,27 @@ std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
 	return joinedPath;
 }
 
+std::string utils::buildRelativePath(const std::string& path) {
+	if (path.empty())
+		throw std::runtime_error("empty relative path");
+
+	if (path.rfind("./", 0) != 0)
+		throw std::runtime_error("relative path must start with './'");
+
+	char cwd[PATH_MAX];
+	if (!getcwd(cwd, sizeof(cwd)))
+		throw std::runtime_error("failed to get current working directory to join relative path)");
+
+	std::string rel = path.substr(2); // remove "./"
+	std::string fullPath = cwd;
+
+	if (!rel.empty() && rel[0] != '/')
+		fullPath += "/";
+	fullPath += rel;
+
+	return normalizePath(fullPath);
+}
+
 /**
  * Normalize a path by:
  * - Removing redundant '.' segments
@@ -204,6 +227,7 @@ std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
  * `_normalizePath("//var///www////html/test//")` -> `/var/www/html/test`
  * `_normalizePath("/./././")` -> `/`
  * `_normalizePath("/a/b/../../c/")` -> `/c`
+ * `_normalizePath("")` -> (empty string)
  */
 std::string utils::normalizePath(std::string const& path) {
 	std::vector<std::string> parts = utils::split(path, '/');
@@ -221,4 +245,50 @@ std::string utils::normalizePath(std::string const& path) {
 		if (i + 1 < clean.size()) normalized += "/";
 	}
 	return normalized;
+}
+
+/**
+ * Delete leading and trailing space and tab chars from a string.
+ */
+std::string	utils::trim(const std::string& str)
+{
+	size_t start = 0;
+
+	while (start < str.size() && (str[start] == ' ' || str[start] == '\t'))
+		start++;
+
+	size_t end = str.size();
+	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
+		end--;
+	return str.substr(start, end - start);
+}
+
+/**
+ * Remove the domain of a URL.
+ *
+ * Examples:
+ * - `https://mydomain.com/path/file.txt` -> `/path/file.txt`
+ * - `anything://mydomain.com/file.txt -> `/file.txt`
+ * - `/path/file.txt` -> `/path/file.txt`
+ * - `http://mydomain.com` -> empty string
+ */
+std::string	utils::trimDomain(std::string const& url)
+{
+	size_t pos = url.find("://");
+	size_t start = (pos != std::string::npos) ? url.find('/', pos + 3) : 0;
+	if (start == std::string::npos)
+		return "/";
+	return url.substr(start);
+}
+
+/**
+ * Truncate a string as an excerpt, up to`n` chars.
+ *
+ * Will display `... (x bytes total)` after a truncated text.
+ */
+std::string	utils::excerpt(size_t n, std::string const& str) {
+	std::string excerpt = str.substr(0, n);
+	if (str.size() > n)
+    	excerpt += "... (" + toString(str.size()) + " bytes total)";
+	return excerpt;
 }

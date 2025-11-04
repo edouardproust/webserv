@@ -1,9 +1,8 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
-# include "HttpStatus.hpp"
-# include "constants.hpp"
-# include <string>
+# include "http/HttpStatus.hpp"
+# include "utils/utils.hpp"
 # include <iostream>
 # include <map>
 # include <set>
@@ -16,7 +15,7 @@ class Request
 		static std::set<std::string> _supportedMethods;
 		static std::set<std::string> _existingMethods;
 		std::string	_method;
-		std::string	_requestTarget;
+		std::string	_uri; // URI = path + query string
 		std::string _path;
 		std::string	_queryString;
 		std::string	_version;
@@ -34,12 +33,10 @@ class Request
 
 		static bool	isSupportedMethod(std::string const& method);
 		static bool	isExistingMethod(std::string const& method);
-		static bool	isSupportedVersion(std::string const& version);
-		static bool	isExistingVersion(std::string const& version);
 
 		const HttpStatus&	getStatus() const;
 		const std::string&	getMethod() const;
-		const std::string&	getRequestTarget() const;
+		const std::string&	getUri() const;
 		const std::string&	getPath() const;
 		const std::string&	getQueryString() const;
 		const std::string&	getVersion() const;
@@ -49,7 +46,7 @@ class Request
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
-		void	setRequestTarget(std::string const& requestTarget);
+		void	setUri(std::string const& uri);
 		void	setPath(std::string const& path);
 		void	setQueryString(std::string const& queryString);
 		void	setVersion(std::string const& version);

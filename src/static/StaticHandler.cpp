@@ -33,48 +33,52 @@ std::string	StaticHandler::_getMimeType(const std::string& filePath)
 	 return "application/octet-stream";
 }
 
-Response	StaticHandler::_serveFile(std::string const& filePath)
+// TODO (optionnal?): If is CGI file, call CGIHandler instead
+Response	StaticHandler::_serveFile(std::string const& filePath, LocationBlock const* loc)
 {
 	size_t fileSize = utils::getFileSize(filePath);
 	if (fileSize > MAX_FILE_SIZE)
-		return handleError(HttpStatus(413), "", ErrorPages());
+		return handleError(HttpStatus("content_too_large"), loc);
 	std::string content = utils::readFile(filePath);
 	if (content.empty() && fileSize > 0)
-		return handleError(HttpStatus(500), "", ErrorPages());
+		return handleError(HttpStatus("internal_server_error"), loc);
 	std::string contentType = _getMimeType(filePath);
 	Response response;
-	response.setStatus(200);
+	response.setStatus(HttpStatus("ok"));
 	response.setHeader("Content-Type", contentType);
 	response.setBody(content);
 	return response;
 }
 
-std::string StaticHandler::_generateErrorPage(int statusCode, const std::string& reasonPhrase)
+// TODO: Ava
+Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationBlock const* loc) {
+	(void)dirPath; (void) loc;
+	if (DEVMODE)
+		std::cout << "[TODO] StaticHandler: _serveAutoindex()" << std::endl;
+	// Return default Response for compilation
+	return Response();
+}
+
+std::string StaticHandler::_generateErrorPage(HttpStatus const& status)
 {
 	std::stringstream html;
 
 	html << "<html>\n"
 		 << "  <head>\n"
-		 << "    <title>" << statusCode << " " << reasonPhrase << "</title>\n"
+		 << "    <title>" << status.toString() << "</title>\n"
 		 << "  </head>\n"
 		 << "  <body>\n"
-		 << "    <center><h1>" << statusCode << " " << reasonPhrase << "</h1></center>\n"
+		 << "    <center><h1>" << status.toString() << "</h1></center>\n"
 		 << "    <hr><center>webserv/1.0</center>\n"
 		 << "  </body>\n"
 		 << "</html>";
 	return html.str();
 }
 
-Response	StaticHandler::handleError(HttpStatus const& status, std::string const& locRoot, ErrorPages const& locErrorPages)
+Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock const* loc)
 {
-	std::cout << "[DEBUG] StaticHandler:\n"
-		<< "- action: Error\n"
-		<< "- status: " << status.toString() << "\n"
-		<< "- location root: " << locRoot << "\n"
-		<< "- error pages: " << locErrorPages.size() << "\n";
-	for (ErrorPages::const_iterator it = locErrorPages.begin(); it != locErrorPages.end(); ++it)
-		std::cout << "  - " << it->first << " -> " << it->second << "\n";
-	std::cout << std::endl;
+	std::string const& locRoot = loc->getRoot();
+	ErrorPages const& locErrorPages = loc->getErrorPages();
 
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (search != locErrorPages.end())
@@ -92,64 +96,51 @@ Response	StaticHandler::handleError(HttpStatus const& status, std::string const&
 	}
 	Response response;
 	response.setStatus(status);
-	std::string errorPage = _generateErrorPage(status.getCode(), status.getReason());
+	std::string errorPage = _generateErrorPage(status);
 	response.setBody(errorPage);
 	response.setHeader("Content-Type", "text/html");
 	return response;
 }
 
-Response	StaticHandler::handleGet(Request const& request, std::string const& path, bool isAutoindex, std::vector<std::string> const& locIndexes)
+Response	StaticHandler::handleGet(std::string const& path, LocationBlock const* loc)
 {
-	std::cout << "[DEBUG] StaticHandler:\n"
-		<< "- handle: Get\n"
-		<< "- method: " << request.getMethod() << "\n"
-		<< "- file path: " << path << "\n"
-		<< "- autoindex: " << (isAutoindex ? "true" : "false") << "\n"
-		<< "- location indexes: " << locIndexes.size() << "\n";
-	for (size_t i = 0; i < locIndexes.size(); ++i)
-		std::cout << "  - " << locIndexes[i] << "\n";
-	std::cout << std::endl;
+	std::vector<std::string> locIndexes = loc->getIndexFiles();
+	bool isAutoindex = loc->getAutoindex() == "on";
 
 	if (utils::isAccessibleDirectory(path))
 	{
-		if (isAutoindex)
+		// Trying serving index files
+		for (size_t i = 0; i < locIndexes.size(); ++i)
 		{
-			for (size_t i = 0; i < locIndexes.size(); ++i)
-			{
-				std::string indexPath = utils::joinPath(path, locIndexes[i]);
-				if (utils::isReadableFile(indexPath))
-				return _serveFile(indexPath);
-			}
-			return handleError(HttpStatus(404), path, ErrorPages());
-		}	
+			std::string indexPath = utils::joinPath(path, locIndexes[i]);
+			if (utils::isReadableFile(indexPath))
+			return _serveFile(indexPath, loc);
+		}
+		// No index file found
+		if (isAutoindex)
+			return _generateAutoindex(path, loc); // Generate HTML listing
 		else
-			return handleError(HttpStatus(404), path, ErrorPages());
+			return handleError(HttpStatus("forbidden"), loc);
 	}
 	else if (utils::isReadableFile(path))
-		return _serveFile(path);
+		return _serveFile(path, loc);
 	else
-		return handleError(HttpStatus(404), path, ErrorPages());
+		return handleError(HttpStatus("not_found"), loc);
 }
 
-Response	StaticHandler::handleDelete(Request const& request, std::string const& path)
+Response	StaticHandler::handleDelete(std::string const& path, LocationBlock const* loc)
 {
-	(void)request;
-	std::cout << "[DEBUG] StaticHandler:\n"
-		<< "- handle: Delete\n"
-		<< "- method: " << request.getMethod() << "\n"
-		<< "- file path: " << path << "\n"
-		<< std::endl;
 	if (!utils::fileExists(path))
-		return handleError(HttpStatus(404), "", ErrorPages());
+		return handleError(HttpStatus("not_found"), loc);
 	std::string dir = path.substr(0, path.find_last_of('/'));
 	if (access(dir.c_str(), W_OK) != 0)
-		return handleError(HttpStatus(403), "", ErrorPages());
-	if (std::remove(path.c_str()) == 0)
+		return handleError(HttpStatus("forbidden"), loc);
+	if (std::remove(path.c_str()) == 0) // TODO Method std::remove is allowed ?
 	{
 		Response response;
-		response.setStatus(204);
+		response.setStatus(HttpStatus("no_content"));
 		return response;
 	}
 	else
-		return handleError(HttpStatus(500), "", ErrorPages());
+		return handleError(HttpStatus("internal_server_error"), loc);
 }

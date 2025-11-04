@@ -1,21 +1,18 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
-#include "utils/utils.hpp"
-#include "http/Request.hpp"
-#include "constants.hpp"
-#include <stdexcept>
-#include <iostream>
-#include <cstdlib>
 
+/**
+ * Default location block (path = "/"). Used if not location matches the request URI.
+ */
 LocationBlock::LocationBlock(ServerBlock const* server)
-: _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)
+: _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(true)
 {}
 
 /**
  * May throw a runtime_error() exception.
  */
 LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string const& blockContent)
-: _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false) {
+: _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(false) {
 	_setPath(path);
 	_parse(blockContent);
 }
@@ -31,7 +28,8 @@ LocationBlock::LocationBlock(const LocationBlock &other)
   _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
   _indexFiles(other._indexFiles),
   _errorPages(other._errorPages),
-  _cgi(other._cgi)
+  _cgi(other._cgi),
+  _isDefaultLocation(other._isDefaultLocation)
 {}
 
 LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
@@ -47,6 +45,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_indexFiles = other._indexFiles;
 		_errorPages = other._errorPages;
 		_cgi = other._cgi;
+		_isDefaultLocation = other._isDefaultLocation;
 	}
 	return *this;
 }
@@ -114,14 +113,14 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 	tokens.clear();
 }
 
+void	LocationBlock::setServer(ServerBlock* server) {
+	_server = server;
+}
+
 void	LocationBlock::_setPath(std::string& path) {
 	if (!utils::isAbsolutePath(path))
 		throw std::runtime_error("Not an absolute path: '" + path + "'");
-	_path = Config::normalizePath(path);
-}
-
-void	LocationBlock::setServer(ServerBlock* server) {
-	_server = server;
+	_path = utils::normalizePath(path);
 }
 
 /**
@@ -133,8 +132,12 @@ void	LocationBlock::_setRoot(Tokens const& tokens) {
 	std::string root = tokens[1];
 	if (root.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (!utils::isAbsolutePath(root))
-		throw std::runtime_error("Not an absolute path: '" + root + "'");
+	if (!utils::isAbsolutePath(root)) {
+		if (root.rfind("./", 0) == 0)
+			root = utils::buildRelativePath(root);
+		else
+			throw std::runtime_error("Not an absolute or './' path: '" + root + "'");
+	}
 	_root = root;
 }
 
@@ -328,7 +331,7 @@ std::string const	LocationBlock::getCgiExecutor(std::string const& extension) co
 }
 
 /**
- * server can be NULL. The getters are built accordingly (security)
+ * If server is NULL, it may lead to unexpected behaviour
  */
 LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server) {
 	static LocationBlock defaultLocation(server);
@@ -361,9 +364,14 @@ bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& meth
     return true; // GET, HEAD, DELETE, etc.
 }
 
+bool	LocationBlock::isDefaultLocation() const {
+	return _isDefaultLocation;
+}
+
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	std::string const in = "  "; // indentation
-	os << in << "- path: " << rhs.getPath() << "\n";
+	os << in << "- Default location: " << (rhs.isDefaultLocation() ? "yes" : "no") << "\n";
+	os << in << "- path: " << (rhs.getPath().empty() ? "[empty]" : rhs.getPath()) << "\n";
 	os << in << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
 	os << in << "- autoindex: " << (rhs.getAutoindex().empty() ? "[empty]" : rhs.getAutoindex()) << "\n";
 

@@ -1,10 +1,4 @@
 #include "config/Config.hpp"
-#include "utils/utils.hpp"
-#include "constants.hpp"
-#include <stdexcept>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 
 Config::Config(std::string const& filePath) {
 	try {
@@ -156,12 +150,6 @@ size_t	Config::parseSize(std::string const& sizeStr) {
 		throw std::runtime_error("Too large number: "
 			+ sizeStr + " (max is " + utils::toString(MAX_SIZE_T) + " bytes)");
 	return number * multiplier;
-}
-
-std::string&	Config::normalizePath(std::string& path) {
-	if (path.size() > 1 && path[path.size() - 1] == '/')
-		path.erase(path.size() - 1);
-	return path;
 }
 
 std::vector<ServerBlock> const&	Config::getServers() const {

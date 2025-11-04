@@ -58,7 +58,7 @@ void	RoutingDecision::_setLocation() {
 	for (size_t i = 0; i < locations.size(); ++i) {
 		const std::string& locPath = locations[i].getPath();
 		if (reqPath.compare(0, locPath.size(), locPath) == 0) { // prefix match
-			if (reqPath.size() == locPath.size() || reqPath[locPath.size()] == '/') { // prevents against false positives
+			if (locPath == "/" || reqPath.size() == locPath.size() || reqPath[locPath.size()] == '/') {
 				if (locPath.size() > longest) {
 					longest = locPath.size();
 					best = &locations[i];
@@ -66,7 +66,9 @@ void	RoutingDecision::_setLocation() {
 			}
 		}
 	}
-	_location = best ? best : &LocationBlock::getDefaultLocation(NULL);
+	if (!best)
+		best = &LocationBlock::getDefaultLocation(_server);
+	_location = best;
 }
 
 void	RoutingDecision::_setError(std::string const& errorSlug) {
@@ -76,6 +78,10 @@ void	RoutingDecision::_setError(std::string const& errorSlug) {
 
 RoutingDecision::Decision const&	RoutingDecision::getDecision() const {
 	return _decision;
+}
+
+Request const&	RoutingDecision::getRequest() const {
+	return _request;
 }
 
 ServerBlock const*	RoutingDecision::getServer() const {
@@ -100,6 +106,7 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 						: "UNKNOWN"))) << "\n"
 		<< "- Matching server:\n"
 		<< "  - root: '" << rhs.getServer()->getRoot() << "'\n"
+		<< "- Request path: '" << rhs.getRequest().getPath() << "'\n"
 		<< "- Matching location:";
 	LocationBlock const* location = rhs.getLocation();
 	if (location) os << "\n" << *location;

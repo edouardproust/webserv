@@ -1,6 +1,4 @@
 #include "config/HostPortPair.hpp"
-#include "utils/utils.hpp"
-#include <netdb.h>
 
 /**
  * May throw an exception
@@ -101,4 +99,9 @@ bool	HostPortPair::operator==(HostPortPair const& other) const {
 bool	HostPortPair::operator<(HostPortPair const& other) const {
 	if (_host != other._host) return _host < other._host;
 	return _port < other._port;
+}
+
+std::ostream&	operator<<(std::ostream& os, HostPortPair const& rhs) {
+	os << rhs.getHost() << ":" << rhs.getPort();
+	return os;
 }

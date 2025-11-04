@@ -2,9 +2,7 @@
 #define CONFIG_HPP
 
 #include "config/ServerBlock.hpp"
-#include <vector>
-
-
+#include <fstream>
 
 class Config {
 
@@ -32,7 +30,6 @@ class Config {
 		static std::string	getBlockContent(std::string const&, size_t&, int&);
 		static void			skipComment(std::string const&, size_t&);
 		static size_t		parseSize(std::string const&);
-		static std::string& normalizePath(std::string& path);
 
 		std::vector<ServerBlock> const&	getServers() const;
 

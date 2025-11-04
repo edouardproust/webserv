@@ -4,6 +4,7 @@
 *.bak
 *.out
 *.tmp
+*.log
 *~
 
 # Specific folders

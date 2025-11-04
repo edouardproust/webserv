@@ -1,15 +1,13 @@
 #include "config/ServerBlock.hpp"
 #include "config/Config.hpp"
-#include "utils/utils.hpp"
-#include "constants.hpp"
-#include <stdexcept>
-#include <iostream>
-#include <cstdlib>
 
 /**
  * May throw an std exception.
  */
-ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
+ServerBlock::ServerBlock(): _isSetClientBodySize(false) {
+	_root = utils::buildRelativePath("./www"); // set default root (setRoot() will clear it the directive exists)
+	_setDefaultIndexFiles(); // set default root (setRoot() will clear it the directive exists)
+}
 
 /**
  * May throw a std exception.
@@ -17,6 +15,8 @@ ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
  * If no listen directive in the server block: add "listen 0.0.0.0:80;"
  */
 ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(false) {
+	_root = utils::buildRelativePath("./www"); // set default root (setRoot() will clear it the directive exists)
+	_setDefaultIndexFiles(); // set default index file (setIndexFiles() will clear it if the directive exists)
 	_parse(blockContent); // throw
 	// set default listen directive if none exist after parsing
 	if (_listen.empty())
@@ -88,7 +88,7 @@ void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t
 		else
 			throw std::runtime_error("Unsupported block: " + tokens[0]);
 	} catch (std::exception& e) {
-		throw std::runtime_error(blockName + ": " + e.what()); // wrap error msg with the block name
+		throw std::runtime_error(blockName + (blockName == "location" && tokens.size() > 1 ? " " + tokens[1] : "") + ": " + e.what()); // wrap error msg with the block name
 	}
 	tokens.clear();
 }
@@ -144,6 +144,14 @@ void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content,
 	_locations.push_back(lb);
 }
 
+
+void	ServerBlock::_setDefaultIndexFiles() {
+	_indexFiles.clear(); // reset previous index files
+	_indexFiles.push_back("index.html");
+	_indexFiles.push_back("index.htm");
+	//_indexFiles.push_back("index.php"); // TODO if uncommented, needs to be checked in StaticHandler::_serveFile
+}
+
 /**
  * May throw a std::runtime_error() exception.
  */
@@ -153,9 +161,13 @@ void	ServerBlock::_setRoot(Tokens const& tokens) {
 	std::string root = tokens[1];
 	if (root.empty())
 		throw std::runtime_error("Value is an empty string");
-	if (!utils::isAbsolutePath(root))
-		throw std::runtime_error("Not an absolute path: '" + root + "'");
-	_root = Config::normalizePath(root);
+	if (!utils::isAbsolutePath(root)) {
+		if (root.rfind("./", 0) == 0)
+			root = utils::buildRelativePath(root);
+		else
+			throw std::runtime_error("Not an absolute or './' path: '" + root + "'");
+	}
+	_root = utils::normalizePath(root); // override previous root if already set
 }
 
 /**
@@ -228,10 +240,10 @@ void	ServerBlock::_setErrorPages(Tokens const& tokens) {
 void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have 2 or more arguments");
+	_indexFiles.clear(); // reset previous index files
 	for (size_t j = 1; j < tokens.size(); ++j) {
 		if (tokens[j].empty())
 			throw std::runtime_error("An index file is an emtpy string");
-		// TODO in Router: check if file exists
 		_indexFiles.push_back(tokens[j]);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))

@@ -2,11 +2,6 @@
 #define ROUTING_DECISION_HPP
 
 #include "config/Config.hpp"
-#include "http/Request.hpp"
-#include "http/HttpStatus.hpp"
-#include "config/ServerBlock.hpp"
-#include "config/LocationBlock.hpp"
-#include "utils/utils.hpp"
 
 class RoutingDecision {
 
@@ -48,6 +43,7 @@ class RoutingDecision {
 	RoutingDecision(Config const&, Request const&, HostPortPair const&);
 	~RoutingDecision();
 
+	Request const&			getRequest() const;
 	ServerBlock const*		getServer() const;
 	LocationBlock const*	getLocation() const;
 	Decision const&			getDecision() const;
