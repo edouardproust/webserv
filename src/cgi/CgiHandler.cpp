@@ -28,6 +28,7 @@ Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::stri
 	_buildEnvp(req, loc->getRoot());
 	_buildArgv();
 	pid_t pid = _forkAndExec();
+
 	_communicateWithChild(req);
 	if (DEVMODE) std::cout << *this <<std::endl;
 
@@ -68,8 +69,7 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
 void	CgiHandler::_buildArgv() {
     _argv.clear(); // security
 	_argv.push_back(_executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
-	if (_extension != ".php")
-		_argv.push_back(_filePath); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
+	_argv.push_back(_filePath); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
 }
 
 pid_t	CgiHandler::_forkAndExec() {
@@ -113,7 +113,6 @@ void	CgiHandler::_communicateWithChild(Request const& req) {
 	close(_stderrPipe[0]);
 }
 
-// TODO test this function with request POST of content-length 0 with empty body
 Response	CgiHandler::_handleStatus(int status) {
 	if (WIFEXITED(status)) {
 		if (!_cgiOutput.empty()) {

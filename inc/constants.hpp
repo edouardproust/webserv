@@ -19,6 +19,7 @@ size_t const		PATH_MAX = 4096;
 // config
 
 size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)
+size_t const	DEFAULT_CGI_TIMEOUT = 5; // seconds
 
 // static
 

@@ -60,8 +60,8 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 			return HttpStatus("bad_request");
 	}
 	std::istringstream	requestLineStream(line);
-	std::string	methodStr, _requestTarget, versionStr;
-	if (!(requestLineStream >> methodStr >> _requestTarget >> versionStr))
+	std::string	methodStr, uri, versionStr;
+	if (!(requestLineStream >> methodStr >> uri >> versionStr))
 		return HttpStatus("bad_request");
 	char c;
 	while (requestLineStream.get(c))
@@ -69,7 +69,7 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 		if (c != ' ')
 			return HttpStatus("bad_request");
 	}
-	HttpStatus result = _parseRequestTarget(request, _requestTarget);
+	HttpStatus result = _parseUri(request, uri);
 	if (result.getSlug() != "ok")
 	 	return result;
 	if (!_isValidMethod(methodStr))
@@ -85,35 +85,35 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 	return HttpStatus("ok");
 }
 
-HttpStatus	RequestParser::_parseRequestTarget(Request& request, const std::string& _requestTarget)
+HttpStatus	RequestParser::_parseUri(Request& request, const std::string& uri)
 {
-	request.setUri(_requestTarget);
-	size_t queryPos = _requestTarget.find('?');
+	request.setUri(uri);
+	size_t queryPos = uri.find('?');
 	if (queryPos != std::string::npos)
 	{
-		std::string path = _requestTarget.substr(0, queryPos);
-		std::string query = _requestTarget.substr(queryPos + 1);
+		std::string path = uri.substr(0, queryPos);
+		std::string query = uri.substr(queryPos + 1);
 		if (!_isValidPath(path))
-			return HttpStatus("bad_request");
+			return HttpStatus(400);
 		std::string decodedPath, decodedQuery;
-		if (_parseUrl(decodedPath, path).getSlug() != "ok")
-			return HttpStatus("bad_request");
-		if (_parseUrl(decodedQuery, query).getSlug() != "ok")
-			return HttpStatus("bad_request");
-		request.setUri(decodedPath);
+		if (_parseUrl(decodedPath, path).getCode() != 200)
+			return HttpStatus(400);
+		if (_parseUrl(decodedQuery, query).getCode() != 200)
+			return HttpStatus(400);
+		request.setPath(decodedPath);
 		request.setQueryString(decodedQuery);
 	}
 	else
 	{
-		if (!_isValidPath(_requestTarget))
-			return HttpStatus("bad_request");
+		if (!_isValidPath(uri))
+			return HttpStatus(400);
 		std::string decodedPath;
-		if (_parseUrl(decodedPath, _requestTarget).getSlug() != "ok")
-			return HttpStatus("bad_request");
-		request.setUri(decodedPath);
+		if (_parseUrl(decodedPath, uri).getCode() != 200)
+			return HttpStatus(400);
+		request.setPath(decodedPath);
 		request.setQueryString("");
 	}
-	return HttpStatus("ok");
+	return HttpStatus(200);
 }
 
 HttpStatus RequestParser::_parseUrl(std::string& result, const std::string& encoded)

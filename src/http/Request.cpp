@@ -74,6 +74,7 @@ bool	Request::isExistingMethod(std::string const& method) {
 	return _existingMethods.find(method) != _existingMethods.end();
 }
 
+
 const HttpStatus& Request::getStatus() const
 {
 	return (this->_status);
@@ -89,9 +90,10 @@ const std::string& Request::getUri() const
 	return this->_uri;
 }
 
-const std::string Request::getPath() const
+const std::string& Request::getPath() const
 {
-	return _uri.empty() ? "/" : _uri;
+	static const std::string root("/");
+	return _path.empty() ? root : _path;
 }
 
 const std::string& Request::getQueryString() const
@@ -167,10 +169,7 @@ void	Request::setBody(const std::string& body)
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
-	HttpStatus const& status = request.getStatus();
-	os << "- Status: ";
-	if (status.getCode() != 200) os << status << "\n";
-	else os << "[empty]\n";
+	os << "- Status: " << request.getStatus() << "\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
 	os << "- URI: " << request.getUri() << "\n";

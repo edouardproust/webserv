@@ -17,8 +17,9 @@
 					echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
 				}
 			?></pre>
+		<?php endif ?>
 
-		<?php elseif (!empty($_POST)): ?>
+		<?php if (!empty($_POST)): ?>
 			<h2>POST Parameters:</h2>
 			<pre><?php
 				foreach ($_POST as $key => $value) {
@@ -29,8 +30,10 @@
 		<?php else:
 			$raw_body = file_get_contents('php://input');
 			if (!empty($raw_body)): ?>
-			<h2>Raw Input (<?php echo $_SERVER['REQUEST_METHOD']; ?>):</h2>
-			<pre><?= htmlspecialchars($raw_body); ?></pre>
+				<h2>Raw Input (<?php echo $_SERVER['REQUEST_METHOD']; ?>):</h2>
+				<pre><?= htmlspecialchars($raw_body); ?></pre>
+			<?php else: ?>
+				<p>No GET or POST parameters received.</p>
 			<?php endif; ?>
 
 		<?php endif; ?>

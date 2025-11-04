@@ -33,6 +33,7 @@ std::string	StaticHandler::_getMimeType(const std::string& filePath)
 	 return "application/octet-stream";
 }
 
+// TODO (optionnal?): If is CGI file, call CGIHandler instead
 Response	StaticHandler::_serveFile(std::string const& filePath, LocationBlock const* loc)
 {
 	size_t fileSize = utils::getFileSize(filePath);

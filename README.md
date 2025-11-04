@@ -10,6 +10,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 - General:
 	- Add "explicit" keyword to constructors declaration with only 1 argument
 	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
+	- Check remaining "// TODO"s and "// DEBUG"s
 - RequestParser:
 	- Test chunked request
 	- test URL decoding / encoding
@@ -20,8 +21,12 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Support `alias` directive in `location` block ?
 	- Support IPv6 ?
 - CGI:
+	- Implement **timeout** on CGI execution ?
 	- Now using `_exit()` in CGIHandler. It is NOT in the list af allowed functions -> How to do ?
 	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
+- StaticHandler:
+	- `StaticHandler::_generateAutoindex`
+	- (?) If location > `index` directive is a CGI extension -> redirect to CGI
 - Network:
 	- What socket(s) to open if only "0.0.0.0" is defined as an open port in config file ?
 

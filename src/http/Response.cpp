@@ -186,6 +186,8 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 	// Split headers and body
 	size_t headerEnd = rawResponse.find("\r\n\r\n");
 	if (headerEnd == std::string::npos)
+		headerEnd = rawResponse.find("\n\n");
+	if (headerEnd == std::string::npos)
 		throw RawException("malformed raw response: missing header/body separator");
 	std::string headersPart = rawResponse.substr(0, headerEnd);
 	std::string bodyPart = rawResponse.substr(headerEnd + 4);

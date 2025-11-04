@@ -35,7 +35,7 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 		return RedirectionHandler::run(ret.first, ret.second);
 	}
 	// cgi, static
-	std::string filePath = utils::joinPath(loc->getRoot(), req.getUri());
+	std::string filePath = utils::normalizePath(utils::joinPath(loc->getRoot(), req.getPath()));
 	if (DEVMODE)
 		std::cout << "Router:\n- filePath: " << filePath << "\n" << std::endl;
 	if (decision == RoutingDecision::CGI) {

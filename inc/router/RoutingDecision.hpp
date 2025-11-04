@@ -43,6 +43,7 @@ class RoutingDecision {
 	RoutingDecision(Config const&, Request const&, HostPortPair const&);
 	~RoutingDecision();
 
+	Request const&			getRequest() const;
 	ServerBlock const*		getServer() const;
 	LocationBlock const*	getLocation() const;
 	Decision const&			getDecision() const;

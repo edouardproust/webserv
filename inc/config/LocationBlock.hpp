@@ -20,6 +20,7 @@ class LocationBlock {
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	ErrorPages					_errorPages;			// optional. Has priority over _server->getErrorPages()
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
+	bool						_isDefaultLocation;		// true if this location is the default one (path = "/")
 
 	LocationBlock(); // not used
 
@@ -65,6 +66,7 @@ class LocationBlock {
 		bool	isRedirection() const;
 		bool	isAllowedMethod(std::string const&) const;
 		bool	isAllowedClientBodySize(size_t, std::string const&) const;
+		bool	isDefaultLocation() const;
 
 };
 

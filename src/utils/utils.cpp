@@ -227,6 +227,7 @@ std::string utils::buildRelativePath(const std::string& path) {
  * `_normalizePath("//var///www////html/test//")` -> `/var/www/html/test`
  * `_normalizePath("/./././")` -> `/`
  * `_normalizePath("/a/b/../../c/")` -> `/c`
+ * `_normalizePath("")` -> (empty string)
  */
 std::string utils::normalizePath(std::string const& path) {
 	std::vector<std::string> parts = utils::split(path, '/');

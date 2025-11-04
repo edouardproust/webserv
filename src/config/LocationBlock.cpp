@@ -5,14 +5,14 @@
  * Default location block (path = "/"). Used if not location matches the request URI.
  */
 LocationBlock::LocationBlock(ServerBlock const* server)
-: _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false)
+: _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(true)
 {}
 
 /**
  * May throw a runtime_error() exception.
  */
 LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string const& blockContent)
-: _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false) {
+: _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(false) {
 	_setPath(path);
 	_parse(blockContent);
 }
@@ -28,7 +28,8 @@ LocationBlock::LocationBlock(const LocationBlock &other)
   _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
   _indexFiles(other._indexFiles),
   _errorPages(other._errorPages),
-  _cgi(other._cgi)
+  _cgi(other._cgi),
+  _isDefaultLocation(other._isDefaultLocation)
 {}
 
 LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
@@ -44,6 +45,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_indexFiles = other._indexFiles;
 		_errorPages = other._errorPages;
 		_cgi = other._cgi;
+		_isDefaultLocation = other._isDefaultLocation;
 	}
 	return *this;
 }
@@ -362,9 +364,14 @@ bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& meth
     return true; // GET, HEAD, DELETE, etc.
 }
 
+bool	LocationBlock::isDefaultLocation() const {
+	return _isDefaultLocation;
+}
+
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	std::string const in = "  "; // indentation
-	os << in << "- path: " << rhs.getPath() << "\n";
+	os << in << "- Default location: " << (rhs.isDefaultLocation() ? "yes" : "no") << "\n";
+	os << in << "- path: " << (rhs.getPath().empty() ? "[empty]" : rhs.getPath()) << "\n";
 	os << in << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
 	os << in << "- autoindex: " << (rhs.getAutoindex().empty() ? "[empty]" : rhs.getAutoindex()) << "\n";
 

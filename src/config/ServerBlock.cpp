@@ -6,7 +6,7 @@
  */
 ServerBlock::ServerBlock(): _isSetClientBodySize(false) {
 	_root = utils::buildRelativePath("./www"); // set default root (setRoot() will clear it the directive exists)
-	_indexFiles.push_back("index.html"); // set default root (setRoot() will clear it the directive exists)
+	_setDefaultIndexFiles(); // set default root (setRoot() will clear it the directive exists)
 }
 
 /**
@@ -16,7 +16,7 @@ ServerBlock::ServerBlock(): _isSetClientBodySize(false) {
  */
 ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(false) {
 	_root = utils::buildRelativePath("./www"); // set default root (setRoot() will clear it the directive exists)
-	_indexFiles.push_back("index.html"); // set default index file (setIndexFiles() will clear it if the directive exists)
+	_setDefaultIndexFiles(); // set default index file (setIndexFiles() will clear it if the directive exists)
 	_parse(blockContent); // throw
 	// set default listen directive if none exist after parsing
 	if (_listen.empty())
@@ -142,6 +142,14 @@ void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content,
 	std::string blockContent = Config::getBlockContent(content, i, braceDepth);
 	LocationBlock lb(this, path, blockContent); // throw
 	_locations.push_back(lb);
+}
+
+
+void	ServerBlock::_setDefaultIndexFiles() {
+	_indexFiles.clear(); // reset previous index files
+	_indexFiles.push_back("index.html");
+	_indexFiles.push_back("index.htm");
+	//_indexFiles.push_back("index.php"); // TODO if uncommented, needs to be checked in StaticHandler::_serveFile
 }
 
 /**
