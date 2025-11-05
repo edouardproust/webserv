@@ -1,13 +1,13 @@
 #include <network/Network.hpp>
 #include <network/Colors.hpp>
 #include <config/Config.hpp>
-#include <config/ServerBlock.hpp> // <--- ADICIONE
-#include <config/HostPortPair.hpp> // <--- ADICIONE
+#include <config/ServerBlock.hpp> 
+#include <config/HostPortPair.hpp> 
 #include "http/Request.hpp"
 #include "http/Response.hpp"
-#include "http/RequestParser.hpp" // Para enums de erro
+#include "http/RequestParser.hpp" 
 #include "router/Router.hpp"  
-#include <set> // <--- ADICIONE
+#include <set> 
 #include <errno.h>
 #include <cstring>
 #include <sstream>
@@ -249,35 +249,26 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 	Response response;
 	try 
 	{
-       
-        Request request(_request_list[client_fd]); // 1. Crie o Request a partir do raw request armazenado em _request_list
-        
-        if (_client_server_map.find(client_fd) == _client_server_map.end())// 2. Verifique se o client_fd está mapeado para um Socket*
+        Request request(_request_list[client_fd]); 
+        if (_client_server_map.find(client_fd) == _client_server_map.end())
             throw std::runtime_error("Network logic error: client_fd not in map.");
-        
         Socket* serverSocket = _client_server_map.at(client_fd);
-        HostPortPair listenPair = serverSocket->getHostPortPair(); // 3. Obtenha o HostPortPair do Socket* correspondente ao client_fd
-
-        // 4. Chame o Router (ele próprio já trata dos erros de parse)
-        // (Como visto no Router.cpp, ele verifica o request.getStatus())
+        HostPortPair listenPair = serverSocket->getHostPortPair(); 
+		//call router
         response = Router::dispatchRequest(_config_file, request, listenPair);
 		std::string msg = response.stringify();
-        // 6. Envie
 		int ret = ::send(client_fd, msg.data(), msg.length(), 0);
 		if (ret == -1)
 			throw std::runtime_error("Send failed");
-        // 7. Limpeza (em caso de sucesso)
 		_request_list.erase(client_fd);
         _client_server_map.erase(client_fd);
 		events_setup.data.fd = client_fd;
-		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);// Remova o client_fd do epoll
+		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 		close(client_fd);
 	}
 	catch (std::exception& e)
 	{
 		std::cout << FT_STATUS << "Error during send/dispatch: " << e.what() << std::endl;
-        
-        // 8. Limpeza (em caso de falha)
         _request_list.erase(client_fd);
         _client_server_map.erase(client_fd);
 		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
@@ -326,16 +317,10 @@ void Network::start_servers()
 	}
 }
 
-// Ficheiro: Network.cpp
-// ... (final do ficheiro) ...
-
-// --- VERSÃO CORRIGIDA (depois de adicionar os getters) ---
 std::ostream& operator<<(std::ostream& os, const Network& rhs)
 {
     os << "--- Network Debug Status ---\n";
     os << "- Epoll FD: " << rhs.getEpollFd() << "\n";
-
-    // Lista de Sockets de servidor (listening)
     os << "- Listening Sockets: " << rhs.getConnections().size() << "\n";
     const std::vector<Socket*>& sockets = rhs.getConnections();
     for (size_t i = 0; i < sockets.size(); ++i)
@@ -344,11 +329,7 @@ std::ostream& operator<<(std::ostream& os, const Network& rhs)
            << sockets[i]->getHostPortPair().getHost() << ":" 
            << sockets[i]->getHostPortPair().getPort() << "\n";
     }
-
-    // Clientes que enviaram dados e estão à espera de um send (EPOLLOUT)
     os << "- Pending Requests (waiting send): " << rhs.getRequestList().size() << "\n";
-    
-    // Clientes que estão ligados (à espera de recv ou send)
     os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
     
     os << "------------------------------" << std::endl;

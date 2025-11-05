@@ -31,14 +31,14 @@ void Socket::loadAddressInfo()
 	std::cout << FT_SETUP << "Loading address info." << std::endl;
 	int status;
 
-	setAddrStruct();//TODO trocar o server name para ipportpair sername vai ser o ip e port vai ser a port kkk
+	setAddrStruct();
 
 	// Converte size_t (porta) para C-string
     std::string portStr = utils::toString(_listen_on.getPort());
     
     // Pega o host. Se for "0.0.0.0" ou "*", usamos NULL para getaddrinfo
     std::string hostStr = _listen_on.getHost();
-    const char* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
+    const char* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str(); //TODO
 
     // Use os valores de _listen_on
 	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);

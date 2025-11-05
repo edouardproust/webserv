@@ -5,16 +5,24 @@
 #include <dirent.h>
 #include <sys/epoll.h>
 #include <sys/stat.h>
-
+#include <network/Colors.hpp>
+#include <config/ServerBlock.hpp> 
+#include <config/HostPortPair.hpp> 
+#include "http/Request.hpp"
+#include "http/Response.hpp"
+#include "http/RequestParser.hpp" 
+#include "router/Router.hpp"  
+#include <set> 
+#include <errno.h>
+#include <cstring>
+#include <sstream>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include "config/Config.hpp"
 #include "network/Socket.hpp"
 #include "utils/signal_handler.hpp"
-#define FT_DEFAULT_CONFIG_FILE "./configurations/webserv.conf"
-#define FT_DEFAULT_CLIENT_BUFFER_SIZE 1024
-#define FT_MAX_EVENT_SIZE 100
+
 
 	class Network
 	{
