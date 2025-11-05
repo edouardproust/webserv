@@ -16,6 +16,10 @@ std::string const	SERVER_SOFTWARE = "webserv/1.0";
 size_t const		EXCERPT_LENGTH = 500;
 size_t const		PATH_MAX = 4096;
 
+// parser
+
+size_t const		HEADER_MAX_SIZE = 8192;
+
 // config
 
 size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)

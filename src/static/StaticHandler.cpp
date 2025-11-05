@@ -59,7 +59,7 @@ Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationB
 	return Response();
 }
 
-std::string StaticHandler::_generateErrorPage(HttpStatus const& status)
+std::string StaticHandler::generateStatusHtml(HttpStatus const& status)
 {
 	std::stringstream html;
 
@@ -69,7 +69,7 @@ std::string StaticHandler::_generateErrorPage(HttpStatus const& status)
 		 << "  </head>\n"
 		 << "  <body>\n"
 		 << "    <center><h1>" << status.toString() << "</h1></center>\n"
-		 << "    <hr><center>webserv/1.0</center>\n"
+		 << "    <hr><center>" << SERVER_SOFTWARE << "</center>\n"
 		 << "  </body>\n"
 		 << "</html>";
 	return html.str();
@@ -96,7 +96,7 @@ Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock cons
 	}
 	Response response;
 	response.setStatus(status);
-	std::string errorPage = _generateErrorPage(status);
+	std::string errorPage = generateStatusHtml(status);
 	response.setBody(errorPage);
 	response.setHeader("Content-Type", "text/html");
 	return response;

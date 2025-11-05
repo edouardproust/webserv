@@ -3,7 +3,9 @@
 
 #include "http/Response.hpp"
 
-class RedirectionHandler {
+class RedirectionHandler
+{
+	private:
 
 	// Not used
 	RedirectionHandler();
