@@ -23,7 +23,10 @@ BASE_SRC_FILES = \
 	router/RoutingDecision.cpp \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
-	cgi/CgiHandler.cpp
+	cgi/CgiHandler.cpp \
+	network/Socket.cpp \
+	network/Network.cpp \
+	utils/signal_handler.cpp
 
 DEV_SRC_FILES =
 

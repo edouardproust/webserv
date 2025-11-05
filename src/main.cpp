@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 		Config config(argv[1]);
 		if (DEVMODE) std::cout << config << std::endl;
 		Network network(config);
-		network.run();
+		network.start_servers();
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;
