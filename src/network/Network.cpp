@@ -71,14 +71,17 @@ void	Network::_runManualTests() const {
 	//_onCatchRequest(srcPort, "GET /cgi/segfault.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 500 Internal Server Error (process killed by signal 11)
 
 	// --- BAD REQUESTS ---
-	//_onCatchRequest(srcPort, "gOt / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (invalid method)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.0\r\n\r\n"); // ✅  Should be 505 Not supported - fixed, non-supported version takes precedence over 400
+	//_onCatchRequest(srcPort, "GOT / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (invalid method)
+	//_onCatchRequest(srcPort, "get / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (invalid method, method is case-sensitive)
+	//_onCatchRequest(srcPort, "HEAD / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 501 not implemented (method exists but our server does not support it)
+	//_onCatchRequest(srcPort, "GET / HTTP/1.0\r\n\r\n"); // ✅  505 Not supported - fixed, non-supported version takes precedence over 400
 	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\n\r\n"); // ✅ 400 Bad Request (missing Host header)
 	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 10\r\n\r\n"); // ✅ 400 Bad Request (wrong content-length)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n"); // ✅ 200 OK
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: compress\r\n\r\n"); // ✅  OK (not implemented encoding)
-	//_onCatchRequest(srcPort, "POST / HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: abc\r\n\r\n"); //  ✅ 400 Bad Request (wrong content-length)
+	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: compress\r\n\r\n"); // ✅  501 (not implemented type of encoding)
+	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello6\r\nWorld!\r\n0\r\n\r\n");// ✅ 400 Bad Request (no CRLF after first chunk)
+	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r\n7\r\nWorld!\r\n0\r\n\r\n"); // ✅ 400 Bad Request (wrong length in second chunk)
 	//_onCatchRequest(srcPort, "POST /upload HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 12\r\nTransfer-Encoding: chunked\r\n\r\nHello world!"); // ✅ 400 Bad Request (both Content-Length and Transfer-Encoding)
+	//_onCatchRequest(srcPort, "GET /index.html ?query=test HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (space inside URL)
 
 	// --- BODY SIZE / LIMIT TESTS ---
 	//std::string bigBody(2000000, 'A'); // 2MB
