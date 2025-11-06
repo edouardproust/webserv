@@ -262,15 +262,15 @@ void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * - an HTTP code is out of range (300-599)
  */
 void	LocationBlock::_setErrorPages(Tokens const& tokens) {
-	std::string const& root = getRoot();
-	if (root.empty())
-		throw std::runtime_error("This directive requires a server root to be set");
 	if (tokens.size() < 3)
 		throw std::runtime_error("Format must be \"error_page code1 [code2 ...] path;\"");
 	// Check path (last argument)
 	std::string path = tokens.back();
 	if (path.empty())
 		throw std::runtime_error("Path is an empty string");
+	std::string const& root = getRoot();
+	if (utils::isRelativePath(path) && root.empty())
+		throw std::runtime_error("Path \"" + path + "\" is relative but not root is set in server");
 	if (utils::isRelativePath(path))
 		path = utils::pathsJoin(root, path);
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
@@ -301,14 +301,14 @@ void	LocationBlock::_setErrorPages(Tokens const& tokens) {
  * - duplicate index files
  */
 void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
-	if (getRoot().empty())
-			throw std::runtime_error("This directive requires a server root to be set");
 	if (tokens.size() < 2)
 		throw std::runtime_error("Format must be \"index file1 [file2 ...];\"");
 	for (size_t j = 1; j < tokens.size(); ++j) {
 		std::string path = tokens[j];
 		if (path.empty())
 			throw std::runtime_error("An index value is an empty string");
+		if (utils::isRelativePath(path) && getRoot().empty())
+			throw std::runtime_error("Path \"" + path + "\" is relative but not root is set in server");
 		_indexFiles.push_back(path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))

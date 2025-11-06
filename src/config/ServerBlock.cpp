@@ -281,14 +281,14 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * - an HTTP code is out of range (300-599)
  */
 void	ServerBlock::_setErrorPages(Tokens const& tokens) {
-	if (_root.empty())
-		throw std::runtime_error("This directive requires a root to be set");
 	if (tokens.size() < 3)
 		throw std::runtime_error("Should have at least 2 paths");
 	// Check path (last argument)
 	std::string path = tokens.back();
 	if (path.empty())
 		throw std::runtime_error("Error path is an empty string");
+	if (utils::isRelativePath(path) && _root.empty())
+		throw std::runtime_error("Path \"" + path + "\" is relative but root is not set");
 	if (utils::isRelativePath(path))
 		path = utils::pathsJoin(_root, path); // make absolute
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
@@ -314,11 +314,10 @@ void	ServerBlock::_setErrorPages(Tokens const& tokens) {
  * Exception is thrown if:
  * - arguments are invalid
  * - an index file is an empty string
+ * - an index path is a relative path but no root is set
  * - duplicate index files
  */
 void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
-	if (_root.empty())
-		throw std::runtime_error("This directive requires a root to be set");
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have 1 or more paths");
 	_indexFiles.clear(); // clear default index files
@@ -326,6 +325,8 @@ void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 		std::string path = tokens[j];
 		if (path.empty())
 			throw std::runtime_error("An index file is an emtpy string");
+		if (utils::isRelativePath(path) && _root.empty())
+			throw std::runtime_error("Path \"" + path + "\" is relative but root is not set");
 		_indexFiles.push_back(path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
