@@ -7,7 +7,7 @@
 
 #include <signal.h>
 
-void (*signal(int sig, void (*func)(int)))(int);
-bool keep(void);
+void signal_handler(int signal);
+int keep(int action = -1);
 
 #endif // SIGNAL_HANDLER_HPP

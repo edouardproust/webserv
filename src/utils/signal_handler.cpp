@@ -1,33 +1,27 @@
-#include <utils/signal_handler.hpp>
+#include "utils/signal_handler.hpp"
+#include <iostream>
+#include <signal.h>
+#include "network/Colors.hpp" 
 
-static bool ctrl_c_pressed = false;
-
-static void signal_handler(int signal)
+void signal_handler(int signal)
 {
-	ctrl_c_pressed = true;
-
-	std::cout
-		<< '\r'
-		<< FT_WARNING
-		<< "Signal " << signal << " (Ctrl + C) received."
-		<< std::endl;
+    (void)signal;
+    std::cout << "\r" << FT_STATUS << "Stopping Web server..." << std::endl;
+    keep(0);
 }
 
-bool keep(void)
+int keep(int action)
 {
-	static bool first_run = false;
+    static int keep = 1;
 
-	if (!first_run)
-	{
-		std::cout << FT_SETUP << "Setting up signals." << std::endl;
+    if (action != -1)
+        keep = action;
+    
+    if (keep == 1 && action == -1)
+    {
+        signal(SIGINT, signal_handler);
+        signal(SIGQUIT, signal_handler);
+    }
 
-		signal(SIGINT, signal_handler);
-
-		first_run = true;
-
-		std::cout << FT_OK << "Signals ready." << std::endl;
-		std::cout << std::endl;
-	}
-
-	return (!ctrl_c_pressed);
+    return (keep);
 }

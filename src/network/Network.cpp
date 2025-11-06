@@ -173,7 +173,10 @@ void Network::start_servers()
 		{
 			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
 			{
-				::fcntl(new_conn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+				// Forma correta:
+				::fcntl(new_conn, F_SETFL, O_NONBLOCK);  // Define como non-blocking
+				::fcntl(new_conn, F_SETFD, FD_CLOEXEC); // Define para fechar no exec()
+				//::fcntl(new_conn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 				events_setup.data.fd = new_conn;
 				events_setup.events = EPOLLIN;
 				if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, new_conn, &events_setup) == -1)
@@ -233,29 +236,24 @@ int Network::epoll_wait(struct epoll_event *events)
 
 int Network::isServerSideEvent(int epoll_fd)
 {
-	std::vector<Socket *>::iterator it;
-
-	std::cout
-		<< FT_EVENT
-		<< "Server side event happened on fd "
-		<< FT_HIGH_LIGHT_COLOR << epoll_fd << RESET_COLOR
-		<< "." << std::endl;
-
-	for (it = _connections.begin(); it != _connections.end() && keep(); it++)
-	{
-		if (epoll_fd == (*it)->getSock())
-		{
-			int new_conn = (*it)->accept();
+    // Itera pelos sockets de escuta (servidores)
+    for (std::vector<Socket *>::iterator it = _connections.begin(); it != _connections.end() && keep(); it++)
+    {
+        // SE e SÓ SE o fd do evento for igual a um dos meus sockets de servidor
+        if (epoll_fd == (*it)->getSock())
+        {
+            std::cout << FT_EVENT << "Server side event on fd " << FT_HIGH_LIGHT_COLOR << epoll_fd << RESET_COLOR << "." << std::endl;
+            
+            int new_conn = (*it)->accept();
             if (new_conn > 0)
             {
-               // Map the new client fd to the server Socket* that accepted it
                 _client_server_map[new_conn] = *it; 
             }
-			return (new_conn);
-		}
-			
-	}
-	return (0);
+            return (new_conn);
+        }
+    }
+    // Se não for evento de servidor, não imprime nada e retorna 0
+    return (0);
 }
 
 void Network::_handleClientDisconnect(int client_fd, struct epoll_event &events_setup)
