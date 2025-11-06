@@ -42,6 +42,9 @@
 		void recv(int client_fd, struct epoll_event &events_setup);
 		void send(int client_fd, struct epoll_event &events_setup);
 
+		void _handleClientDisconnect(int client_fd, struct epoll_event &events_setup);
+		void _handleRecvError(int client_fd, struct epoll_event &events_setup);
+
 		int			getRequestTotalLength(std::string request);
 		std::string getBoundry(std::string request);
 		

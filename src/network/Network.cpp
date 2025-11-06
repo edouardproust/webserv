@@ -99,44 +99,20 @@
 // 	// --- PIPELINED REQUESTS ---
 // 	_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\nGET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // NOT TESTED YET
 // }
-
-
-
-#include <network/Network.hpp>
-#include <network/Colors.hpp>
-#include <config/Config.hpp>
-#include <config/ServerBlock.hpp> 
-#include <config/HostPortPair.hpp> 
-#include "http/Request.hpp"
-#include "http/Response.hpp"
-#include "http/RequestParser.hpp" 
-#include "router/Router.hpp"  
-#include <set> 
-#include <errno.h>
-#include <cstring>
-#include <sstream>
-
+#include "network/Network.hpp"
 Network::Network(Config const& _config_file) : _config_file(_config_file)
 {
 	// Initializes Ctrl + C signal handler
 	keep();
-    //  GET HoSTpORTpAIr
-    std::set<HostPortPair> unique_listens;
-    const std::vector<ServerBlock>& servers = _config_file.getServers(); //
-    
-    for (size_t i = 0; i < servers.size(); ++i)
-    {
-        const std::set<HostPortPair>& listens = servers[i].getListen(); //
-        unique_listens.insert(listens.begin(), listens.end());
-    }
 
-    //  create socket for each HostPortPair
-    for (std::set<HostPortPair>::const_iterator it = unique_listens.begin(); 
-         it != unique_listens.end() && keep(); ++it)
-    {
-        _connections.push_back(new Socket(*it)); // Usa o novo construtor do Socket
-    }
+	// Get all unique host:port pairs directly from config
+	std::vector<HostPortPair> listen_ports = _config_file.getAllListenPorts();
 
+    // Create socket for each HostPortPair
+    for (size_t i = 0; i < listen_ports.size() && keep(); ++i)
+    {
+        _connections.push_back(new Socket(listen_ports[i]));
+    }
 	//  bind and listen to each socket created
 	std::vector<Socket *>::iterator it_sock;
 	for (it_sock = _connections.begin(); it_sock != _connections.end(); it_sock++)
@@ -193,10 +169,6 @@ void Network::start_servers()
 	while (keep())
 	{
 		number_of_events = epoll_wait(events);
-		if (number_of_events > 0)
-        {
-            std::cout << "\n--- SERVER STATUS (Activity Detected) ---\n" << *this << "\n";
-        }
 		for (int n = 0; n < number_of_events && keep(); n++)
 		{
 			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
@@ -286,42 +258,23 @@ int Network::isServerSideEvent(int epoll_fd)
 	return (0);
 }
 
-// std::string Network::getBoundry(std::string request)
-// {
-// 	size_t start;
-// 	size_t end;
+void Network::_handleClientDisconnect(int client_fd, struct epoll_event &events_setup)
+{
+	std::cout << FT_EVENT << "Client " << client_fd << " disconnected." << std::endl;
+	_client_server_map.erase(client_fd);
+	_request_list.erase(client_fd);
+	epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
+	close(client_fd);
+}
 
-// 	start = request.find("boundary=", 0) + 9;
-// 	if (start == std::string::npos)
-// 		return ("");
-// 	end = request.find("\r", start);
-// 	return (request.substr(start, end - start));
-// }
-
-// int  Network::getRequestTotalLength(std::string request)
-// {
-// 	size_t	start;
-// 	size_t	end;
-// 	int		length;
-// 	std::string boundry;
-
-// 	boundry = getBoundry(request);
-// 	if (boundry == "")
-// 		return (request.length());
-
-// 	length = request.rfind(boundry, request.length()) - 2;
-// 	start = request.find("Content-Length: ", 0);
-// 	if (start == std::string::npos)
-// 		return (request.length());
-// 	start += 16;
-// 	end = request.find("\r", start);
-// 	length += std::atoi(request.substr(start, end - start).data());
-// 	return (length);
-// }
-
-// Em Network.cpp
-
-
+void Network::_handleRecvError(int client_fd, struct epoll_event &events_setup)
+{
+	std::cout << FT_WARNING << "recv error on client " << client_fd << ": " << strerror(errno) << std::endl;
+	_client_server_map.erase(client_fd);
+	_request_list.erase(client_fd);
+	epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
+	close(client_fd);
+}
 void Network::recv(int client_fd, struct epoll_event &events_setup)
 {
 	std::cout
@@ -330,20 +283,16 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 		<< FT_HIGH_LIGHT_COLOR << client_fd << RESET_COLOR
 		<< "." << std::endl;
 
-	char client_buffer[FT_DEFAULT_CLIENT_BUFFER_SIZE + 1]; // +1 para null terminator
-	
-    // Pega uma referência ao request string (ou cria um novo vazio)
+	char client_buffer[FT_DEFAULT_CLIENT_BUFFER_SIZE];
     std::string& total_request = _request_list[client_fd];
 	int bytes;
 
 	while (keep())
 	{
-		std::memset(client_buffer, 0, sizeof(client_buffer));
 		bytes = ::recv(client_fd, client_buffer, FT_DEFAULT_CLIENT_BUFFER_SIZE, 0);
 
 		if (bytes > 0)
 		{
-            // receivng data
 			std::cout << FT_EVENT << "Receiving " << bytes
 					  << ((bytes <= 1) ? " byte." : " bytes.")
 					  << std::endl;
@@ -351,12 +300,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 		}
 		else if (bytes == 0)
 		{
-            // client disconnected
-			std::cout << FT_EVENT << "Client " << client_fd << " disconnected." << std::endl;
-			_client_server_map.erase(client_fd);
-			_request_list.erase(client_fd); // clean up the request
-			epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
-			close(client_fd);
+			_handleClientDisconnect(client_fd, events_setup);
 			return;
 		}
 		else // bytes == -1
@@ -365,17 +309,12 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 				break; // No more data to read right now
 			else
 			{
-				// error occurred
-				std::cout << FT_WARNING << "recv error on client " << client_fd << ": " << strerror(errno) << std::endl;
-				_client_server_map.erase(client_fd);
-				_request_list.erase(client_fd); 
-				epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
-				close(client_fd);
+				_handleRecvError(client_fd, events_setup);
 				return; 
 			}
 		}
 	} 
-	if (!total_request.empty()) // not empty change to EPOLLOUT to send response
+	if (!total_request.empty()) 
 	{
 		events_setup.data.fd = client_fd;
 		events_setup.events = EPOLLOUT;
