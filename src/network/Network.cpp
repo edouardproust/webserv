@@ -177,6 +177,47 @@ Network::~Network()
 	std::cout << std::endl;
 }
 
+void Network::start_servers()
+{
+	std::cout << FT_SETUP << "Starting up Web server" << std::endl;
+	std::cout << FT_WARNING << "Press Ctrl + C to stop the Web server." << std::endl;
+
+	int number_of_events;
+	int new_conn;
+	struct epoll_event events[FT_MAX_EVENT_SIZE];
+	struct epoll_event events_setup;
+
+	epoll();
+	epollAddServers();
+
+	while (keep())
+	{
+		number_of_events = epoll_wait(events);
+		if (number_of_events > 0)
+        {
+            std::cout << "\n--- SERVER STATUS (Activity Detected) ---\n" << *this << "\n";
+        }
+		for (int n = 0; n < number_of_events && keep(); n++)
+		{
+			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
+			{
+				::fcntl(new_conn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+				events_setup.data.fd = new_conn;
+				events_setup.events = EPOLLIN;
+				if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, new_conn, &events_setup) == -1)
+				{
+					std::cout << FT_STATUS << "Epoll Ctl status: " << strerror(errno) << std::endl;
+					throw EpollCtlException();
+				}
+			}
+			else if (events[n].events & EPOLLIN)
+				recv(events[n].data.fd, events_setup);
+			else if (events[n].events & EPOLLOUT)
+				send(events[n].data.fd, events_setup);
+		}
+	}
+}
+
 void Network::epoll()
 {
 	_epoll = ::epoll_create(1);
@@ -377,47 +418,6 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
         _client_server_map.erase(client_fd);
 		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 		close(client_fd);
-	}
-}
-
-void Network::start_servers()
-{
-	std::cout << FT_SETUP << "Starting up Web server" << std::endl;
-	std::cout << FT_WARNING << "Press Ctrl + C to stop the Web server." << std::endl;
-
-	int number_of_events;
-	int new_conn;
-	struct epoll_event events[FT_MAX_EVENT_SIZE];
-	struct epoll_event events_setup;
-
-	epoll();
-	epollAddServers();
-
-	while (keep())
-	{
-		number_of_events = epoll_wait(events);
-		if (number_of_events > 0)
-        {
-            std::cout << "\n--- SERVER STATUS (Activity Detected) ---\n" << *this << "\n";
-        }
-		for (int n = 0; n < number_of_events && keep(); n++)
-		{
-			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
-			{
-				::fcntl(new_conn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-				events_setup.data.fd = new_conn;
-				events_setup.events = EPOLLIN;
-				if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, new_conn, &events_setup) == -1)
-				{
-					std::cout << FT_STATUS << "Epoll Ctl status: " << strerror(errno) << std::endl;
-					throw EpollCtlException();
-				}
-			}
-			else if (events[n].events & EPOLLIN)
-				recv(events[n].data.fd, events_setup);
-			else if (events[n].events & EPOLLOUT)
-				send(events[n].data.fd, events_setup);
-		}
 	}
 }
 

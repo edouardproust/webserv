@@ -198,9 +198,9 @@ std::string utils::buildRelativePath(const std::string& path) {
 		throw std::runtime_error("empty relative path");
 
 	if (path.rfind("./", 0) != 0)
-		throw std::runtime_error("relative path must start with './'");
+		throw std::runtime_error("relative path must start with './'");//TODO
 
-	char cwd[PATH_MAX];
+	char cwd[4096];
 	if (!getcwd(cwd, sizeof(cwd)))
 		throw std::runtime_error("failed to get current working directory to join relative path)");
 

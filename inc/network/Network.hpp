@@ -21,7 +21,8 @@
 #include "config/Config.hpp"
 #include "network/Socket.hpp"
 #include "utils/signal_handler.hpp"
-
+#define FT_DEFAULT_CLIENT_BUFFER_SIZE 1024
+#define FT_MAX_EVENT_SIZE 100
 
 	class Network
 	{
