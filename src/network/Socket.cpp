@@ -16,6 +16,7 @@ Socket::Socket(const HostPortPair &listen_pair) : _listen_on(listen_pair)
 Socket::~Socket()
 {
 	std::cout << FT_CLOSE << "Closing " << FT_HIGH_LIGHT_COLOR << _listen_on.getHost()<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort() << RESET_COLOR << "." << std::endl;
+	close(_sock);
 }
 
 void Socket::setAddrStruct(void)
