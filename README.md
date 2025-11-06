@@ -12,6 +12,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
 	- Check remaining "// TODO"s and "// DEBUG"s
 - RequestParser:
+	- Add check for 414 URI Too Long (+ add this HttpStatus too the list)
 	- Test chunked request
 	- test URL decoding / encoding
 - Config parsing:
@@ -25,6 +26,7 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Now using `_exit()` in CGIHandler. It is NOT in the list af allowed functions -> How to do ?
 	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
 - StaticHandler:
+	- If URI does not end by a / and is the path of a directory -> `301 Moved Permanently` with header `Location: http://localhost:8003/test/`
 	- `StaticHandler::_generateAutoindex`
 	- (?) If location > `index` directive is a CGI extension -> redirect to CGI
 - Network:

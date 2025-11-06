@@ -5,6 +5,7 @@ RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair
   _decision(ERROR), _errorSlug("internal_server_error") {
 	_setServer();
 	_setLocation();
+	_setFilePath();
 	_makeDecision();
 }
 
@@ -71,6 +72,21 @@ void	RoutingDecision::_setLocation() {
 	_location = best;
 }
 
+/**
+ * May set _filePath to an empty string in case of root path traversal attempt.
+ */
+void	RoutingDecision::_setFilePath() {
+	if (!_server)
+		_setServer();
+	if (!_location)
+		_setLocation();
+	std::string joinedPath = utils::joinPath(_location->getRoot(), _request.getPath());
+	std::string normalizedPath = utils::normalizePath(joinedPath);
+	if (normalizedPath.rfind(_location->getRoot(), 0) != 0) // root path traversal check
+		normalizedPath = ""; // outside of root
+	_filePath = normalizedPath;
+}
+
 void	RoutingDecision::_setError(std::string const& errorSlug) {
 	_decision = ERROR;
 	_errorSlug = errorSlug;
@@ -92,6 +108,10 @@ LocationBlock const*	RoutingDecision::getLocation() const {
 	return _location;
 }
 
+std::string const&	RoutingDecision::getFilePath() const {
+	return _filePath;
+}
+
 std::string const&	RoutingDecision::getErrorSlug() const {
 	return _errorSlug;
 }
@@ -104,6 +124,7 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 				: (d == RoutingDecision::STATIC ? "STATIC"
 					: d == RoutingDecision::CGI ? "CGI"
 						: "UNKNOWN"))) << "\n"
+		<< "- File path: '" << rhs.getFilePath() << "'\n"
 		<< "- Matching server:\n"
 		<< "  - root: '" << rhs.getServer()->getRoot() << "'\n"
 		<< "- Request path: '" << rhs.getRequest().getPath() << "'\n"

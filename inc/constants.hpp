@@ -11,10 +11,14 @@
 # define DEVMODE 0
 #endif
 
-size_t const		MAX_SIZE_T = std::numeric_limits<int>::max(); // ~ 2GB
-std::string const	SERVER_SOFTWARE = "webserv/1.0";
+std::string const	SERVER_NAME = "webserv";
+std::string const	SERVER_VERSION = "1.0";
+std::string const	SERVER_REPO = "https://github.com/edouardproust/webserv";
 size_t const		EXCERPT_LENGTH = 500;
 size_t const		PATH_MAX = 4096;
+
+size_t const		MAX_SIZE_T = std::numeric_limits<int>::max(); // ~ 2GB
+std::string const	SERVER_SOFTWARE = SERVER_NAME + "/" + SERVER_VERSION;
 
 // config
 

@@ -22,12 +22,16 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	if (DEVMODE) std::cout << rd << std::endl;
 	RoutingDecision::Decision decision = rd.getDecision();
 	LocationBlock const* loc = rd.getLocation();
+	std::string const& filePath = rd.getFilePath();
 
-	// error, redirection
+	// Request parser Bad request
 	HttpStatus const& reqStatus = req.getStatus();
 	if (reqStatus.getSlug() != "ok")
 		return StaticHandler::handleError(HttpStatus(reqStatus), loc);
-
+	// Transversal attack check
+	if (filePath.empty())
+		return StaticHandler::handleError(HttpStatus("forbidden"), loc);
+	// Routing Decision error or redirection
 	if (decision == RoutingDecision::ERROR)
 		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()), loc);
 	if (decision == RoutingDecision::REDIRECTION) {
@@ -35,9 +39,6 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 		return RedirectionHandler::run(ret.first, ret.second);
 	}
 	// cgi, static
-	std::string filePath = utils::normalizePath(utils::joinPath(loc->getRoot(), req.getPath()));
-	if (DEVMODE)
-		std::cout << "Router:\n- filePath: " << filePath << "\n" << std::endl;
 	if (decision == RoutingDecision::CGI) {
 		CgiHandler handler;
 		try {

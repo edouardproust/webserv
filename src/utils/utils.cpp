@@ -13,12 +13,19 @@ bool	utils::isInt(std::string const& str)
 }
 
 /**
+ * Checks if the path starts by "/" and is not empty.
+ *
  * Only checking for Linux distros (path starting by '/')
  */
 bool	utils::isAbsolutePath(std::string const& path) {
-	if (path.empty() || path[0] != '/')
-		return false;
-    return true;
+	return (!path.empty() && path[0] == '/');
+}
+
+/**
+ * Checks if the path starts by "./" and is not empty.
+ */
+bool	utils::isRelativePath(std::string const& path) {
+	return (!path.empty() && path[0] != '/');
 }
 
 static bool	_checkFileTypeAndAccess(std::string const& path, mode_t expectedType, int accessMode) {
@@ -169,14 +176,15 @@ std::vector<std::string>	utils::split(std::string const& s, char delim) {
 /**
  * Merge two strings into a valid path.
  *
- * Trailing slashes are not trimmed.
- *
  * Examples:
  * `joinPath("", "mydomain/index.htm")` -> `/mydomain/index.htm`
  * `joinPath("var/www/html/", "")` -> `/var/www/html/`
  * `joinPath("/var/www/html/", "/index.htm")` -> `/var/www/html/index.htm`
  * `joinPath("/var/www/html", "test/")` -> `/var/www/html/test/`
  * `joinPath("", "")` -> `/`
+ *
+ * Trailing slashes are not trimmed.
+ * Usage of normalizePath() resolves any `.` or `..` in the path.
  */
 std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
 	if (lhs.empty()) {
@@ -190,28 +198,7 @@ std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
 		joinedPath += rhs.substr(1);
 	else
 		joinedPath += rhs;
-	return joinedPath;
-}
-
-std::string utils::buildRelativePath(const std::string& path) {
-	if (path.empty())
-		throw std::runtime_error("empty relative path");
-
-	if (path.rfind("./", 0) != 0)
-		throw std::runtime_error("relative path must start with './'");
-
-	char cwd[PATH_MAX];
-	if (!getcwd(cwd, sizeof(cwd)))
-		throw std::runtime_error("failed to get current working directory to join relative path)");
-
-	std::string rel = path.substr(2); // remove "./"
-	std::string fullPath = cwd;
-
-	if (!rel.empty() && rel[0] != '/')
-		fullPath += "/";
-	fullPath += rel;
-
-	return normalizePath(fullPath);
+	return normalizePath(joinedPath);
 }
 
 /**
@@ -261,24 +248,6 @@ std::string	utils::trim(const std::string& str)
 	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
 		end--;
 	return str.substr(start, end - start);
-}
-
-/**
- * Remove the domain of a URL.
- *
- * Examples:
- * - `https://mydomain.com/path/file.txt` -> `/path/file.txt`
- * - `anything://mydomain.com/file.txt -> `/file.txt`
- * - `/path/file.txt` -> `/path/file.txt`
- * - `http://mydomain.com` -> empty string
- */
-std::string	utils::trimDomain(std::string const& url)
-{
-	size_t pos = url.find("://");
-	size_t start = (pos != std::string::npos) ? url.find('/', pos + 3) : 0;
-	if (start == std::string::npos)
-		return "/";
-	return url.substr(start);
 }
 
 /**

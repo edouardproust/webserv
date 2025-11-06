@@ -15,6 +15,7 @@ class StaticHandler
 	static std::map<std::string, std::string> _initMimeTypes();
 	static std::string _getMimeType(const std::string& filePath);
 	static Response _serveFile(const std::string& filePath, LocationBlock const*);
+	static Response	_generateWelcomePage();
 	static Response _generateAutoindex(std::string const& dirPath, LocationBlock const* loc);
 	static std::string _generateErrorPage(HttpStatus const& status);
 

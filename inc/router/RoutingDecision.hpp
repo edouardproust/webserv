@@ -23,6 +23,7 @@ class RoutingDecision {
 	// process
 	ServerBlock const*		_server;
 	LocationBlock const*	_location;
+	std::string 			_filePath;
 	// output
 	Decision				_decision;
 	std::string				_errorSlug;
@@ -31,6 +32,7 @@ class RoutingDecision {
 
 	void	_setServer();
 	void	_setLocation();
+	void	_setFilePath();
 	void	_setError(std::string const& errorSlug);
 
 	// Not used
@@ -46,6 +48,7 @@ class RoutingDecision {
 	Request const&			getRequest() const;
 	ServerBlock const*		getServer() const;
 	LocationBlock const*	getLocation() const;
+	std::string const&		getFilePath() const;
 	Decision const&			getDecision() const;
 	std::string const&		getErrorSlug() const;
 

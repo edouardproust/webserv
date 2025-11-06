@@ -27,6 +27,8 @@ namespace utils {
 
 	bool	isInt(std::string const&);
 	bool	isAbsolutePath(std::string const&);
+	bool	isRelativePath(std::string const& path);
+
 	bool	isAccessibleDirectory(std::string const&);
 	bool	isReadableFile(std::string const&);
 	bool	isExecutableFile(std::string const&);
@@ -43,11 +45,9 @@ namespace utils {
 	std::vector<std::string>	split(std::string const&, char);
 
 	std::string	joinPath(std::string const&, std::string const&);
-	std::string	buildRelativePath(const std::string&);
 	std::string	normalizePath(std::string const&);
 
 	std::string	trim(const std::string& str);
-	std::string	trimDomain(std::string const&);
 	std::string	excerpt(size_t, std::string const&);
 
 }

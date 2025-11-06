@@ -50,6 +50,39 @@ Response	StaticHandler::_serveFile(std::string const& filePath, LocationBlock co
 	return response;
 }
 
+// TODO (Ava): verify it is correct
+Response StaticHandler::_generateWelcomePage()
+{
+	std::stringstream html;
+
+	html << "<!DOCTYPE html>\n"
+			<< "<html>\n"
+			<< "<head>\n"
+			<< "  <title>Welcome to " + SERVER_NAME + "!</title>\n"
+			<< "  <style>\n"
+			<< "    html { color-scheme: light dark; }\n"
+			<< "    body { width: 35em; margin: 0 auto;\n"
+			<< "           font-family: Tahoma, Verdana, Arial, sans-serif; }\n"
+			<< "  </style>\n"
+			<< "</head>\n"
+			<< "<body>\n"
+			<< "  <h1>Welcome to " + SERVER_NAME + "!</h1>\n"
+			<< "  <p>If you see this page, the web server is successfully working.\n"
+			<< "     Further configuration is required.</p>\n"
+			<< "  <p>For online documentation and support please refer to\n"
+			<< "     <a href=\"" + SERVER_REPO + "\">Github repository</a>.</p>\n"
+			<< "  <p><em>Thank you for using " + SERVER_NAME + ".</em></p>\n"
+			<< "</body>\n"
+			<< "</html>";
+
+	Response response;
+	response.setStatus(HttpStatus("ok"));
+	response.setHeader("Content-Type", "text/html");
+	response.setBody(html.str());
+
+	return response;
+}
+
 // TODO: Ava
 Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationBlock const* loc) {
 	(void)dirPath; (void) loc;
@@ -83,7 +116,7 @@ Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock cons
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (search != locErrorPages.end())
 	{
-		std::string errorPath = utils::joinPath(locRoot, search->second);
+		std::string errorPath = search->second;
 		if (utils::isReadableFile(errorPath))
 		{
 			std::string content = utils::readFile(errorPath);
@@ -104,9 +137,12 @@ Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock cons
 
 Response	StaticHandler::handleGet(std::string const& path, LocationBlock const* loc)
 {
+	// Serve webserv welcome page
+	 if (loc->getRoot().empty() && path == "/")
+		return _generateWelcomePage();
+
 	std::vector<std::string> locIndexes = loc->getIndexFiles();
 	bool isAutoindex = loc->getAutoindex() == "on";
-
 	if (utils::isAccessibleDirectory(path))
 	{
 		// Trying serving index files

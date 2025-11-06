@@ -1,24 +1,17 @@
 #include "config/ServerBlock.hpp"
 #include "config/Config.hpp"
 
-/**
- * May throw an std exception.
- */
-ServerBlock::ServerBlock(): _isSetClientBodySize(false) {
-	_root = utils::buildRelativePath("./www"); // set default root (setRoot() will clear it the directive exists)
-	_setDefaultIndexFiles(); // set default root (setRoot() will clear it the directive exists)
-}
+ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
 
 /**
- * May throw a std exception.
+ * Parse the content of a server block and sets default index files and listening port `0.0.0.0:80`
+ * if empty after parsing.
  *
- * If no listen directive in the server block: add "listen 0.0.0.0:80;"
+ * Parsing may throw an exception.
  */
 ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(false) {
-	_root = utils::buildRelativePath("./www"); // set default root (setRoot() will clear it the directive exists)
-	_setDefaultIndexFiles(); // set default index file (setIndexFiles() will clear it if the directive exists)
 	_parse(blockContent); // throw
-	// set default listen directive if none exist after parsing
+	_setDefaultIndexFiles();
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0:80"));
 }
@@ -48,7 +41,13 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
 ServerBlock::~ServerBlock() {}
 
 /**
- * May throw a std exception.
+ * Parses the content of a server block.
+ *
+ * Throws a runtime_error() exception if:
+ * - `root` directive is not set or is invalid
+ * - unsupported directive or with invalid arguments
+ * - unexpected ';' or '{' found
+ * - unclosed quoted string or directive not terminated with ';'
  */
 void	ServerBlock::_parse(std::string const& content) {
 	std::string token = "";
@@ -56,22 +55,34 @@ void	ServerBlock::_parse(std::string const& content) {
 	bool inQuotes = false;
 	int braceDepth = 0;
 	for (size_t i = 0; i < content.size(); ++i) {
-		if (content[i] == '#')
+		char c = content[i];
+		if (c == '#')
 			Config::skipComment(content, i);
-		else if (content[i] == '{')
+		else if (c == '{')
 			_parseBlock(tokens, content, i, braceDepth, inQuotes);
-		else if (content[i] == ';')
+		else if (c == ';')
 			_parseDirective(token, tokens, inQuotes);
-		else if (isspace(content[i]) && !inQuotes)
+		else if (isspace(c) && !inQuotes)
 			Config::addTokenIf(token, tokens);
-		else if (content[i] == '"')
+		else if (c == '"')
 			inQuotes = !inQuotes;
 		else
-			token += content[i];
+			token += c;
 	}
+	std::string directiveName = !tokens.empty() ? tokens[0] : !token.empty() ? token : "";
+	if (directiveName != "")
+		throw std::runtime_error(directiveName + ": Directive not terminated with ';'");
+    if (inQuotes)
+        throw std::runtime_error("Unclosed quoted string");
 }
 
 /**
+ * Parses a block inside a server block.
+ *
+ * A block is is delimited by '{' and '}' and can contains directives.
+ * For now only `location` blocks are supported inside a server block.
+ * There can be serveral `location` blocks inside a `server` block.
+ *
  * May throw a std::runtime_error() exception.
  */
 void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t& i, int& braceDepth, bool inQuotes) {
@@ -86,15 +97,22 @@ void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t
 			_addLocation(tokens, content, i, braceDepth);
 		// -- additional blocks can be added here --
 		else
-			throw std::runtime_error("Unsupported block: " + tokens[0]);
+			throw std::runtime_error("Unsupported block");
 	} catch (std::exception& e) {
-		throw std::runtime_error(blockName + (blockName == "location" && tokens.size() > 1 ? " " + tokens[1] : "") + ": " + e.what()); // wrap error msg with the block name
+		throw std::runtime_error(blockName + (blockName == "location" && tokens.size() > 1 ? " \"" + tokens[1] + "\"" : "") + ": " + e.what()); // wrap error msg with the block name
 	}
 	tokens.clear();
 }
 
 /**
- * May throw a std::runtime_error() exception.
+ * Parses a directive inside a server block.
+ *
+ * A directive is a setting that ends with a ';'.
+ * `root` directive is mandatory. Other directives are optionnal and have default values.
+ *
+ * Throws a runtime_error() exception if:
+ * - unexpected ';' found or unclosed quoted string
+ * - directive is unsupported or has invalid arguments
  */
 void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuotes) {
 	Config::addTokenIf(token, tokens);
@@ -127,11 +145,18 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
 }
 
 /**
- * May throw a std::runtime_error() exception.
+ * Adds a location block to this server.
+ *
+ * Syntax: `location path { [directive1 param; ...] }`
+ *
+ * Throw a std::runtime_error() exception if:
+ * - the location does not have a path
+ * - this location path is already used by another location
+ * - the parsing of the location block throws an exception
  */
 void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth) {
 	if (tokens.size() != 2)
-		throw std::runtime_error("Invalid block declaration (should be 'location /path {...}')");
+		throw std::runtime_error("Format must be \"location path { [directive1 param; ...] }\"");
 
 	std::string path = tokens[1];
 	// Check if the path does not already exists in another LocationBlock
@@ -144,38 +169,52 @@ void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content,
 	_locations.push_back(lb);
 }
 
-
+/**
+ * Sets default index files if server root is set and no index directive was found yet.
+ */
 void	ServerBlock::_setDefaultIndexFiles() {
-	_indexFiles.clear(); // reset previous index files
-	_indexFiles.push_back("index.html");
-	_indexFiles.push_back("index.htm");
-	//_indexFiles.push_back("index.php"); // TODO if uncommented, needs to be checked in StaticHandler::_serveFile
+	if (!_indexFiles.empty())
+		return; // do not override if index files are already set
+	if (!_root.empty()) { // only set default index files if server root is set (it will always be an absolute path)
+		_indexFiles.push_back("index.html");
+		_indexFiles.push_back("index.htm");
+		//_indexFiles.push_back("index.php"); // TODO if uncommented, needs to be checked in StaticHandler::_serveFile
+	}
 }
 
 /**
- * May throw a std::runtime_error() exception.
+ * Set root path for this server.
+ *
+ * Syntax: `root path;`
+ * Path must be an absolute path.
+ * The last root directive overrides the previous one.
+ *
+ * Throws a runtime exception if:
+ * - path is missing or is not an absolute path or an emtpy string.
  */
 void	ServerBlock::_setRoot(Tokens const& tokens) {
 	if (tokens.size() != 2)
-		throw std::runtime_error("Should have 2 arguments");
+		throw std::runtime_error("Format must be \"root path;\"");
 	std::string root = tokens[1];
 	if (root.empty())
-		throw std::runtime_error("Value is an empty string");
+		throw std::runtime_error("path is an empty string");
 	if (!utils::isAbsolutePath(root)) {
-		if (root.rfind("./", 0) == 0)
-			root = utils::buildRelativePath(root);
-		else
-			throw std::runtime_error("Not an absolute or './' path: '" + root + "'");
+		throw std::runtime_error("Not an absolute path: '" + root + "'");
 	}
 	_root = utils::normalizePath(root); // override previous root if already set
 }
 
 /**
- * May throw a std::runtime_error() exception.
+ * Sets listen host:port pairs for this server.
  *
- * Can accept several host:port pairs in one line if seperated by a space:
- * listen localhost:8080 1.1.1.1:80
- * Only supports IPv4 for now // TODO support IPv6 also?
+ * Syntax: `listen host1:port1 [host2:port2 ...];`
+ * Example: `listen localhost:8080 80 1.1.1.1`
+ *
+ * Can accept several host:port pairs in one line if seperated by a space
+ * If only a `host` is defined for a pair, port defaults to `80`.
+ * If only a `port` is defined for a pair, host defaults to `0.0.0.0`.
+ * `localhost` is the only server name supported for now.
+ * For host, only IPv4 format is supported for now.
  *
  * Accepted syntax examples:
  * - listen 127.0.0.1:8080 → pair = "127.0.0.1:8080"
@@ -190,23 +229,37 @@ void	ServerBlock::_setRoot(Tokens const& tokens) {
  * - listen any_string → port invalid number, 'listen localhost' not supported without port
  * - listen 70000 → port out of range
  * - listen :8080 → missing host
+ *
+ * Throws a runtime exception if:
+ * - `host:port` pair is empty, has an invalid syntax
+ * - there is a port overflow
  */
 void	ServerBlock::_setListen(Tokens const& tokens) {
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have at least one address or port");
 	for (size_t i = 1; i < tokens.size(); ++i) {
-		HostPortPair listen(tokens[i]); // throw if empty, invalid syntax, port overflow, etc.
+		HostPortPair listen(tokens[i]); // throw
 		_listen.insert(listen);
 	}
 }
 
 /**
- * May throw a std::runtime_error() exception.
+ * Sets client max body size limit for this location.
+ *
+ * Syntax: `client_max_body_size size;`
+ * Examples: `client_max_body_size 1024;`, `client_max_body_size 2M;`
+ * Size is the number of bytes followed by optional unit (B, K, M, G).
+ *
+ * Server's limit is used if not set in this location.
+ *
+ * Exception is thrown if:
+ * - arguments are invalid
+ * - size is 0, has a wrong syntax or overflows size_t
  */
 void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
 	if (tokens.size() != 2)
-		throw std::runtime_error("Should have 2 arguments");
-	size_t result = Config::parseSize(tokens[1]); // throw if empty, invalid syntax or overflow
+		throw std::runtime_error("size is missing");
+	size_t result = Config::parseSize(tokens[1]);
 	if (result == 0)
 		throw std::runtime_error("Must be more than 0 bytes:" + tokens[1]);
     _clientMaxBodySize = result;
@@ -214,15 +267,30 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
 }
 
 /**
- * May throw an exception.
+ * Sets custom error pages for this server.
+ *
+ * Syntax: `error_page code1 [code2 ...] path;`
+ * Error page path can be an absolute or relative path. If relative, it is relative to root. If absolute, it is used as is.
+ *
+ * If no custom error pages are set in this server, built-in ones are used.
+ *
+ * Exception is thrown if:
+ * - arguments are invalid
+ * - the path is an empty string
+ * - a relative path is given but no root is set in this server
+ * - an HTTP code is out of range (300-599)
  */
 void	ServerBlock::_setErrorPages(Tokens const& tokens) {
 	if (tokens.size() < 3)
-		throw std::runtime_error("Should have at least 3 arguments");
+		throw std::runtime_error("Should have at least 2 paths");
 	// Check path (last argument)
 	std::string path = tokens.back();
-	if (!utils::isAbsolutePath(path)) // also checks if is an empty str
-		throw std::runtime_error("Not an absolute path: '" + path + "'");
+	if (path.empty())
+		throw std::runtime_error("Error path is an empty string");
+	if (_root.empty() && utils::isRelativePath(path))
+		throw std::runtime_error("Relative path \"" + path + "\" needs root to be set");
+	if (utils::isRelativePath(path))
+		path = utils::joinPath(_root, path); // make absolute
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
 		// Check each HTTP status codes
 		std::string codeStr = tokens[j];
@@ -230,21 +298,33 @@ void	ServerBlock::_setErrorPages(Tokens const& tokens) {
 		if (code < 300 || code > 599)
 			throw std::out_of_range("Invalid HTTP code: " + codeStr);
 		// Add to map (overrides value of existing codes)
-		_errorPages[code] = path;
+		_errorPages[code] = utils::normalizePath(path);
 	}
 }
 
 /**
- * May throw a std::runtime_error() exception.
+ * Set index files for this server. Index files are served if a directory is requested.
+ * If no index file is set for the requested directory and autoindex is on, a built-in directory index is served instead.
+ *
+ * Syntax: `index file1 [file2 ...];`
+ * If no index files are set in this server, default index files are used.
+ *
+ * Exception is thrown if:
+ * - arguments are invalid
+ * - an index file is an empty string or an absolute path
+ * - duplicate index files
  */
 void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 	if (tokens.size() < 2)
-		throw std::runtime_error("Should have 2 or more arguments");
-	_indexFiles.clear(); // reset previous index files
+		throw std::runtime_error("Should have 1 or more paths");
+	_indexFiles.clear(); // clear default index files
 	for (size_t j = 1; j < tokens.size(); ++j) {
-		if (tokens[j].empty())
+		std::string current = tokens[j];
+		if (current.empty())
 			throw std::runtime_error("An index file is an emtpy string");
-		_indexFiles.push_back(tokens[j]);
+		if (utils::isAbsolutePath(current))
+			throw std::runtime_error("Index file must be a relative path: " + current);
+		_indexFiles.push_back(utils::normalizePath(current));
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicate index file in server");
@@ -262,6 +342,9 @@ std::set<HostPortPair> const&	ServerBlock::getListen() const {
 	return _listen;
 }
 
+/**
+ * Defaults to `DEFAULT_MAX_CLIENT_BODY_SIZE` with a limit of `MAX_SIZE_T`.
+ */
 size_t	ServerBlock::getClientMaxBodySize() const {
 	if (!_isSetClientBodySize) {
 		if (DEFAULT_MAX_CLIENT_BODY_SIZE > MAX_SIZE_T)
