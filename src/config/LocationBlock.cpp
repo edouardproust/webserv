@@ -250,28 +250,29 @@ void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * Overrides server's custom error pages for this location.
  *
  * Syntax: `error_page code1 [code2 ...] path;`
- * Error page path can be an absolute or relative path. If relative, it is relative to the server root. If absolute, it is used as is.
+ * Error page path can be an absolute, or relative to the server root.
+ * A server root is required.
  *
  * Defaults to server error pages if not set in this location. If none set in server either, built-in error pages are used.
  *
  * Exception is thrown if:
  * - arguments are invalid
+ * - No server root is set
  * - the path is an empty string
- * - a relative path is given but the server root is not set
  * - an HTTP code is out of range (300-599)
  */
 void	LocationBlock::_setErrorPages(Tokens const& tokens) {
+	std::string const& root = getRoot();
+	if (root.empty())
+		throw std::runtime_error("This directive requires a server root to be set");
 	if (tokens.size() < 3)
 		throw std::runtime_error("Format must be \"error_page code1 [code2 ...] path;\"");
 	// Check path (last argument)
 	std::string path = tokens.back();
 	if (path.empty())
 		throw std::runtime_error("Path is an empty string");
-	std::string const& root = getRoot();
-	if (utils::isRelativePath(path) && root.empty())
-		throw std::runtime_error("Relative path \"" + path + "\" needs server root to be set");
 	if (utils::isRelativePath(path))
-		path = utils::joinPath(root, path);
+		path = utils::pathsJoin(root, path);
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
 		// Check each HTTP status codes
 		std::string codeStr = tokens[j];
@@ -284,28 +285,31 @@ void	LocationBlock::_setErrorPages(Tokens const& tokens) {
 }
 
 /**
- * Overrides server's index files for this location.
+ * Overrides server's index files for this location. Index files are served if a directory is requested.
  *
  * Syntax: `index file1 [file2 ...];`
+ * Index path can be absolute, or relative to server's root;
+ * A server root is required.
  *
  * Defaults to server index files if not set in this location. If none set in server either, default index files are used.
+ * If no index file is set for the requested directory and autoindex is on, a built-in directory index is served instead.
  *
  * Exception is thrown if:
  * - arguments are invalid
- * - an index file is an empty string or an absolute path
+ * - No server root is set
+ * - an index file is an empty string
  * - duplicate index files
  */
 void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
+	if (getRoot().empty())
+			throw std::runtime_error("This directive requires a server root to be set");
 	if (tokens.size() < 2)
 		throw std::runtime_error("Format must be \"index file1 [file2 ...];\"");
 	for (size_t j = 1; j < tokens.size(); ++j) {
-		std::string current = tokens[j];
-		if (current.empty())
+		std::string path = tokens[j];
+		if (path.empty())
 			throw std::runtime_error("An index value is an empty string");
-		std::string const& root = getRoot();
-		if (utils::isAbsolutePath(current))
-			throw std::runtime_error("Index file must be a relative path: " + current);
-		_indexFiles.push_back(utils::normalizePath(current));
+		_indexFiles.push_back(path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicated index files");

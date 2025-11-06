@@ -44,7 +44,9 @@ namespace utils {
 	std::string	toLowerCase(std::string const&);
 	std::vector<std::string>	split(std::string const&, char);
 
-	std::string	joinPath(std::string const&, std::string const&);
+	std::string	pathsJoin(std::string const&, std::string const&);
+	std::string securedPathsJoin(std::string const&, std::string const&);
+
 	std::string	normalizePath(std::string const&);
 
 	std::string	trim(const std::string& str);

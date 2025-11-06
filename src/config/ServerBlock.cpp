@@ -270,7 +270,7 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * Sets custom error pages for this server.
  *
  * Syntax: `error_page code1 [code2 ...] path;`
- * Error page path can be an absolute or relative path. If relative, it is relative to root. If absolute, it is used as is.
+ * Error page path can be an absolute, or relative to root.
  *
  * If no custom error pages are set in this server, built-in ones are used.
  *
@@ -281,16 +281,16 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * - an HTTP code is out of range (300-599)
  */
 void	ServerBlock::_setErrorPages(Tokens const& tokens) {
+	if (_root.empty())
+		throw std::runtime_error("This directive requires a root to be set");
 	if (tokens.size() < 3)
 		throw std::runtime_error("Should have at least 2 paths");
 	// Check path (last argument)
 	std::string path = tokens.back();
 	if (path.empty())
 		throw std::runtime_error("Error path is an empty string");
-	if (_root.empty() && utils::isRelativePath(path))
-		throw std::runtime_error("Relative path \"" + path + "\" needs root to be set");
 	if (utils::isRelativePath(path))
-		path = utils::joinPath(_root, path); // make absolute
+		path = utils::pathsJoin(_root, path); // make absolute
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
 		// Check each HTTP status codes
 		std::string codeStr = tokens[j];
@@ -307,24 +307,26 @@ void	ServerBlock::_setErrorPages(Tokens const& tokens) {
  * If no index file is set for the requested directory and autoindex is on, a built-in directory index is served instead.
  *
  * Syntax: `index file1 [file2 ...];`
+ * Index path can be aboslute, or relative to root.
+ *
  * If no index files are set in this server, default index files are used.
  *
  * Exception is thrown if:
  * - arguments are invalid
- * - an index file is an empty string or an absolute path
+ * - an index file is an empty string
  * - duplicate index files
  */
 void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
+	if (_root.empty())
+		throw std::runtime_error("This directive requires a root to be set");
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have 1 or more paths");
 	_indexFiles.clear(); // clear default index files
 	for (size_t j = 1; j < tokens.size(); ++j) {
-		std::string current = tokens[j];
-		if (current.empty())
+		std::string path = tokens[j];
+		if (path.empty())
 			throw std::runtime_error("An index file is an emtpy string");
-		if (utils::isAbsolutePath(current))
-			throw std::runtime_error("Index file must be a relative path: " + current);
-		_indexFiles.push_back(utils::normalizePath(current));
+		_indexFiles.push_back(path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicate index file in server");

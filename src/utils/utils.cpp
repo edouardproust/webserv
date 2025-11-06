@@ -177,16 +177,16 @@ std::vector<std::string>	utils::split(std::string const& s, char delim) {
  * Merge two strings into a valid path.
  *
  * Examples:
- * `joinPath("", "mydomain/index.htm")` -> `/mydomain/index.htm`
- * `joinPath("var/www/html/", "")` -> `/var/www/html/`
- * `joinPath("/var/www/html/", "/index.htm")` -> `/var/www/html/index.htm`
- * `joinPath("/var/www/html", "test/")` -> `/var/www/html/test/`
- * `joinPath("", "")` -> `/`
+ * `pathsJoin("", "mydomain/index.htm")` -> `/mydomain/index.htm`
+ * `pathsJoin("var/www/html/", "")` -> `/var/www/html/`
+ * `pathsJoin("/var/www/html/", "/index.htm")` -> `/var/www/html/index.htm`
+ * `pathsJoin("/var/www/html", "test/")` -> `/var/www/html/test/`
+ * `pathsJoin("", "")` -> `/`
  *
  * Trailing slashes are not trimmed.
  * Usage of normalizePath() resolves any `.` or `..` in the path.
  */
-std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
+std::string utils::pathsJoin(std::string const& lhs, std::string const& rhs) {
 	if (lhs.empty()) {
 		if (rhs.empty()) return "/";
 		return (!rhs.empty() && rhs[0] == '/') ? rhs : "/" + rhs;
@@ -199,6 +199,18 @@ std::string utils::joinPath(std::string const& lhs, std::string const& rhs) {
 	else
 		joinedPath += rhs;
 	return normalizePath(joinedPath);
+}
+
+std::string utils::securedPathsJoin(std::string const& rootPath, std::string const& otherPath) {
+	std::string joinedNormalizedPath = pathsJoin(rootPath, otherPath);
+	// Joined path should be included in `lhs` (path traversal check)
+	std::string normalizedRoot = normalizePath(rootPath);
+    	if (normalizedRoot.empty()) normalizedRoot = "/";
+	if (joinedNormalizedPath.rfind(normalizedRoot, 0) != 0
+		|| (joinedNormalizedPath.size() > normalizedRoot.size()
+			&& joinedNormalizedPath[normalizedRoot.size()] != '/'))
+		joinedNormalizedPath = ""; // outside of root
+	return joinedNormalizedPath;
 }
 
 /**

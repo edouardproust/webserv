@@ -135,33 +135,38 @@ Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock cons
 	return response;
 }
 
-Response	StaticHandler::handleGet(std::string const& path, LocationBlock const* loc)
+Response	StaticHandler::handleGet(std::string const& basePath, LocationBlock const* loc)
 {
 	// Serve webserv welcome page
-	 if (loc->getRoot().empty() && path == "/")
+	 if (loc->getRoot().empty() && basePath == "/")
 		return _generateWelcomePage();
 
 	std::vector<std::string> locIndexes = loc->getIndexFiles();
 	bool isAutoindex = loc->getAutoindex() == "on";
-	if (utils::isAccessibleDirectory(path))
+	if (utils::isAccessibleDirectory(basePath))
 	{
 		// Trying serving index files
 		for (size_t i = 0; i < locIndexes.size(); ++i)
 		{
-			std::string indexPath = utils::joinPath(path, locIndexes[i]);
-			if (utils::isReadableFile(indexPath))
-			return _serveFile(indexPath, loc);
+			std::string const& indexPath = locIndexes[i];
+			std::string fullIndexPath;
+			if (utils::isAbsolutePath(indexPath))
+				fullIndexPath = indexPath;
+			else {
+				// no transversal check needed (basePath already secured in RoutingDecision::_setFilePath)
+				fullIndexPath = utils::pathsJoin(basePath, indexPath);
+			}
+			if (utils::isReadableFile(fullIndexPath))
+				return _serveFile(fullIndexPath, loc);
 		}
 		// No index file found
 		if (isAutoindex)
-			return _generateAutoindex(path, loc); // Generate HTML listing
-		else
-			return handleError(HttpStatus("forbidden"), loc);
+			return _generateAutoindex(basePath, loc); // Generate HTML listing
+		return handleError(HttpStatus("forbidden"), loc);
 	}
-	else if (utils::isReadableFile(path))
-		return _serveFile(path, loc);
-	else
-		return handleError(HttpStatus("not_found"), loc);
+	else if (utils::isReadableFile(basePath))
+		return _serveFile(basePath, loc);
+	return handleError(HttpStatus("not_found"), loc);
 }
 
 Response	StaticHandler::handleDelete(std::string const& path, LocationBlock const* loc)

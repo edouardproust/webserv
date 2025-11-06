@@ -32,17 +32,23 @@ void	Network::_sendResponse(HostPortPair const& destPort, Response const& respon
 
 /**
  * This method is for testing during developement process.
- * Legend:
- * - ✅ Correct output
- * - ❌ Incorrect output (need fixes)
+ * Legend: ✅ Correct output, ❌ Incorrect output (need fixes)
  */
 void	Network::_runManualTests() const {
-	HostPortPair srcPort("localhost:80");
+	HostPortPair srcPort; // 0.0.0.0:80
 
-	_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 200 OK (welcome page)
-	_onCatchRequest(srcPort, "GET /images/test.png HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found
-	_onCatchRequest(srcPort, "GET /test/subdir/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found
-	_onCatchRequest(srcPort, "GET /test/subdir/hello.jpeg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found
-	_onCatchRequest(srcPort, "GET /images/icons/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found
-	_onCatchRequest(srcPort, "GET /nonexistentfile.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found
+	// --- config parsing errors ---
+	_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: 0.0.0.0:80\r\n\r\n");
+	// missing root -> server { error_page 404 errors/404.html; }
+	// missing root -> server { index index.htm; }
+
+	// --- root directory ---
+	// _onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: 0.0.0.0:80\r\n\r\n");
+	// // 200 OK (webserv welcome page) -> server {}
+	// // 200 OK (/index.htm) -> server { root /home/edouard/Projects/webserv/tests/website; }
+	// // 200 OK (autoindex) -> server { root /home/edouard/Projects/webserv/tests/website; index /invalid; }
+	// // 403 Forbidden -(autoindex off) -> server { listen 80; root /home/edouard/Projects/webserv/tests/website; index /invalid; location / { autoindex off; } }
+
+	// _onCatchRequest(srcPort, "GET /invalid HTTP/1.1\r\nHost: 0.0.0.0:80\r\n\r\n");
+
 }

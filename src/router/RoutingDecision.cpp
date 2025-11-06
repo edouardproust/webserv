@@ -18,6 +18,8 @@ RoutingDecision::~RoutingDecision() {}
 void	RoutingDecision::_makeDecision() {
 	if (!_location || !_server)
 		_setError("internal_server_error");
+	else if (_filePath.empty())
+		_setError("forbidden"); // transversal attack
 	else if (!_location->isAllowedMethod(_request.getMethod()))
 		_setError("method_not_allowed");
 	else if (!_location->isAllowedClientBodySize(_request.getBody().length(), _request.getMethod()))
@@ -80,11 +82,8 @@ void	RoutingDecision::_setFilePath() {
 		_setServer();
 	if (!_location)
 		_setLocation();
-	std::string joinedPath = utils::joinPath(_location->getRoot(), _request.getPath());
-	std::string normalizedPath = utils::normalizePath(joinedPath);
-	if (normalizedPath.rfind(_location->getRoot(), 0) != 0) // root path traversal check
-		normalizedPath = ""; // outside of root
-	_filePath = normalizedPath;
+	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), _request.getPath());
+	_filePath = joinedPath;
 }
 
 void	RoutingDecision::_setError(std::string const& errorSlug) {
