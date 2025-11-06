@@ -393,13 +393,3 @@ const char *Network::EpollWaitException::what() const throw()
 {
 	return (FT_ERROR "Can't wait events.");
 }
-
-const char *Network::cantGetUserInfoException::what() const throw()
-{
-	return (FT_ERROR "Can't get user information.");
-}
-
-const char *Network::needSudoException::what() const throw()
-{
-	return (FT_ERROR "Sudo required.");
-}

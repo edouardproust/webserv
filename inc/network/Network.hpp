@@ -1,9 +1,7 @@
 #ifndef WEBSERVER_HPP
 #define WEBSERVER_HPP
 
-#include <dirent.h>
 #include <sys/epoll.h>
-#include <sys/stat.h>
 #include <network/Colors.hpp>
 #include <config/ServerBlock.hpp> 
 #include <config/HostPortPair.hpp> 
@@ -15,7 +13,6 @@
 #include <errno.h>
 #include <cstring>
 #include <sstream>
-#include <fstream>
 #include <iostream>
 #include <vector>
 #include "config/Config.hpp"
@@ -72,18 +69,6 @@
 		};
 
 		class EpollWaitException : public std::exception
-		{
-		public:
-			const char *what() const throw();
-		};
-
-		class cantGetUserInfoException : public std::exception
-		{
-		public:
-			const char *what() const throw();
-		};
-
-		class needSudoException : public std::exception
 		{
 		public:
 			const char *what() const throw();
