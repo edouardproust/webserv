@@ -12,11 +12,11 @@ Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https
 	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
 	- Check remaining "// TODO"s and "// DEBUG"s
 - RequestParser:
+	- Add check for 411 error (length required for POST and PUT)
 	- Add check for 414 URI Too Long (+ add this HttpStatus too the list)
 	- Test chunked request
 	- test URL decoding / encoding
 - Config parsing:
-	- Handle 411 error (length required for POST and PUT)
 	- Accept `ssl` option in `listen` directive ?
 	- check if `clientMaxBodySize` is well formated ?
 	- Support `alias` directive in `location` block ?
