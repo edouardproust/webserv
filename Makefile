@@ -9,21 +9,23 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
 BASE_SRC_FILES = \
 	main.cpp \
-	network/Network.cpp \
-	utils/utils.cpp \
 	config/Config.cpp \
+	config/ServerBlock.cpp \
 	config/LocationBlock.cpp \
 	config/HostPortPair.cpp \
-	config/ServerBlock.cpp \
-	http/HttpStatus.cpp \
+	network/Network.cpp \
+	network/Socket.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
 	http/Response.cpp \
+	http/HttpStatus.cpp \
 	router/Router.cpp \
 	router/RoutingDecision.cpp \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
-	cgi/CgiHandler.cpp
+	cgi/CgiHandler.cpp \
+	utils/utils.cpp \
+	utils/signal_handler.cpp \
 
 DEV_SRC_FILES =
 
