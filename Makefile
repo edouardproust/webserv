@@ -25,7 +25,7 @@ BASE_SRC_FILES = \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp \
 	utils/utils.cpp \
-	utils/signal_handler.cpp \
+	utils/signal.cpp \
 
 DEV_SRC_FILES =
 

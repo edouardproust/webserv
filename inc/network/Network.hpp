@@ -1,34 +1,19 @@
 #ifndef WEBSERVER_HPP
 #define WEBSERVER_HPP
 
-#include <sys/epoll.h>
-#include <network/Colors.hpp>
-#include <config/ServerBlock.hpp> 
-#include <config/HostPortPair.hpp> 
-#include "http/Request.hpp"
-#include "http/Response.hpp"
-#include "http/RequestParser.hpp" 
-#include "router/Router.hpp"  
-#include <set> 
-#include <errno.h>
-#include <cstring>
-#include <sstream>
-#include <iostream>
-#include <vector>
-#include "config/Config.hpp"
+#include "router/Router.hpp"
 #include "network/Socket.hpp"
-#include "utils/signal_handler.hpp"
-#define FT_DEFAULT_CLIENT_BUFFER_SIZE 1024
-#define FT_MAX_EVENT_SIZE 100
+#include "utils/signal.hpp"
+#include <sys/epoll.h>
 
-	class Network
-	{
+class Network {
+
 	private:
-		Config const& _config_file;
+		Config const& _config;
 		std::vector<Socket *> _connections;
 		std::map<int, std::string> _request_list;
 		std::map<int, Socket*> _client_server_map;
-		
+
 		int _epoll;
 
 		void epoll();
@@ -44,37 +29,33 @@
 
 		int			getRequestTotalLength(std::string request);
 		std::string getBoundry(std::string request);
-		
 
 	public:
 		Network();
 		Network(Config const& _config_file);
 		~Network();
 		void start_servers();
-		int getEpollFd() const { return _epoll; }
-    	const std::vector<Socket*>& getConnections() const { return _connections; }
-    	const std::map<int, std::string>& getRequestList() const { return _request_list; }
-   	 	const std::map<int, Socket*>& getClientServerMap() const { return _client_server_map; }
+		int getEpollFd() const;
+    	const std::vector<Socket*>& getConnections() const;
+    	const std::map<int, std::string>& getRequestList() const;
+   	 	const std::map<int, Socket*>& getClientServerMap() const;
 
-		class EpollException : public std::exception
-		{
-		public:
-			const char *what() const throw();
+		class EpollException : public std::exception {
+			public:
+				const char *what() const throw();
 		};
 
-		class EpollCtlException : public std::exception
-		{
-		public:
-			const char *what() const throw();
+		class EpollCtlException : public std::exception {
+			public:
+				const char *what() const throw();
 		};
 
-		class EpollWaitException : public std::exception
-		{
-		public:
-			const char *what() const throw();
+		class EpollWaitException : public std::exception {
+			public:
+				const char *what() const throw();
 		};
-	};
+};
 
-	std::ostream& operator<<(std::ostream& os, const Network& rhs);
+std::ostream& operator<<(std::ostream& os, const Network& rhs);
 
 #endif // WEBSERVER_HPP

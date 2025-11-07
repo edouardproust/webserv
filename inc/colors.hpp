@@ -12,4 +12,5 @@
 #define RED "\033[31m"
 #define RESET_COLOR "\033[0m"
 #define FT_ERROR "[" RED " ERROR " RESET_COLOR "] "
+
 #endif

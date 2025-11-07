@@ -1,21 +1,10 @@
 #ifndef SOCKET_HPP
 #define SOCKET_HPP
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "config/Config.hpp"
+#include "colors.hpp"
 #include <fcntl.h>
-
 #include <cstring>
-#include <iostream>
-
-#include <network/Colors.hpp>
-#include <iostream>
-#include <config/Config.hpp>
 
 	class Socket
 	{
@@ -38,7 +27,6 @@
 
 		const HostPortPair& getHostPortPair() const;
 		int getSock();
-		
 
 		class GetAddrInfoException : public std::exception
 		{
@@ -82,4 +70,4 @@
 		};
 	};
 
-#endif 
+#endif
