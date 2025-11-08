@@ -220,6 +220,8 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 	Response response;
 	try {
         Request request(_request_list[client_fd]);
+		if (DEVMODE)
+			std::cout << request << std::endl;
         if (_client_server_map.find(client_fd) == _client_server_map.end())
             throw std::runtime_error("Network logic error: client_fd not in map.");
         Socket* serverSocket = _client_server_map.at(client_fd);
@@ -227,6 +229,8 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 
 		// Call router
         response = Router::dispatchRequest(_config, request, listenPair);
+		if (DEVMODE)
+			std::cout << response << std::endl;
 		std::string msg = response.stringify();
 		int ret = ::send(client_fd, msg.data(), msg.length(), 0);
 		if (ret == -1)

@@ -19,18 +19,15 @@ Router::~Router() {}
  */
 Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen) {
 	RoutingDecision rd(config, req, listen);
-	if (DEVMODE) std::cout << rd << std::endl;
+	if (DEVMODE)
+		std::cout << rd << std::endl;
 	RoutingDecision::Decision decision = rd.getDecision();
 	LocationBlock const* loc = rd.getLocation();
-	std::string const& filePath = rd.getFilePath();
-
+	std::string const& basePath = rd.getBasePath();
 	// Request parser Bad request
 	HttpStatus const& reqStatus = req.getStatus();
 	if (reqStatus.getSlug() != "ok")
 		return StaticHandler::handleError(HttpStatus(reqStatus), loc);
-	// Transversal attack check
-	if (filePath.empty())
-		return StaticHandler::handleError(HttpStatus("forbidden"), loc);
 	// Routing Decision error or redirection
 	if (decision == RoutingDecision::ERROR)
 		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()), loc);
@@ -42,21 +39,21 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	if (decision == RoutingDecision::CGI) {
 		CgiHandler handler;
 		try {
-			return handler.run(req, loc, filePath);
+			return handler.run(req, loc, basePath);
 		} catch (CgiHandler::ExecException& e) {
-			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
+			std::cerr << "[WARNING] CGI (" << basePath << "): " << e.what() << std::endl;
 			return StaticHandler::handleError(HttpStatus("internal_server_error"), loc);
 		} catch (Response::RawException& e) {
-			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
+			std::cerr << "[WARNING] CGI (" << basePath << "): " << e.what() << std::endl;
 			return StaticHandler::handleError(HttpStatus("bad_gateway"), loc);
 		}
 	}
 	if (decision == RoutingDecision::STATIC) {
 		std::string const&	method = req.getMethod();
 		if (method == "GET")
-			return StaticHandler::handleGet(filePath, loc);
+			return StaticHandler::handleGet(basePath, loc);
 		else if (method == "DELETE")
-			return StaticHandler::handleDelete(filePath, loc);
+			return StaticHandler::handleDelete(basePath, loc);
 		// -- additional supported methods can be added here -- // TODO PUT method
 		else
 			return StaticHandler::handleError(HttpStatus("method_not_allowed"), loc);

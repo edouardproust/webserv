@@ -5,7 +5,7 @@ RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair
   _decision(ERROR), _errorSlug("internal_server_error") {
 	_setServer();
 	_setLocation();
-	_setFilePath();
+	_setBasePath();
 	_makeDecision();
 }
 
@@ -18,8 +18,6 @@ RoutingDecision::~RoutingDecision() {}
 void	RoutingDecision::_makeDecision() {
 	if (!_location || !_server)
 		_setError("internal_server_error");
-	else if (_filePath.empty())
-		_setError("forbidden"); // transversal attack
 	else if (!_location->isAllowedMethod(_request.getMethod()))
 		_setError("method_not_allowed");
 	else if (!_location->isAllowedClientBodySize(_request.getBody().length(), _request.getMethod()))
@@ -75,15 +73,15 @@ void	RoutingDecision::_setLocation() {
 }
 
 /**
- * May set _filePath to an empty string in case of root path traversal attempt.
+ * May set _basePath to an empty string in case of root path traversal attempt.
  */
-void	RoutingDecision::_setFilePath() {
+void	RoutingDecision::_setBasePath() {
 	if (!_server)
 		_setServer();
 	if (!_location)
 		_setLocation();
 	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), _request.getPath());
-	_filePath = joinedPath;
+	_basePath = joinedPath;
 }
 
 void	RoutingDecision::_setError(std::string const& errorSlug) {
@@ -107,8 +105,8 @@ LocationBlock const*	RoutingDecision::getLocation() const {
 	return _location;
 }
 
-std::string const&	RoutingDecision::getFilePath() const {
-	return _filePath;
+std::string const&	RoutingDecision::getBasePath() const {
+	return _basePath;
 }
 
 std::string const&	RoutingDecision::getErrorSlug() const {
@@ -123,7 +121,7 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 				: (d == RoutingDecision::STATIC ? "STATIC"
 					: d == RoutingDecision::CGI ? "CGI"
 						: "UNKNOWN"))) << "\n"
-		<< "- File path: '" << rhs.getFilePath() << "'\n"
+		<< "- basePath: '" << rhs.getBasePath() << "'\n"
 		<< "- Matching server:\n"
 		<< "  - root: '" << rhs.getServer()->getRoot() << "'\n"
 		<< "- Request path: '" << rhs.getRequest().getPath() << "'\n"
