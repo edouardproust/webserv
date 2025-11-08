@@ -2,14 +2,11 @@
 
 Network::Network(Config const& config) : _config(config)
 {
-	// Initializes Ctrl + C signal handler
-	sig::keep();
-
 	// Get all unique host:port pairs directly from config
 	std::vector<HostPortPair> listen_ports = _config.getAllListenPorts();
 
     // Create socket for each HostPortPair
-	for (size_t i = 0; i < listen_ports.size() && sig::keep(); ++i)
+	for (size_t i = 0; i < listen_ports.size() && sig::keepRunning(); ++i)
 		_connections.push_back(new Socket(listen_ports[i]));
 
 	//  Bind and listen to each socket created
@@ -59,10 +56,10 @@ void Network::start_servers()
 	epoll();
 	epollAddServers();
 
-	while (sig::keep())
+	while (sig::keepRunning())
 	{
 		number_of_events = epoll_wait(events);
-		for (int n = 0; n < number_of_events && sig::keep(); n++)
+		for (int n = 0; n < number_of_events && sig::keepRunning(); n++)
 		{
 			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
 			{
@@ -116,7 +113,7 @@ int Network::epoll_wait(struct epoll_event *events)
 	int nfds;
 
 	nfds = ::epoll_wait(_epoll, events, FT_MAX_EVENT_SIZE, -1);
-	if (nfds == -1 && sig::keep())
+	if (nfds == -1 && sig::keepRunning())
 	{
 		std::cout << FT_STATUS << "Epoll Wait status: " << strerror(errno) << std::endl;
 		throw EpollWaitException();
@@ -174,7 +171,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
     std::string& total_request = _request_list[client_fd];
 	int bytes;
 
-	while (sig::keep())
+	while (sig::keepRunning())
 	{
 		bytes = ::recv(client_fd, client_buffer, FT_DEFAULT_CLIENT_BUFFER_SIZE, 0);
 

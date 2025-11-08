@@ -1,25 +1,19 @@
 #include "utils/signal.hpp"
 
-// TODO
-void	sig::handler(int signal)
+static volatile sig_atomic_t running = 1;
+
+static void handler(int)
 {
-	(void)signal;
-	std::cout << "\r" << FT_STATUS << "Stopping Web server..." << std::endl;
-	keep(0);
+    running = 0; // signal-safe
 }
 
-int	sig::keep(int action)
+void sig::setup()
 {
-	static int keep = 1;
+    signal(SIGINT, handler);
+    signal(SIGQUIT, handler);
+}
 
-	if (action != -1)
-		keep = action;
-
-	if (keep == 1 && action == -1)
-	{
-		signal(SIGINT, handler);
-		signal(SIGQUIT, handler);
-	}
-
-	return (keep);
+bool sig::keepRunning()
+{
+    return running != 0;
 }

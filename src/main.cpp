@@ -7,6 +7,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	sig::setup();
 	try {
 		Config config(argv[1]);
 		if (DEVMODE) std::cout << config << std::endl;

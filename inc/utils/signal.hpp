@@ -2,13 +2,14 @@
 #define SIGNAL_HANDLER_HPP
 
 #include "colors.hpp"
+#include <csignal>
 #include <iostream>
-#include <signal.h>
+
 
 namespace sig {
 
-	void handler(int signal);
-	int keep(int action = -1);
+    void setup();
+    bool keepRunning();
 
 }
 
