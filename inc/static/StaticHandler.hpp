@@ -3,35 +3,47 @@
 
 #include "http/Response.hpp"
 #include "config/LocationBlock.hpp"
+#include "router/RoutingDecision.hpp"
 #include "utils/utils.hpp"
 #include "typedefs.hpp"
 
 class StaticHandler
 {
-	private:
+	RoutingDecision const&	_routingDecision;
+	LocationBlock const*	_location;
 
-	static std::map<std::string, std::string> _mimeTypes;
+	std::string				_finalPath;
 
-	static std::map<std::string, std::string> _initMimeTypes();
-	static std::string _getMimeType(const std::string& filePath);
-	static Response _serveFile(const std::string& filePath, LocationBlock const*);
-	static Response	_generateWelcomePage();
-	static Response _generateAutoindex(std::string const& dirPath, LocationBlock const* loc);
-	static std::string _generateErrorPage(HttpStatus const& status);
+	Response _serveFile();
+
+	std::string	_errorPageHtml(HttpStatus const& status) const;
+	std::string	_welcomePageHtml() const;
+	std::string	_autoindexHtml() const;
+
+	static std::string	_getMime(const std::string& filePath);
+	static std::string	_getMimeFromPath(const std::string& filePath);
+
 
 	// TODO make canonical
 	StaticHandler();
 	StaticHandler(const StaticHandler& other);
-	~StaticHandler();
 	StaticHandler&	operator=(StaticHandler const& other);
 
 	public:
 
-	static Response	handleGet(const std::string& path, LocationBlock const* loc);
-	static Response	handleDelete(std::string const& path, LocationBlock const* loc);
-	//static Response	handlePut(std::string const&, Request const&);
-	static Response	handleError(HttpStatus const& status, LocationBlock const* loc);
+		StaticHandler(RoutingDecision const& rd);
+		~StaticHandler();
+
+		Response	handleGet();
+		Response	handleDelete();
+		//static Response	handlePut(std::string const&, Request const&);
+		Response	handleError(HttpStatus const& status);
+
+		std::string const&	getFinalPath() const;
+		bool	hasUpdatedFinalPath() const;
 
 };
+
+std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs);
 
 #endif

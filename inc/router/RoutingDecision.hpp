@@ -23,7 +23,7 @@ class RoutingDecision {
 	// process
 	ServerBlock const*		_server;
 	LocationBlock const*	_location;
-	std::string 			_basePath;
+	std::string 			_finalPath;
 	// output
 	Decision				_decision;
 	std::string				_errorSlug;
@@ -32,23 +32,23 @@ class RoutingDecision {
 
 	void	_setServer();
 	void	_setLocation();
-	void	_setBasePath();
+	void	_setFinalPath();
 	void	_setError(std::string const& errorSlug);
 
 	// Not used // TODO canonical ?
 	RoutingDecision();
-	RoutingDecision(RoutingDecision const&);
-	RoutingDecision&	operator=(RoutingDecision const&);
 
 	public:
 
 	RoutingDecision(Config const&, Request const&, HostPortPair const&);
+	RoutingDecision(RoutingDecision const&);
+	RoutingDecision&	operator=(RoutingDecision const&);
 	~RoutingDecision();
 
 	Request const&			getRequest() const;
 	ServerBlock const*		getServer() const;
 	LocationBlock const*	getLocation() const;
-	std::string const&		getBasePath() const;
+	std::string const&		getFinalPath() const;
 	Decision const&			getDecision() const;
 	std::string const&		getErrorSlug() const;
 

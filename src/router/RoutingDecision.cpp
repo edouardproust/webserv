@@ -5,8 +5,30 @@ RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair
   _decision(ERROR), _errorSlug("internal_server_error") {
 	_setServer();
 	_setLocation();
-	_setBasePath();
+	_setFinalPath();
 	_makeDecision();
+}
+
+RoutingDecision::RoutingDecision(RoutingDecision const& other)
+: _config(other._config),
+  _request(other._request),
+  _listen(other._listen),
+  _server(other._server),
+  _location(other._location),
+  _finalPath(other._finalPath),
+  _decision(other._decision),
+  _errorSlug(other._errorSlug)
+{}
+
+RoutingDecision&	RoutingDecision::operator=(RoutingDecision const& other) {
+	if (this != &other) {
+        _server = other._server;
+        _location = other._location;
+        _finalPath = other._finalPath;
+        _decision = other._decision;
+        _errorSlug = other._errorSlug;
+    }
+    return *this;
 }
 
 RoutingDecision::~RoutingDecision() {}
@@ -73,15 +95,15 @@ void	RoutingDecision::_setLocation() {
 }
 
 /**
- * May set _basePath to an empty string in case of root path traversal attempt.
+ * May set _finalPath to an empty string in case of root path traversal attempt.
  */
-void	RoutingDecision::_setBasePath() {
+void	RoutingDecision::_setFinalPath() {
 	if (!_server)
 		_setServer();
 	if (!_location)
 		_setLocation();
 	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), _request.getPath());
-	_basePath = joinedPath;
+	_finalPath = joinedPath;
 }
 
 void	RoutingDecision::_setError(std::string const& errorSlug) {
@@ -105,8 +127,8 @@ LocationBlock const*	RoutingDecision::getLocation() const {
 	return _location;
 }
 
-std::string const&	RoutingDecision::getBasePath() const {
-	return _basePath;
+std::string const&	RoutingDecision::getFinalPath() const {
+	return _finalPath;
 }
 
 std::string const&	RoutingDecision::getErrorSlug() const {
@@ -121,7 +143,7 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 				: (d == RoutingDecision::STATIC ? "STATIC"
 					: d == RoutingDecision::CGI ? "CGI"
 						: "UNKNOWN"))) << "\n"
-		<< "- basePath: '" << rhs.getBasePath() << "'\n"
+		<< "- finalPath: '" << rhs.getFinalPath() << "'\n"
 		<< "- Matching server:\n"
 		<< "  - root: '" << rhs.getServer()->getRoot() << "'\n"
 		<< "- Request path: '" << rhs.getRequest().getPath() << "'\n"

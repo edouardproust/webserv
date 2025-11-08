@@ -90,7 +90,9 @@ fclean: clean
 re: fclean all
 
 test: all
-	./$(NAME) ./tests/webserv.config > log 2>&1
+	@clear
+	./$(NAME) ./tests/webserv.config
 
 test_dev: dev
-	./$(NAME_DEV) ./tests/webserv.config > log 2>&1
+	@clear
+	./$(NAME_DEV) ./tests/webserv.config

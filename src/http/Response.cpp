@@ -75,6 +75,14 @@ void	Response::setStatus(const HttpStatus& status)
 		setBody("");
 }
 
+/**
+ * Set header "Content-Type".
+ * It is a wrapper of `setHeader` method that prevents mispelling.
+ */
+void	Response::setContentType(const std::string& value) {
+	setHeader("Content-Type", value);
+}
+
 void	Response::setHeader(const std::string& name, const std::string& value)
 {
 	std::string normalizedName = utils::toLowerCase(name);
