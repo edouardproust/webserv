@@ -17,7 +17,7 @@ class RedirectionHandler
 	public:
 
 	RedirectionHandler();
-	RedirectionHandler(RoutingDecision const& rd, int code, std::string const& path)
+	RedirectionHandler(RoutingDecision const& rd, int code, std::string const& path);
 	RedirectionHandler(RedirectionHandler const&);
 	RedirectionHandler&	operator=(RedirectionHandler const&);
 	~RedirectionHandler();

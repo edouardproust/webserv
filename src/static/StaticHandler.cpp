@@ -29,6 +29,10 @@ Response	StaticHandler::handleGet()
 
 	if (utils::isAccessibleDirectory(_finalPath))
 	{
+		DIR* dir = opendir(_finalPath.c_str());
+		if (!dir)
+			return handleError(HttpStatus("forbidden"));
+		closedir(dir);
 		// Trying serving index files
 		for (size_t i = 0; i < locIndexes.size(); ++i)
 		{
@@ -131,8 +135,6 @@ std::string	StaticHandler::_autoindexHtml() const
 		 << "<h1>Index of " << _finalPath << "</h1><hr><pre>\n"
 		 << "<a href=\"../\">../</a>\n";
 	DIR* dir = opendir(_finalPath.c_str());
-	if (!dir)
-		return handleError(HttpStatus("forbidden"));
 	std::vector<std::string> files;
 	struct dirent* entry; //required by readdir
 	while ((entry = readdir(dir)) != NULL)
@@ -146,7 +148,7 @@ std::string	StaticHandler::_autoindexHtml() const
 	std::sort(files.begin(), files.end());
 	for (size_t i = 0; i < files.size(); i++)
 	{
-		std::string fullPath = utils::joinPath(_finalPath, files[i]);
+		std::string fullPath = utils::pathsJoin(_finalPath, files[i]);
 		bool isDir = utils::isAccessibleDirectory(fullPath);
 		size_t fileSize = utils::getFileSize(fullPath);
 		std::string sizeStr = isDir ? "-" : utils::toString(fileSize);
@@ -158,14 +160,13 @@ std::string	StaticHandler::_autoindexHtml() const
 		html << "<a href=\"" << files[i] << (isDir ? "/" : "") << "\">" 
 			 << displayName << "</a>"
 			 << std::string(50 - displayName.length(), ' ')
-			 << files[i] << (isDir ? "/" : "") << "</a>\n"
 			 << dateStr << "                  " << sizeStr << "\n";
 	}
 	html << "</pre><hr></body>\n</html>";
 	return html.str();
 }
 
-std::string StaticHandler::_getCurrentDateLocal(time_t time)
+std::string StaticHandler::_getCurrentDateLocal(time_t time) const
 {
 	struct tm* timeinfo = localtime(&time);
 	char buffer[20];

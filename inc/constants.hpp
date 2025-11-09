@@ -26,6 +26,7 @@ std::string const	SERVER_SOFTWARE = SERVER_NAME + "/" + SERVER_VERSION;
 
 // parser
 
+size_t const		PATH_MAX = 4096;
 size_t const		HEADER_MAX_SIZE = 8192;
 
 // config

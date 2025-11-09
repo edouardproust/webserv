@@ -2,8 +2,6 @@
 #include "static/StaticHandler.hpp"
 #include "constants.hpp"
 
-RedirectionHandler::RedirectionHandler() : _routingDecision(), _code(302), _path("") {}
-
 RedirectionHandler::RedirectionHandler(RoutingDecision const& rd, int code, std::string const& path)
 	: _routingDecision(rd), _code(code), _path(path) {}
 
@@ -45,7 +43,7 @@ void RedirectionHandler::setPath(std::string const& path)
 
 Response	RedirectionHandler::execute()
 {
-	if (path.empty())
+	if (_path.empty())
 	{
 		StaticHandler static_(_routingDecision);
 		return static_.handleError(HttpStatus("internal_server_error"));
@@ -70,10 +68,10 @@ std::string	RedirectionHandler::_generateRedirectionHtml() const
 	html << "<!DOCTYPE html>"
 		 << "<html>"
 		 << "<head>"
-		 << "<title>" << _code << " " << HttpStatus(_code).getMessage() << "</title>"
+		 << "<title>" << _code << " " << HttpStatus(_code).getReason() << "</title>"
 		 << "</head>"
 		 << "<body>"
-		 << "<center><h1>" << _code << " " << HttpStatus(_code).getMessage() << "</h1></center>";
+		 << "<center><h1>" << _code << " " << HttpStatus(_code).getReason() << "</h1></center>";
 	if (_code >= 300 && _code < 400)
 	{
 		html << "<p>The document has moved <a href=\"" << _path << "\">here</a>.</p>"
@@ -94,8 +92,8 @@ Response	RedirectionHandler::run(RoutingDecision const& rd, int code, std::strin
 std::ostream& operator<<(std::ostream& os, RedirectionHandler const& rhs)
 {
 	os << "RedirectionHandler:\n"
-		<< "- code: " << rhs._code << " (" << HttpStatus(rhs._code).getMessage() << ")\n"
-		<< "- path: " << (rhs._path.empty() ? "[empty]" : rhs._path) << "\n"
-		<< "- type: " << (rhs._code >= 300 && rhs._code < 400 ? "HTTP Redirection" : "Return Code");
+		<< "- code: " << rhs.getCode() << " (" << HttpStatus(rhs.getCode()).getReason() << ")\n"
+		<< "- path: " << (rhs.getPath().empty() ? "[empty]" : rhs.getPath()) << "\n"
+		<< "- type: " << (rhs.getCode() >= 300 && rhs.getCode() < 400 ? "HTTP Redirection" : "Return Code");
 	return os;
 }

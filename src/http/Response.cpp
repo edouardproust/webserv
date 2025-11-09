@@ -102,13 +102,23 @@ void	Response::setHeader(const std::string& name, const std::string& value)
 void	Response::setBody(const std::string& body)
 {
 	_body = body;
+	_updateContentLength();
+	_manageContentType();
+}
+
+void	Response::_updateContentLength()
+{
 	std::stringstream lengthStream;
-	lengthStream << body.length();
+	lengthStream << _body.length();
 	_headers["content-length"] = lengthStream.str();
-	if (_headers.find("content-type") == _headers.end() && !body.empty())
-		_headers["content-type"] = "text/html";
-	if (body.empty())
+}
+
+void	Response::_manageContentType()
+{
+	if (_body.empty())
 		_headers.erase("content-type");
+	else if (_headers.find("content-type") == _headers.end() && !_body.empty())
+		_headers["content-type"] = "text/html";
 }
 
 std::string Response::_getCurrentDate() const
