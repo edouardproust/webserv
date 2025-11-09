@@ -127,27 +127,26 @@ std::string StaticHandler::_welcomePageHtml() const
 std::string	StaticHandler::_autoindexHtml() const
 {
 	std::stringstream html;
-	html << "<html>\n<head><title>Index of " << dirPath << "</title></head>\n<body>\n"
-		 << "<h1>Index of " << dirPath << "</h1><hr><pre>\n"
+	html << "<html>\n<head><title>Index of " << _finalPath << "</title></head>\n<body>\n"
+		 << "<h1>Index of " << _finalPath << "</h1><hr><pre>\n"
 		 << "<a href=\"../\">../</a>\n";
-	DIR* dir = opendir(dirPath.c_str());
+	DIR* dir = opendir(_finalPath.c_str());
 	if (!dir)
 		return handleError(HttpStatus("forbidden"), loc);
-	std::string files[100];
-	int fileCount = 0;
+	std::vector<std::string> files;
 	struct dirent* entry; //required by readdir
-	while ((entry = readdir(dir)) != NULL && fileCount < 100)
+	while ((entry = readdir(dir)) != NULL)
 	{
 		std::string name = entry->d_name;
 		if (name == "." || name == "..")
 			continue;
-		files[fileCount++] = name;
+		files.push_back(name);
 	}
 	closedir(dir);
-	std::sort(files, files + fileCount);
-	for (int i = 0; i < fileCount; i++)
+	std::sort(files.begin(), files.end());
+	for (size_t i = 0; i < files.size(); i++)
 	{
-		std::string fullPath = utils::joinPath(dirPath, files[i]);
+		std::string fullPath = utils::joinPath(_finalPath, files[i]);
 		bool isDir = utils::isAccessibleDirectory(fullPath);
 		size_t fileSize = utils::getFileSize(fullPath);
 		std::string sizeStr = isDir ? "-" : utils::toString(fileSize);
@@ -163,10 +162,7 @@ std::string	StaticHandler::_autoindexHtml() const
 			 << dateStr << "                  " << sizeStr << "\n";
 	}
 	html << "</pre><hr></body>\n</html>";
-	Response response;
-	response.setStatus(HttpStatus(200));
-	response.setBody(html.str());
-	return response;
+	return html.str();
 }
 
 std::string StaticHandler::_getCurrentDateLocal(time_t time)
