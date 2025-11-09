@@ -91,6 +91,13 @@ void	Network::_runManualTests() const {
 	//_onCatchRequest(srcPort, "GET /redirect HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 301 Moved Permanently
 	//_onCatchRequest(srcPort, "GET /doesnotexist HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ Custom 404 page
 
+	// --- DIRECTORY LISTING TESTS ---
+	_onCatchRequest(srcPort, "GET /dir-index/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+	_onCatchRequest(srcPort, "GET /dir-listing/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+	_onCatchRequest(srcPort, "GET /dir-off/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+	_onCatchRequest(srcPort, "GET /dir-listing/subdir/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+	_onCatchRequest(srcPort, "GET /dir-listing/file.txt HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+
 	// --- SECURITY TESTS ---
 	//_onCatchRequest(srcPort, "GET /../webserv.config HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ❌ 200 OK -> Should be 403 Forbidden (directory traversal) // TODO (Ed)
 

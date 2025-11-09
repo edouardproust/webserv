@@ -2,6 +2,9 @@
 #include "http/HttpStatus.hpp"
 #include "constants.hpp"
 #include "utils/utils.hpp"
+#include <dirent.h>
+#include <algorithm>
+#include <ctime>
 
 std::map<std::string, std::string> StaticHandler::_mimeTypes = StaticHandler::_initMimeTypes();
 
@@ -50,13 +53,58 @@ Response	StaticHandler::_serveFile(std::string const& filePath, LocationBlock co
 	return response;
 }
 
-// TODO: Ava
-Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationBlock const* loc) {
-	(void)dirPath; (void) loc;
-	if (DEVMODE)
-		std::cout << "[TODO] StaticHandler: _serveAutoindex()" << std::endl;
-	// Return default Response for compilation
-	return Response();
+std::string StaticHandler::_getCurrentDateLocal(time_t time)
+{
+	struct tm* timeinfo = localtime(&time);
+	char buffer[20];
+	strftime(buffer, sizeof(buffer), "%d-%b-%Y %H:%M", timeinfo);
+	return buffer;
+}
+
+Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationBlock const* loc)
+{
+	(void)loc;
+	std::stringstream html;
+	html << "<html>\n<head><title>Index of " << dirPath << "</title></head>\n<body>\n"
+		 << "<h1>Index of " << dirPath << "</h1><hr><pre>\n"
+		 << "<a href=\"../\">../</a>\n";
+	DIR* dir = opendir(dirPath.c_str());
+	if (!dir)
+		return handleError(HttpStatus("forbidden"), loc);
+	std::string files[100];
+	int fileCount = 0;
+	struct dirent* entry; //required by readdir
+	while ((entry = readdir(dir)) != NULL && fileCount < 100)
+	{
+		std::string name = entry->d_name;
+		if (name == "." || name == "..")
+			continue;
+		files[fileCount++] = name;
+	}
+	closedir(dir);
+	std::sort(files, files + fileCount);
+	for (int i = 0; i < fileCount; i++)
+	{
+		std::string fullPath = utils::joinPath(dirPath, files[i]);
+		bool isDir = utils::isAccessibleDirectory(fullPath);
+		size_t fileSize = utils::getFileSize(fullPath);
+		std::string sizeStr = isDir ? "-" : utils::toString(fileSize);
+		struct stat fileStat;
+		std::string dateStr = "?";
+		if (stat(fullPath.c_str(), &fileStat) == 0)
+			dateStr = _getCurrentDateLocal(fileStat.st_mtime);
+		std::string displayName = files[i] + (isDir ? "/" : "");
+		html << "<a href=\"" << files[i] << (isDir ? "/" : "") << "\">" 
+			 << displayName << "</a>"
+			 << std::string(50 - displayName.length(), ' ')
+			 << files[i] << (isDir ? "/" : "") << "</a>\n"
+			 << dateStr << "                  " << sizeStr << "\n";
+	}
+	html << "</pre><hr></body>\n</html>";
+	Response response;
+	response.setStatus(HttpStatus(200));
+	response.setBody(html.str());
+	return response;
 }
 
 std::string StaticHandler::generateStatusHtml(HttpStatus const& status)
@@ -135,7 +183,7 @@ Response	StaticHandler::handleDelete(std::string const& path, LocationBlock cons
 	std::string dir = path.substr(0, path.find_last_of('/'));
 	if (access(dir.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"), loc);
-	if (std::remove(path.c_str()) == 0) // TODO Method std::remove is allowed ?
+	if (std::remove(path.c_str()) == 0)
 	{
 		Response response;
 		response.setStatus(HttpStatus("no_content"));
