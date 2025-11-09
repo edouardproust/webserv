@@ -19,47 +19,53 @@ Router::~Router() {}
  */
 Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen) {
 	RoutingDecision rd(config, req, listen);
-	if (DEVMODE) std::cout << rd << std::endl;
+	Response resp;
+	if (DEVMODE)
+		std::cout << rd << std::endl;
 	RoutingDecision::Decision decision = rd.getDecision();
 	LocationBlock const* loc = rd.getLocation();
-
-	// error, redirection
+	std::string const& finalPath = rd.getFinalPath();
+	// Request parser Bad request
+	StaticHandler statiq(rd);
 	HttpStatus const& reqStatus = req.getStatus();
 	if (reqStatus.getSlug() != "ok")
-		return StaticHandler::handleError(HttpStatus(reqStatus), loc);
-
-	if (decision == RoutingDecision::ERROR)
-		return StaticHandler::handleError(HttpStatus(rd.getErrorSlug()), loc);
-	if (decision == RoutingDecision::REDIRECTION) {
+		resp = statiq.handleError(HttpStatus(reqStatus));
+	// Routing decision: ERROR or REDIRECTION
+	else if (decision == RoutingDecision::ERROR)
+		resp = statiq.handleError(HttpStatus(rd.getErrorSlug()));
+	else if (decision == RoutingDecision::REDIRECTION) {
 		std::pair<int, std::string> const& ret = loc->getReturn();
-		return RedirectionHandler::run(ret.first, ret.second);
+		resp = RedirectionHandler::run(ret.first, ret.second);
 	}
-	// cgi, static
-	std::string filePath = utils::normalizePath(utils::joinPath(loc->getRoot(), req.getPath()));
-	if (DEVMODE)
-		std::cout << "Router:\n- filePath: " << filePath << "\n" << std::endl;
-	if (decision == RoutingDecision::CGI) {
-		CgiHandler handler;
+	// Routing decision: CGI
+	else if (decision == RoutingDecision::CGI) {
+		CgiHandler cgi;
 		try {
-			return handler.run(req, loc, filePath);
+			resp = cgi.run(req, loc, finalPath);
 		} catch (CgiHandler::ExecException& e) {
-			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
-			return StaticHandler::handleError(HttpStatus("internal_server_error"), loc);
+			std::cerr << "[WARNING] CGI (" << finalPath << "): " << e.what() << std::endl;
+			resp = statiq.handleError(HttpStatus("internal_server_error"));
 		} catch (Response::RawException& e) {
-			std::cerr << "[WARNING] CGI (" << filePath << "): " << e.what() << std::endl;
-			return StaticHandler::handleError(HttpStatus("bad_gateway"), loc);
+			std::cerr << "[WARNING] CGI (" << finalPath << "): " << e.what() << std::endl;
+			resp = statiq.handleError(HttpStatus("bad_gateway"));
 		}
 	}
-	if (decision == RoutingDecision::STATIC) {
+	// Routing decision: STATIC
+	else if (decision == RoutingDecision::STATIC) {
 		std::string const&	method = req.getMethod();
 		if (method == "GET")
-			return StaticHandler::handleGet(filePath, loc);
+			resp = statiq.handleGet();
 		else if (method == "DELETE")
-			return StaticHandler::handleDelete(filePath, loc);
+			resp = statiq.handleDelete();
 		// -- additional supported methods can be added here -- // TODO PUT method
 		else
-			return StaticHandler::handleError(HttpStatus("method_not_allowed"), loc);
+			resp = statiq.handleError(HttpStatus("method_not_allowed"));
 	}
 	// fallback
-	return StaticHandler::handleError(HttpStatus("internal_server_error"), loc);
+	else
+		resp = statiq.handleError(HttpStatus("internal_server_error"));
+
+	if (DEVMODE && statiq.hasUpdatedFinalPath())
+		std::cout << "StaticHandler:\n" << statiq << std::endl;
+	return resp;
 }

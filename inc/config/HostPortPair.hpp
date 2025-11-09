@@ -17,10 +17,9 @@ class HostPortPair {
 
 	static bool	_isValidIP(std::string const&);
 
-	HostPortPair(); // not used
-
 	public:
 
+		HostPortPair();
 		HostPortPair(std::string const&);
 		HostPortPair(HostPortPair const&);
 		HostPortPair& operator=(HostPortPair const&);

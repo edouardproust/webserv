@@ -1,0 +1,18 @@
+@font-face {
+	font-family: 'clinton';
+	src: url('font/clinton.ttf');
+}
+
+@font-face {
+	font-family: 'clinton-bold';
+	src: url('font/clinton-bold.ttf');
+}
+
+body {
+	background-color: cadetblue;
+	font-family: 'clinton', sans-serif;
+}
+
+h1 {
+	font-family: 'clinton-bold', sans-serif;
+}

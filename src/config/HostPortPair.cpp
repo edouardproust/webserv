@@ -1,5 +1,7 @@
 #include "config/HostPortPair.hpp"
 
+HostPortPair::HostPortPair(): _host("0.0.0.0"), _port(80) {}
+
 /**
  * May throw an exception
  */

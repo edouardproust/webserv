@@ -10,7 +10,6 @@ class LocationBlock {
 
 	ServerBlock const*			_server;				// Pointer to parent server block, set during validation
 	std::string					_path;					// URI prefix (e.g. "/cgi-bin/")
-	std::string					_root;					// optional, overrides server root
 	std::string					_autoindex;				// optional
 	std::set<std::string>		_limitExcept;			// optional (if empty, all methods are allowed)
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
@@ -28,7 +27,6 @@ class LocationBlock {
 	void	_parseDirective(std::string&, std::vector<std::string>&, bool);
 
 	void	_setPath(std::string&);
-	void	_setRoot(Tokens const&);
 	void	_setAutoindex(Tokens const&);
 	void	_setLimitExcept(Tokens const&);
 	void	_setReturn(Tokens const&);
