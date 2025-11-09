@@ -74,7 +74,6 @@ bool	Request::isExistingMethod(std::string const& method) {
 	return _existingMethods.find(method) != _existingMethods.end();
 }
 
-
 const HttpStatus& Request::getStatus() const
 {
 	return (this->_status);

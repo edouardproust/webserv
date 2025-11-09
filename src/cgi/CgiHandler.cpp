@@ -46,7 +46,7 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
 	tmp["CONTENT_TYPE"] = req.getContentType();
 	tmp["CONTENT_LENGTH"] = utils::toString(req.getBody().length());
 	tmp["SCRIPT_FILENAME"] = _filePath;
-	tmp["SCRIPT_NAME"] = utils::trimDomain(req.getPath());
+	tmp["SCRIPT_NAME"] = req.getPath();
 	tmp["DOCUMENT_ROOT"] = locRoot;
 	// Server protocol information
 	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";

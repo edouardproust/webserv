@@ -34,6 +34,7 @@ class Response
 	std::string stringify() const;
 
 	void setStatus(const HttpStatus& status);
+	void setContentType(const std::string& value);
 	void setHeader(const std::string& name, const std::string& value);
 	void setBody(const std::string& body);
 

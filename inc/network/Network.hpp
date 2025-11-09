@@ -1,29 +1,61 @@
-#ifndef NETWORK_HPP
-#define NETWORK_HPP
+#ifndef WEBSERVER_HPP
+#define WEBSERVER_HPP
 
-#include "config/Config.hpp"
 #include "router/Router.hpp"
-#include "http/Response.hpp"
+#include "network/Socket.hpp"
+#include "utils/signal.hpp"
+#include <sys/epoll.h>
 
 class Network {
 
-	Config const& _config;
+	private:
+		Config const& _config;
+		std::vector<Socket *> _connections;
+		std::map<int, std::string> _request_list;
+		std::map<int, Socket*> _client_server_map;
 
-	// TODO make canonical
-	Network();
-	Network(Network const&);
+		int _epoll;
 
-	void	_onCatchRequest(HostPortPair const&, std::string const&) const;
-	void	_sendResponse(HostPortPair const&, Response const& response) const;
-	void	_runManualTests() const;
+		void epoll();
+		void epollAddServers();
+		int epoll_wait(struct epoll_event *events);
+
+		int isServerSideEvent(int epoll_fd);
+		void recv(int client_fd, struct epoll_event &events_setup);
+		void send(int client_fd, struct epoll_event &events_setup);
+
+		void _handleClientDisconnect(int client_fd, struct epoll_event &events_setup);
+		void _handleRecvError(int client_fd, struct epoll_event &events_setup);
+
+		int			getRequestTotalLength(std::string request);
+		std::string getBoundry(std::string request);
 
 	public:
-
-		Network(Config const&);
+		Network();
+		Network(Config const& _config_file);
 		~Network();
+		void start_servers();
+		int getEpollFd() const;
+    	const std::vector<Socket*>& getConnections() const;
+    	const std::map<int, std::string>& getRequestList() const;
+   	 	const std::map<int, Socket*>& getClientServerMap() const;
 
-		void	run() const;
+		class EpollException : public std::exception {
+			public:
+				const char *what() const throw();
+		};
 
+		class EpollCtlException : public std::exception {
+			public:
+				const char *what() const throw();
+		};
+
+		class EpollWaitException : public std::exception {
+			public:
+				const char *what() const throw();
+		};
 };
 
-#endif
+std::ostream& operator<<(std::ostream& os, const Network& rhs);
+
+#endif // WEBSERVER_HPP

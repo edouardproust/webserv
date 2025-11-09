@@ -1,112 +1,298 @@
 #include "network/Network.hpp"
 
-Network::Network(Config const& config): _config(config) {}
+Network::Network(Config const& config) : _config(config)
+{
+	// Get all unique host:port pairs directly from config
+	std::vector<HostPortPair> listen_ports = _config.getAllListenPorts();
 
-Network::~Network() {}
+    // Create socket for each HostPortPair
+	for (size_t i = 0; i < listen_ports.size() && sig::keepRunning(); ++i)
+		_connections.push_back(new Socket(listen_ports[i]));
 
-// TODO Add Daniel's code in this method
-void	Network::run() const {
-	std::vector<HostPortPair> const& portsToOpen = _config.getAllListenPorts();
-	for (size_t i = 0; i < portsToOpen.size(); ++i)
-		std::cout << "[INFO] " << SERVER_SOFTWARE << ": Listening on port " << portsToOpen[i] << std::endl;
-	_runManualTests(); // DEBUG: Remove in prod
+	//  Bind and listen to each socket created
+	for (size_t i = 0; i < _connections.size(); ++i) {
+		try {
+			_connections[i]->bind();
+			_connections[i]->listen();
+		} catch (Socket::BindException& e) {
+			// Cleanup allocated sockets before throwing
+			for (size_t j = 0; j < _connections.size(); ++j)
+				delete _connections[j];
+			_connections.clear();
+			throw;
+		}
+		std::cout << std::endl;
+	}
 }
 
-/**
- * Process a raw request when the Network module catches a raw request from a client.
- */
-void Network::_onCatchRequest(HostPortPair const& srcPort, std::string const& rawRequest) const {
-	Request request(rawRequest);
-	std::string const& method = !request.getMethod().empty() ? (request.getMethod() + " ") : "";
-	std::cout << "[INFO] Network: caught " << method << "request on port " << srcPort << std::endl;
-	if (DEVMODE) std::cout << request << std::endl;
-	Response const response = Router::dispatchRequest(_config, request, srcPort);
-	if (DEVMODE) std::cout << response << std::endl;
-	_sendResponse(srcPort, response); // TODO
+Network::~Network()
+{
+	std::cout << FT_CLOSE << "Closing Web server." << std::endl;
+
+	std::cout << FT_CLOSE << "Freeing Socket memory." << std::endl;
+	for (size_t i = 0; i < _connections.size(); ++i)
+		delete _connections[i];
+
+	std::cout << FT_OK << "Socket memory is now free!" << std::endl;
+
+	std::cout << FT_CLOSE << "Closing epoll." << std::endl;
+	close(_epoll);
+	std::cout << FT_OK << "Epoll closed!" << std::endl;
+
+	std::cout << FT_OK << "Web server closed!" << std::endl;
+	std::cout << std::endl;
 }
 
-// TODO Add Daniel's code in this method
-void	Network::_sendResponse(HostPortPair const& destPort, Response const& response) const {
-	std::cout << "[INFO] Network: sending '" << response.getStatus().toString() << "' response to client via port " << destPort << std::endl;
+void Network::start_servers()
+{
+	std::cout << FT_SETUP << "Starting up Web server" << std::endl;
+	std::cout << FT_WARNING << "Press Ctrl + C to stop the Web server." << std::endl;
+
+	int number_of_events;
+	int new_conn;
+	struct epoll_event events[FT_MAX_EVENT_SIZE];
+	struct epoll_event events_setup;
+
+	epoll();
+	epollAddServers();
+
+	while (sig::keepRunning())
+	{
+		number_of_events = epoll_wait(events);
+		for (int n = 0; n < number_of_events && sig::keepRunning(); n++)
+		{
+			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
+			{
+				// Forma correta:
+				::fcntl(new_conn, F_SETFL, O_NONBLOCK);  // Define como non-blocking
+				::fcntl(new_conn, F_SETFD, FD_CLOEXEC); // Define para fechar no exec()
+				//::fcntl(new_conn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+				events_setup.data.fd = new_conn;
+				events_setup.events = EPOLLIN;
+				if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, new_conn, &events_setup) == -1)
+				{
+					std::cout << FT_STATUS << "Epoll Ctl status: " << strerror(errno) << std::endl;
+					throw EpollCtlException();
+				}
+			}
+			else if (events[n].events & EPOLLIN)
+				recv(events[n].data.fd, events_setup);
+			else if (events[n].events & EPOLLOUT)
+				send(events[n].data.fd, events_setup);
+		}
+	}
 }
 
-/**
- * This method is for testing during developement process.
- * Legend:
- * - ✅ Correct output
- * - ❌ Incorrect output (need fixes)
- */
-void	Network::_runManualTests() const {
-	HostPortPair srcPort("localhost:80");
+void Network::epoll()
+{
+	_epoll = ::epoll_create(1);
+	if (_epoll < 0)
+	{
+		std::cout << FT_STATUS << "Epoll status: " << strerror(errno) << std::endl;
+		throw EpollException();
+	}
+}
 
-	// --- BASIC ROUTES ---
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 200 OK (website index OR webserv default index if [location "/" > directive "root"] is commented)
-	//_onCatchRequest(srcPort, "GET /index.html?query=test HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 200 OK (website index)
-	//_onCatchRequest(srcPort, "GET /dir-index HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 200 OK (index file in /dir-index/ OR index.html if [location "/dir-listing/" > directive "index"] is commented )
-	//_onCatchRequest(srcPort, "GET /dir-listing HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 200 OK (autoindex listing) -> // TODO (ava) StaticHandler: _serveAutoindex()
-	//_onCatchRequest(srcPort, "GET /dir-off HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 403 Forbidden (autoindex off, no index file)
-	//_onCatchRequest(srcPort, "GET /doesnotexist HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found (custom errors/404.html page)
+void Network::epollAddServers()
+{
+	struct epoll_event events_setup;
 
-	// --- METHOD TESTS ---
-	//_onCatchRequest(srcPort, "POST /cgi/test.php?name=John%20Doe&age=23 HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 12\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nname=webserv"); // ✅ 200 OK
-	//_onCatchRequest(srcPort, "POST /cgi/test.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 0\r\n\r\n"); // ✅ 200 OK
-	//_onCatchRequest(srcPort, "DELETE /uploads/test.txt HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 204 No Content (file deleted)
-	// limit_except
-	//_onCatchRequest(srcPort, "GET /uploads/test.txt HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 405 Method Not Allowed
-	// Unsupported method
-	//_onCatchRequest(srcPort, "PUT /cgi/test.php HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 501 Not Implemented
-	//_onCatchRequest(srcPort, "TRACE / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 501 Not Implemented
-	// Invalid method
-	//_onCatchRequest(srcPort, "INVALID /cgi/test.php HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request
+	events_setup.events = EPOLLIN | EPOLLOUT;
+	for (size_t i = 0; i < _connections.size(); ++i) {
+		events_setup.data.fd = _connections[i]->getSock();
+		if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, _connections[i]->getSock(), &events_setup) < 0)
+		{
+			std::cout << FT_STATUS << "Epoll Ctl status: " << strerror(errno) << std::endl;
+			throw EpollCtlException();
+		}
+	}
+}
 
-	// --- MORE CGI TESTS ---
-	// .php
-	//_onCatchRequest(srcPort, "GET /cgi/nonexistent.php HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 404 Not Found (php-cgi cannot find script)
-	//_onCatchRequest(srcPort, "GET /cgi/invalid.php HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 500 Internal Server Error (php-cgi fails to parse script with syntax error)
-	//_onCatchRequest(srcPort, "POST /cgi/test.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 20\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nusername=test&pwd=42"); // ✅ 200 OK (with POST parameters)
-	//.py
-	//_onCatchRequest(srcPort, "GET /cgi/nonexistent.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 500 Internal Server Error (python3 fails to execute non-existing script)
-	//_onCatchRequest(srcPort, "GET /cgi/env.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 200 OK (prints environment variables correctly)
-	//_onCatchRequest(srcPort, "GET /cgi/timeout.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ❌ 200 OK (should timeout and return 504 Gateway Timeout) // TODO (Ed) Implement timeout on CGI execution
-	//_onCatchRequest(srcPort, "GET /cgi/segfault.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 500 Internal Server Error (process killed by signal 11)
+int Network::epoll_wait(struct epoll_event *events)
+{
+	int nfds;
 
-	// --- BAD REQUESTS ---
-	//_onCatchRequest(srcPort, "GOT / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (invalid method)
-	//_onCatchRequest(srcPort, "get / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (invalid method, method is case-sensitive)
-	//_onCatchRequest(srcPort, "HEAD / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 501 not implemented (method exists but our server does not support it)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.0\r\n\r\n"); // ✅  505 Not supported - fixed, non-supported version takes precedence over 400
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\n\r\n"); // ✅ 400 Bad Request (missing Host header)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 10\r\n\r\n"); // ✅ 400 Bad Request (wrong content-length)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: compress\r\n\r\n"); // ✅  501 (not implemented type of encoding)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello6\r\nWorld!\r\n0\r\n\r\n");// ✅ 400 Bad Request (no CRLF after first chunk)
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r\n7\r\nWorld!\r\n0\r\n\r\n"); // ✅ 400 Bad Request (wrong length in second chunk)
-	//_onCatchRequest(srcPort, "POST /upload HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 12\r\nTransfer-Encoding: chunked\r\n\r\nHello world!"); // ✅ 400 Bad Request (both Content-Length and Transfer-Encoding)
-	//_onCatchRequest(srcPort, "GET /index.html ?query=test HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 400 Bad Request (space inside URL)
+	nfds = ::epoll_wait(_epoll, events, FT_MAX_EVENT_SIZE, -1);
+	if (nfds == -1 && sig::keepRunning())
+	{
+		std::cout << FT_STATUS << "Epoll Wait status: " << strerror(errno) << std::endl;
+		throw EpollWaitException();
+	}
 
-	// --- BODY SIZE / LIMIT TESTS ---
-	//std::string bigBody(2000000, 'A'); // 2MB
-	//_onCatchRequest(srcPort, "POST /uploads HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 2000000\r\n\r\n" + bigBody); // ✅ 413 Content Too Large
+	return (nfds);
+}
 
-	// --- REDIRECTION / ERROR PAGE TESTS ---
-	//_onCatchRequest(srcPort, "GET /redirect HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ 301 Moved Permanently
-	//_onCatchRequest(srcPort, "GET /doesnotexist HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ✅ Custom 404 page
+int Network::isServerSideEvent(int epoll_fd)
+{
+    // Iterate through listening sockets (servers)
+    for (size_t i = 0; i < _connections.size(); ++i)
+    {
+        // IF and ONLY IF the event fd equals one of my server sockets
+        if (epoll_fd == _connections[i]->getSock())
+        {
+            std::cout << FT_EVENT << "Server side event on fd " << FT_HIGH_LIGHT_COLOR << epoll_fd << RESET_COLOR << "." << std::endl;
+            int new_conn = _connections[i]->accept();
+            if (new_conn > 0)
+                _client_server_map[new_conn] = _connections[i];
+            return (new_conn);
+        }
+    }
+    // If not a server event, don't print anything and return 0
+    return (0);
+}
 
-	// --- DIRECTORY LISTING TESTS ---
-	_onCatchRequest(srcPort, "GET /dir-index/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /dir-listing/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /dir-off/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /dir-listing/subdir/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
-	_onCatchRequest(srcPort, "GET /dir-listing/file.txt HTTP/1.1\r\nHost: localhost:8080\r\n\r\n");
+void Network::_handleClientDisconnect(int client_fd, struct epoll_event &events_setup)
+{
+	std::cout << FT_EVENT << "Client " << client_fd << " disconnected." << std::endl;
+	_client_server_map.erase(client_fd);
+	_request_list.erase(client_fd);
+	epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
+	close(client_fd);
+}
 
-	// --- SECURITY TESTS ---
-	//_onCatchRequest(srcPort, "GET /../webserv.config HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ❌ 200 OK -> Should be 403 Forbidden (directory traversal) // TODO (Ed)
+void Network::_handleRecvError(int client_fd, struct epoll_event &events_setup)
+{
+	std::cout << FT_WARNING << "recv error on client " << client_fd << ": " << strerror(errno) << std::endl;
+	_client_server_map.erase(client_fd);
+	_request_list.erase(client_fd);
+	epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
+	close(client_fd);
+}
 
-	//_onCatchRequest(srcPort, "GET /../../../../ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // ❌ 200 OK (autoindex) -> Should be 403 Forbidden // TODO (Ed)
+void Network::recv(int client_fd, struct epoll_event &events_setup)
+{
+	std::cout
+		<< FT_EVENT
+		<< "Recv event happened on fd "
+		<< FT_HIGH_LIGHT_COLOR << client_fd << RESET_COLOR
+		<< "." << std::endl;
 
-	// --- HEADER STRESS TEST ---
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: WebservTest\r\nUser-Agent: Duplicate\r\nAccept: */*\r\n\r\n"); // NOT TESTED YET
-	//_onCatchRequest(srcPort, "POST /cgi-bin/test.php HTTP/1.1\r\nHost: localhost:8080\r\nContent-Length: 0\r\n\r\n"); // NOT TESTED YET
+	char client_buffer[FT_DEFAULT_CLIENT_BUFFER_SIZE];
+    std::string& total_request = _request_list[client_fd];
+	int bytes;
 
-	// --- PIPELINED REQUESTS ---
-	//_onCatchRequest(srcPort, "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\nGET /index.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"); // NOT TESTED YET
+	while (sig::keepRunning())
+	{
+		bytes = ::recv(client_fd, client_buffer, FT_DEFAULT_CLIENT_BUFFER_SIZE, 0);
+
+		if (bytes > 0)
+		{
+			std::cout << FT_EVENT << "Receiving " << bytes
+					  << ((bytes <= 1) ? " byte." : " bytes.")
+					  << std::endl;
+			total_request.append(client_buffer, bytes);
+		}
+		else if (bytes == 0)
+		{
+			_handleClientDisconnect(client_fd, events_setup);
+			return;
+		}
+		else // bytes == -1
+		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break; // No more data to read right now
+			else
+			{
+				_handleRecvError(client_fd, events_setup);
+				return;
+			}
+		}
+	}
+	if (!total_request.empty())
+	{
+		events_setup.data.fd = client_fd;
+		events_setup.events = EPOLLOUT;
+		epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
+	}
+}
+
+void Network::send(int client_fd, struct epoll_event &events_setup)
+{
+	std::cout
+		<< FT_EVENT
+		<< "Send event happened on fd "
+		<< FT_HIGH_LIGHT_COLOR << client_fd << RESET_COLOR
+		<< "." << std::endl;
+
+	Response response;
+	try {
+        Request request(_request_list[client_fd]);
+		if (DEVMODE)
+			std::cout << request << std::endl;
+        if (_client_server_map.find(client_fd) == _client_server_map.end())
+            throw std::runtime_error("Network logic error: client_fd not in map.");
+        Socket* serverSocket = _client_server_map.at(client_fd);
+        HostPortPair listenPair = serverSocket->getHostPortPair();
+
+		// Call router
+        response = Router::dispatchRequest(_config, request, listenPair);
+		if (DEVMODE)
+			std::cout << response << std::endl;
+		std::string msg = response.stringify();
+		int ret = ::send(client_fd, msg.data(), msg.length(), 0);
+		if (ret == -1)
+			throw std::runtime_error("Send failed");
+		_request_list.erase(client_fd);
+        _client_server_map.erase(client_fd);
+		events_setup.data.fd = client_fd;
+		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
+		close(client_fd);
+	}
+	catch (std::exception& e) {
+		std::cout << FT_STATUS << "Error during send/dispatch: " << e.what() << std::endl;
+        _request_list.erase(client_fd);
+        _client_server_map.erase(client_fd);
+		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
+		close(client_fd);
+	}
+}
+
+int Network::getEpollFd() const {
+	return _epoll;
+}
+
+const std::vector<Socket*>& Network::getConnections() const {
+	return _connections;
+}
+
+const std::map<int, std::string>& Network::getRequestList() const {
+	return _request_list;
+}
+
+const std::map<int, Socket*>& Network::getClientServerMap() const {
+	return _client_server_map;
+}
+
+std::ostream& operator<<(std::ostream& os, const Network& rhs)
+{
+    os << "--- Network Debug Status ---\n";
+    os << "- Epoll FD: " << rhs.getEpollFd() << "\n";
+    os << "- Listening Sockets: " << rhs.getConnections().size() << "\n";
+    const std::vector<Socket*>& sockets = rhs.getConnections();
+    for (size_t i = 0; i < sockets.size(); ++i)
+    {
+        os << "  - Socket " << i << " (FD: " << sockets[i]->getSock() << ") on "
+           << sockets[i]->getHostPortPair().getHost() << ":"
+           << sockets[i]->getHostPortPair().getPort() << "\n";
+    }
+    os << "- Pending Requests (waiting send): " << rhs.getRequestList().size() << "\n";
+    os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
+
+    os << "------------------------------" << std::endl;
+    return os;
+}
+
+const char *Network::EpollException::what() const throw()
+{
+	return (FT_ERROR "Can't create epoll.");
+}
+
+const char *Network::EpollCtlException::what() const throw()
+{
+	return (FT_ERROR "Can't manage file descriptor.");
+}
+
+const char *Network::EpollWaitException::what() const throw()
+{
+	return (FT_ERROR "Can't wait events.");
 }

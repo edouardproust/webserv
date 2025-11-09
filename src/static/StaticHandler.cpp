@@ -6,64 +6,126 @@
 #include <algorithm>
 #include <ctime>
 
-std::map<std::string, std::string> StaticHandler::_mimeTypes = StaticHandler::_initMimeTypes();
+StaticHandler::StaticHandler(RoutingDecision const& rd)
+: _routingDecision(rd),
+  _location(rd.getLocation()),
+  _finalPath(rd.getFinalPath())
+{}
 
-std::map<std::string, std::string> StaticHandler::_initMimeTypes()
+StaticHandler::~StaticHandler() {}
+
+Response	StaticHandler::handleGet()
 {
-	std::map<std::string, std::string> types;
-	types["html"] = "text/html";
-	types["css"] = "text/css";
-	types["txt"] = "text/plain";
-	types["jpg"] = "image/jpeg";
-	types["jpeg"] = "image/jpeg";
-	types["png"] = "image/png";
-	types["gif"] = "image/gif";
-	types["ico"] = "image/x-icon";
-	types["js"] = "application/javascript";
-	types["json"] = "application/json";
-	types["pdf"] = "application/pdf";
-	return types;
+	Response resp;
+
+	// Serve webserv welcome page
+	 if (_location->getRoot().empty() && _finalPath == "/") {
+		resp.setBody(_welcomePageHtml());
+		return resp;
+	}
+
+	std::vector<std::string> locIndexes = _location->getIndexFiles();
+	bool isAutoindex = _location->getAutoindex() == "on";
+
+	if (utils::isAccessibleDirectory(_finalPath))
+	{
+		// Trying serving index files
+		for (size_t i = 0; i < locIndexes.size(); ++i)
+		{
+			std::string const& indexPath = locIndexes[i];
+			std::string tmp;
+			if (utils::isAbsolutePath(indexPath))
+				tmp = indexPath;
+			else {
+				// no transversal check needed (finalPath already secured in RoutingDecision::_setFilePath)
+				tmp = utils::pathsJoin(_finalPath, indexPath);
+			}
+			if (utils::isReadableFile(tmp)) {
+				_finalPath = tmp; //!\ final path updated
+				return _serveFile();
+			}
+		}
+		// No index file found
+		if (isAutoindex) { // Generate HTML listing
+			resp.setBody(_autoindexHtml());
+			return resp;
+
+		}
+		return handleError(HttpStatus("forbidden"));
+	}
+	else if (utils::isReadableFile(_finalPath))
+		return _serveFile();
+	return handleError(HttpStatus("not_found"));
 }
 
-std::string	StaticHandler::_getMimeType(const std::string& filePath)
+Response	StaticHandler::handleDelete()
 {
-	std::string extension = utils::getFileExtension(filePath);
-	if (!extension.empty() && extension[0] == '.')
-		extension = extension.substr(1);
-	std::map<std::string, std::string>::const_iterator it = _mimeTypes.find(extension);
-	if (it != _mimeTypes.end())
-		return it->second;
-	 return "application/octet-stream";
+	if (!utils::fileExists(_finalPath))
+		return handleError(HttpStatus("not_found"));
+	_finalPath = _finalPath.substr(0, _finalPath.find_last_of('/')); //!\ final path updated
+	if (access(_finalPath.c_str(), W_OK) != 0)
+		return handleError(HttpStatus("forbidden"));
+	if (std::remove(_finalPath.c_str()) == 0) // TODO Method std::remove is allowed ?
+	{
+		Response response;
+		response.setStatus(HttpStatus("no_content"));
+		return response;
+	}
+	else
+		return handleError(HttpStatus("internal_server_error"));
 }
 
-// TODO (optionnal?): If is CGI file, call CGIHandler instead
-Response	StaticHandler::_serveFile(std::string const& filePath, LocationBlock const* loc)
+Response	StaticHandler::handleError(HttpStatus const& status)
 {
-	size_t fileSize = utils::getFileSize(filePath);
-	if (fileSize > MAX_FILE_SIZE)
-		return handleError(HttpStatus("content_too_large"), loc);
-	std::string content = utils::readFile(filePath);
-	if (content.empty() && fileSize > 0)
-		return handleError(HttpStatus("internal_server_error"), loc);
-	std::string contentType = _getMimeType(filePath);
-	Response response;
-	response.setStatus(HttpStatus("ok"));
-	response.setHeader("Content-Type", contentType);
-	response.setBody(content);
-	return response;
+	std::string const& locRoot = _location->getRoot();
+	ErrorPages const& locErrorPages = _location->getErrorPages();
+
+	Response resp;
+	resp.setStatus(status);
+	resp.setContentType(_getMime("html"));
+
+	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
+	if (search != locErrorPages.end())
+	{
+		std::string errorPath = search->second;
+		if (utils::isReadableFile(errorPath)) {
+			_finalPath = errorPath; //!\ final path updated
+			resp.setBody(utils::readFile(_finalPath));
+			return resp;
+		}
+	}
+	resp.setBody(_errorPageHtml(status));
+	return resp;
 }
 
-std::string StaticHandler::_getCurrentDateLocal(time_t time)
+// HTML
+
+std::string StaticHandler::_welcomePageHtml() const
 {
-	struct tm* timeinfo = localtime(&time);
-	char buffer[20];
-	strftime(buffer, sizeof(buffer), "%d-%b-%Y %H:%M", timeinfo);
-	return buffer;
+	std::string html;
+
+	return std::string(
+		"<!DOCTYPE html>"
+		"<html>"
+		"<head>"
+		" <title>Welcome to " + SERVER_NAME + "!</title>"
+		" <style>"
+		"  html { color-scheme: light dark; }"
+		"  body { width: 35em; margin: 0 auto; font-family: Tahoma, Verdana, Arial, sans-serif; }"
+		" </style>"
+		"</head>"
+		"<body>"
+		" <h1>Welcome to " + SERVER_NAME + "!</h1>"
+		" <p>If you see this page, the web server is successfully working. Further configuration is required.</p>"
+		" <p>For online documentation and support please refer to <a href=\"" + SERVER_REPO + "\">Github repository</a>.</p>"
+		" <p><em>Thank you for using " + SERVER_NAME + ".</em></p>"
+		"</body>"
+		"</html>"
+	);
 }
 
-Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationBlock const* loc)
+std::string	StaticHandler::_autoindexHtml() const
 {
-	(void)loc;
 	std::stringstream html;
 	html << "<html>\n<head><title>Index of " << dirPath << "</title></head>\n<body>\n"
 		 << "<h1>Index of " << dirPath << "</h1><hr><pre>\n"
@@ -107,88 +169,109 @@ Response	StaticHandler::_generateAutoindex(std::string const& dirPath, LocationB
 	return response;
 }
 
-std::string StaticHandler::generateStatusHtml(HttpStatus const& status)
+std::string StaticHandler::_getCurrentDateLocal(time_t time)
 {
-	std::stringstream html;
-
-	html << "<html>\n"
-		 << "  <head>\n"
-		 << "    <title>" << status.toString() << "</title>\n"
-		 << "  </head>\n"
-		 << "  <body>\n"
-		 << "    <center><h1>" << status.toString() << "</h1></center>\n"
-		 << "    <hr><center>" << SERVER_SOFTWARE << "</center>\n"
-		 << "  </body>\n"
-		 << "</html>";
-	return html.str();
+	struct tm* timeinfo = localtime(&time);
+	char buffer[20];
+	strftime(buffer, sizeof(buffer), "%d-%b-%Y %H:%M", timeinfo);
+	return buffer;
 }
 
-Response	StaticHandler::handleError(HttpStatus const& status, LocationBlock const* loc)
+std::string StaticHandler::_errorPageHtml(HttpStatus const& status) const
 {
-	std::string const& locRoot = loc->getRoot();
-	ErrorPages const& locErrorPages = loc->getErrorPages();
-
-	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
-	if (search != locErrorPages.end())
-	{
-		std::string errorPath = utils::joinPath(locRoot, search->second);
-		if (utils::isReadableFile(errorPath))
-		{
-			std::string content = utils::readFile(errorPath);
-			Response response;
-			response.setStatus(status);
-			response.setBody(content);
-			response.setHeader("Content-Type", "text/html");
-			return response;
-		}
-	}
-	Response response;
-	response.setStatus(status);
-	std::string errorPage = generateStatusHtml(status);
-	response.setBody(errorPage);
-	response.setHeader("Content-Type", "text/html");
-	return response;
+	return std::string(
+		"<!DOCTYPE html>"
+		"<html>"
+		"<head>"
+		" <title>" + status.toString() + "</title>\n"
+		"</head>\n"
+		"<body>\n"
+		" <center><h1>" + status.toString() + "</h1></center>\n"
+		" <hr><center>webserv/1.0</center>\n"
+		" </body>\n"
+		"</html>"
+	);
 }
 
-Response	StaticHandler::handleGet(std::string const& path, LocationBlock const* loc)
-{
-	std::vector<std::string> locIndexes = loc->getIndexFiles();
-	bool isAutoindex = loc->getAutoindex() == "on";
+// MIME
 
-	if (utils::isAccessibleDirectory(path))
-	{
-		// Trying serving index files
-		for (size_t i = 0; i < locIndexes.size(); ++i)
-		{
-			std::string indexPath = utils::joinPath(path, locIndexes[i]);
-			if (utils::isReadableFile(indexPath))
-			return _serveFile(indexPath, loc);
-		}
-		// No index file found
-		if (isAutoindex)
-			return _generateAutoindex(path, loc); // Generate HTML listing
-		else
-			return handleError(HttpStatus("forbidden"), loc);
-	}
-	else if (utils::isReadableFile(path))
-		return _serveFile(path, loc);
-	else
-		return handleError(HttpStatus("not_found"), loc);
+/**
+ * Get MIME type from extension (without dot, eg. "html", jpeg")
+ */
+std::string	StaticHandler::_getMime(const std::string& extension)
+{
+	static std::map<std::string, std::string> types;
+
+	types["html"]	= "text/html";
+	types["htm"]	= "text/html";
+	types["css"]	= "text/css";
+	types["txt"]	= "text/plain";
+
+	types["jpg"]	= "image/jpeg";
+	types["jpeg"]	= "image/jpeg";
+	types["png"]	= "image/png";
+	types["gif"]	= "image/gif";
+	types["ico"]	= "image/x-icon";
+
+	types["js"]		= "application/javascript";
+	types["json"]	= "application/json";
+	types["pdf"]	= "application/pdf";
+
+	types["ttf"]	= "font/ttf";
+	types["otf"]	= "font/otf";
+	types["woff"]	= "font/woff";
+	types["woff2"]	= "font/woff2";
+
+	// -- additional types can be added here --
+
+	std::map<std::string, std::string>::const_iterator it = types.find(extension);
+	if (it != types.end())
+		return it->second;
+	return "application/octet-stream";
 }
 
-Response	StaticHandler::handleDelete(std::string const& path, LocationBlock const* loc)
+/**
+ * Get MIME type from an absolute file path.
+ */
+std::string	StaticHandler::_getMimeFromPath(const std::string& filePath)
 {
-	if (!utils::fileExists(path))
-		return handleError(HttpStatus("not_found"), loc);
-	std::string dir = path.substr(0, path.find_last_of('/'));
-	if (access(dir.c_str(), W_OK) != 0)
-		return handleError(HttpStatus("forbidden"), loc);
-	if (std::remove(path.c_str()) == 0)
-	{
-		Response response;
-		response.setStatus(HttpStatus("no_content"));
-		return response;
-	}
-	else
-		return handleError(HttpStatus("internal_server_error"), loc);
+	std::string extension = utils::getFileExtension(filePath);
+	if (!extension.empty() && extension[0] == '.')
+		extension = extension.substr(1);
+	return _getMime(extension);
+}
+
+// UTILS
+
+// TODO (optionnal?): If is CGI file, call CGIHandler instead
+Response	StaticHandler::_serveFile()
+{
+	size_t fileSize = utils::getFileSize(_finalPath);
+	if (fileSize > MAX_FILE_SIZE)
+		return handleError(HttpStatus("content_too_large"));
+	std::string content = utils::readFile(_finalPath);
+	if (content.empty() && fileSize > 0)
+		return handleError(HttpStatus("internal_server_error"));
+
+	Response resp;
+	resp.setStatus(HttpStatus("ok"));
+	resp.setContentType(_getMimeFromPath(_finalPath));
+	resp.setBody(content);
+	return resp;
+}
+
+std::string const&	StaticHandler::getFinalPath() const
+{
+	return _finalPath;
+}
+
+bool	StaticHandler::hasUpdatedFinalPath() const {
+	return (_routingDecision.getFinalPath() != _finalPath);
+}
+
+std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs) {
+	os << "- finalPath: " << rhs.getFinalPath()
+		<< "\n";
+
+	return os;
 }
