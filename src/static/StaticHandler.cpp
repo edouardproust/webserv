@@ -132,7 +132,7 @@ std::string	StaticHandler::_autoindexHtml() const
 		 << "<a href=\"../\">../</a>\n";
 	DIR* dir = opendir(_finalPath.c_str());
 	if (!dir)
-		return handleError(HttpStatus("forbidden"), loc);
+		return handleError(HttpStatus("forbidden"));
 	std::vector<std::string> files;
 	struct dirent* entry; //required by readdir
 	while ((entry = readdir(dir)) != NULL)
