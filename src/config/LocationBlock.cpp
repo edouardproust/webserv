@@ -336,7 +336,7 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 			throw std::runtime_error("An index value is an empty string");
 		if (utils::isRelativePath(path) && getRoot().empty())
 			throw std::runtime_error("A relative path requires a server root");
-		_indexFiles.push_back(path);
+		_indexFiles.push_back(path); // Relative paths are not resolved into absolute yet (done at runtime using request URI)
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicated index files");
@@ -360,12 +360,14 @@ void	LocationBlock::_setCgi(Tokens const& tokens) {
 		throw std::runtime_error("Extension is an empty string");
 	if (executable.empty())
 		throw std::runtime_error("Executable is an empty string");
-	if (utils::isRelativePath(executable))
-		throw std::runtime_error("Executable path must be an absolute path: " + executable);
+	if (utils::isRelativePath(executable) && getRoot().empty())
+		throw std::runtime_error("A relative path requires a server root");
     if (extension[0] != '.')
 		throw std::runtime_error("Extension must start with a dot: " + extension);
     if (_cgi.find(extension) != _cgi.end())
 		throw std::runtime_error("Duplicate extension: " + extension);
+	if (utils::isRelativePath(executable))
+		executable = utils::pathsJoin(getRoot(), executable);
 	if (!utils::isExecutableFile(executable))
 		throw std::runtime_error("Executable cannot be accessed on host: " + executable
 			+ "\nPlease review the path or install the missing dependencies");

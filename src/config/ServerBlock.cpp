@@ -337,8 +337,8 @@ void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 		if (path.empty())
 			throw std::runtime_error("An index file is an emtpy string");
 		if (utils::isRelativePath(path) && _root.empty())
-			throw std::runtime_error("Path \"" + path + "\" is relative but root is not set");
-		_indexFiles.push_back(path);
+			throw std::runtime_error("A relative path requires a server root");
+		_indexFiles.push_back(path); // Relative paths are not resolved into absolute yet (done at runtime using request URI)
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicate index file in server");
