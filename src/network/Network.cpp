@@ -198,11 +198,24 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 			}
 		}
 	}
+	//WARNING : tmp fix so the tester can move on!!!
 	if (!total_request.empty() && total_request.find("\r\n\r\n") != std::string::npos)
 	{
-		events_setup.data.fd = client_fd;
-		events_setup.events = EPOLLOUT;
-		epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
+    	if (total_request.find("Transfer-Encoding: chunked") != std::string::npos)
+   	 	{
+        	if (total_request.find("0\r\n\r\n") != std::string::npos)
+       		{
+            	events_setup.data.fd = client_fd;
+            	events_setup.events = EPOLLOUT;
+            	epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
+        	}
+    	}
+    	else
+    	{
+        	events_setup.data.fd = client_fd;
+        	events_setup.events = EPOLLOUT;
+        	epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
+    	}
 	}
 }
 
