@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <algorithm>
 #include <ctime>
+#include <iomanip>
 
 StaticHandler::StaticHandler(RoutingDecision const& rd)
 : _routingDecision(rd),
@@ -128,6 +129,19 @@ std::string StaticHandler::_welcomePageHtml() const
 	);
 }
 
+/**
+ * Generates an automatic directory listing HTML page.
+ * 
+ * Creates a user-friendly file browser showing all files and subdirectories in the current directory.
+ * For each entry, displays:
+ * - Clickable filename/link (with "/" suffix for directories)
+ * - Last modification date
+ * - File size (or "-" for directories)
+ * 
+ * The layout uses fixed-width spacing (50 characters for names) for aligned columns,
+ * though exact alignment may vary depending on font and browser rendering.
+ * Entries are sorted alphabetically for consistent browsing.
+ */
 std::string	StaticHandler::_autoindexHtml() const
 {
 	std::stringstream html;
@@ -159,8 +173,8 @@ std::string	StaticHandler::_autoindexHtml() const
 		std::string displayName = files[i] + (isDir ? "/" : "");
 		html << "<a href=\"" << files[i] << (isDir ? "/" : "") << "\">" 
 			 << displayName << "</a>"
-			 << std::string(50 - displayName.length(), ' ')
-			 << dateStr << "                  " << sizeStr << "\n";
+			 << std::setw(50 - displayName.length()) << " "
+			 << dateStr << std::setw(20) << sizeStr << "\n";
 	}
 	html << "</pre><hr></body>\n</html>";
 	return html.str();

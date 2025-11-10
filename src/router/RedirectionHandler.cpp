@@ -41,6 +41,17 @@ void RedirectionHandler::setPath(std::string const& path)
 	_path = path;
 }
 
+/**
+ * Executes the redirection by building an appropriate HTTP response.
+ * 
+ * For 3xx redirects, sets the Location header and applies cache control for best pratice:
+ * - 301 (Permanent): Cached for 1 year (max-age=31536000) since browsers cache these
+ * - 302 (Temporary): Uses no-cache to ensure fresh redirects on subsequent requests
+ * 
+ * Also generates a user-friendly HTML body with redirect information and links.
+ * (This HTML will only be visible inside the browser if the client doesn't follow the redirect automatically)
+ * Returns an internal server error if the redirect path is empty.
+ */
 Response	RedirectionHandler::execute()
 {
 	if (_path.empty())

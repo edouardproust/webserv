@@ -165,12 +165,17 @@ std::string Response::_buildHeaders() const
 		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
 	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
 	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
+	if (_headers.find("location") != _headers.end())
+		headerStream << "Location: " << _headers.find("location")->second << "\r\n";
+	if (_headers.find("cache-control") != _headers.end())
+		headerStream << "Cache-Control: " << _headers.find("cache-control")->second << "\r\n";
 	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
 		it != _headers.end(); ++it)
 		{
 			const std::string& key = it->first;
 			if (key != "server" && key != "date" && key != "content-type" &&
-				key != "content-length" && key != "connection")
+				key != "content-length" && key != "connection" &&
+				key != "location" && key != "cache-control")
 					headerStream << key << ": " << it->second << "\r\n";
 		}
 	return headerStream.str();
