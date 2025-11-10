@@ -106,6 +106,15 @@ void	Response::setBody(const std::string& body)
 	_manageContentType();
 }
 
+void	Response::setConnectionFromRequest(const Request& request)
+{
+	const std::map<std::string, std::string>& headers = request.getHeaders();
+	if (headers.find("connection") != headers.end())
+		setHeader("Connection", headers.find("connection")->second);
+	else
+		setHeader("Connection", "keep-alive");
+}
+
 void	Response::_updateContentLength()
 {
 	std::stringstream lengthStream;

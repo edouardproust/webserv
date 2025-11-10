@@ -65,7 +65,7 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	// fallback
 	else
 		resp = statiq.handleError(HttpStatus("internal_server_error"));
-
+	resp.setConnectionFromRequest(req);
 	if (DEVMODE && statiq.hasUpdatedFinalPath())
 		std::cout << "StaticHandler:\n" << statiq << std::endl;
 	return resp;
