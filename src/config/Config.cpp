@@ -43,11 +43,14 @@ void	Config::_parseBlock(std::vector<std::string>& tokens, std::string const& co
 	++braceDepth;
 	std::string blockName = tokens[0];
 	try {
-		if (tokens[0] == "server")
+		if (blockName == "server")
 			_addServer(tokens, content, i, braceDepth);
 		// -- additional supported blocks can be added here --
-		else
-			throw std::runtime_error("Invalid block: " + tokens[0]);
+		else {
+			throw std::runtime_error("Unsupported block "
+				"(supported: server)");
+				// -- update this list if blocks added --
+		}
 	} catch (std::exception& e) {
 		throw std::runtime_error(blockName + ": " + e.what()); // wrap error msg with the block name
 	}

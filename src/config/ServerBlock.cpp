@@ -1,11 +1,13 @@
 #include "config/ServerBlock.hpp"
 #include "config/Config.hpp"
+#include "colors.hpp"
 
 ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
 
 /**
  * Parse the content of a server block and sets default index files and listening port `0.0.0.0:80`
  * if empty after parsing.
+ * If no location block is defined, a default location is created (path "/" and PUT method forbidden)
  *
  * Parsing may throw an exception.
  */
@@ -14,6 +16,10 @@ ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(
 	_setDefaultIndexFiles();
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0:80"));
+	if (_locations.empty()) {
+		_locations.push_back(LocationBlock(this));
+		std::cout << FT_WARNING << "Config: server: No location block defined, a default one was created. PUT method is no allowed in this location." << RESET_COLOR << std::endl;
+	}
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other): _isSetClientBodySize(false) {
@@ -96,8 +102,11 @@ void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t
 		if (blockName == "location")
 			_addLocation(tokens, content, i, braceDepth);
 		// -- additional blocks can be added here --
-		else
-			throw std::runtime_error("Unsupported block");
+		else {
+			throw std::runtime_error("Unsupported block "
+				"(supported: location)");
+				// -- update this list if blocks added --
+		}
 	} catch (std::exception& e) {
 		throw std::runtime_error(blockName + (blockName == "location" && tokens.size() > 1 ? " \"" + tokens[1] + "\"" : "") + ": " + e.what()); // wrap error msg with the block name
 	}
@@ -123,19 +132,21 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
 
 	std::string directiveName = tokens[0];
 	try {
-		if (tokens[0] == "root")
+		if (directiveName == "root")
 			_setRoot(tokens);
-		else if (tokens[0] == "listen")
+		else if (directiveName == "listen")
 			_setListen(tokens);
-		else if (tokens[0] == "client_max_body_size")
+		else if (directiveName == "client_max_body_size")
 			_setClientMaxBodySize(tokens);
-		else if (tokens[0] == "error_page")
+		else if (directiveName == "error_page")
 			_setErrorPages(tokens);
-		else if (tokens[0] == "index")
+		else if (directiveName == "index")
 			_setIndexFiles(tokens);
 		// -- additional directives can be added here --
 		else {
-			throw std::runtime_error("Unsupported directive");
+			throw std::runtime_error(directiveName + ": Unsupported directive.\n"
+				"Supported list: root, listen, client_max_body_size, error_page, index");
+				// -- update this list if directives added --
 		}
 	} catch (std::exception& e) {
 		throw std::runtime_error(directiveName + ": " + e.what()); // wrap error msg with the directive name
@@ -366,7 +377,7 @@ std::vector<std::string> const&	ServerBlock::getIndexFiles() const {
 }
 
 std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
-	os << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
+	os << "- root: " << PrintableString(rhs.getRoot()) << "\n";
 
 	std::set<HostPortPair> const& listen = rhs.getListen();
 	os << "- listen: " << listen.size() << "\n";

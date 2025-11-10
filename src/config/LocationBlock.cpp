@@ -6,7 +6,11 @@
  */
 LocationBlock::LocationBlock(ServerBlock const* server)
 : _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(true)
-{}
+{
+	// PUT method is disabled by default because it requires a upload_store value
+	_allowedMethods = Request::getSupportedMethods();
+	_allowedMethods.erase("PUT");
+}
 
 /**
  * Sets the path and parses the content of a location block.
@@ -17,16 +21,20 @@ LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string
 : _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(false) {
 	_setPath(path);
 	_parse(blockContent);
+	// Extra checks
+	if (isAllowedMethod("PUT") && _uploadStore.empty())
+		throw std::runtime_error("Directive upload_store is mandatory for PUT method");
 }
 
 LocationBlock::LocationBlock(const LocationBlock &other)
 : _server(other._server),
   _path(other._path),
   _autoindex(other._autoindex),
-  _limitExcept(other._limitExcept),
+  _allowedMethods(other._allowedMethods),
   _return(other._return),
   _clientMaxBodySize(other._clientMaxBodySize),
   _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
+  _uploadStore(other._uploadStore),
   _indexFiles(other._indexFiles),
   _errorPages(other._errorPages),
   _cgi(other._cgi),
@@ -38,7 +46,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 		_server = other._server;
 		_path = other._path;
 		_autoindex= other._autoindex;
-		_limitExcept= other._limitExcept;
+		_allowedMethods= other._allowedMethods;
 		_return = other._return;
 		_clientMaxBodySize = other._clientMaxBodySize;
 		_isSetClientMaxBodySize = other._isSetClientMaxBodySize;
@@ -109,12 +117,14 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 	try {
 		if (directiveName == "autoindex")
 			_setAutoindex(tokens);
-		else if (directiveName == "limit_except")
-			_setLimitExcept(tokens);
+		else if (directiveName == "allowed_methods")
+			_setAllowedMethods(tokens);
 		else if (directiveName == "return")
 			_setReturn(tokens);
 		else if (directiveName == "client_max_body_size")
 			_setClientMaxBodySize(tokens);
+		else if (directiveName == "upload_store")
+			_setUploadStore(tokens);
 		else if (directiveName == "index")
 			_setIndexFiles(tokens);
 		else if (directiveName == "cgi")
@@ -122,8 +132,11 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 		else if (directiveName == "error_page")
 			_setErrorPages(tokens);
 		// -- additional directives can be added here --
-		else
-			throw std::runtime_error("Unsupported directive");
+		else {
+			throw std::runtime_error("Unsupported directive "
+				"(supported: autoindex, allowed_methods, return, client_max_body_size, upload_store, index, cgi, error_page)");
+				// -- update this list if blocks added --
+		}
 	} catch (std::exception& e) {
 		throw std::runtime_error(directiveName + ": " + e.what()); // wrap error msg with the directive name
 	}
@@ -166,7 +179,7 @@ void	LocationBlock::_setAutoindex(Tokens const& tokens) {
 /**
  * Defines allowed HTTP methods in this location.
  *
- * Syntax: `limit_except method1 [method2 ...];`
+ * Syntax: `allowed_methods method1 [method2 ...];`
  *
  * If not set, all methods are allowed.
  *
@@ -174,17 +187,17 @@ void	LocationBlock::_setAutoindex(Tokens const& tokens) {
  * - no method is given
  * - a method is an empty string or is not supported
  */
-void LocationBlock::_setLimitExcept(Tokens const& tokens) {
+void LocationBlock::_setAllowedMethods(Tokens const& tokens) {
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have at least 1 method");
-	_limitExcept.clear(); // renitialise before filling up
+	_allowedMethods.clear(); // renitialise before filling up
 	for (size_t i = 1; i < tokens.size(); ++i) {
 		const std::string& method = tokens[i];
 		if (method.empty())
 			throw std::runtime_error("Method is an empty string");
 		if (!Request::isSupportedMethod(method))
 			throw std::runtime_error("Not supported method: " + method);
-		_limitExcept.insert(method);
+		_allowedMethods.insert(method);
 	}
 }
 
@@ -246,6 +259,20 @@ void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
     _isSetClientMaxBodySize = true;
 }
 
+void	LocationBlock::_setUploadStore(Tokens const& tokens) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Format must be \"upload_store path;\"");
+	std::string path = tokens[1];
+	if (path.empty())
+		throw std::runtime_error("Path is an empty string");
+	std::string const& root = getRoot();
+	if (utils::isRelativePath(path) && root.empty())
+		throw std::runtime_error("A relative path requires a server root");
+	if (utils::isRelativePath(path))
+		path = utils::pathsJoin(root, path);
+	_uploadStore = path;
+}
+
 /**
  * Overrides server's custom error pages for this location.
  *
@@ -270,7 +297,7 @@ void	LocationBlock::_setErrorPages(Tokens const& tokens) {
 		throw std::runtime_error("Path is an empty string");
 	std::string const& root = getRoot();
 	if (utils::isRelativePath(path) && root.empty())
-		throw std::runtime_error("Path \"" + path + "\" is relative but not root is set in server");
+		throw std::runtime_error("A relative path requires a server root");
 	if (utils::isRelativePath(path))
 		path = utils::pathsJoin(root, path);
 	for (size_t j = 1; j < tokens.size() - 1; ++j) {
@@ -308,7 +335,7 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
 		if (path.empty())
 			throw std::runtime_error("An index value is an empty string");
 		if (utils::isRelativePath(path) && getRoot().empty())
-			throw std::runtime_error("Path \"" + path + "\" is relative but not root is set in server");
+			throw std::runtime_error("A relative path requires a server root");
 		_indexFiles.push_back(path);
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
@@ -370,8 +397,8 @@ std::string const	LocationBlock::getAutoindex() const {
 	return _autoindex;
 }
 
-std::set<std::string> const&	LocationBlock::getLimitExcept() const {
-	return _limitExcept;
+std::set<std::string> const&	LocationBlock::getAllowedMethods() const {
+	return _allowedMethods;
 }
 
 std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
@@ -389,6 +416,10 @@ size_t	LocationBlock::getClientMaxBodySize() const {
 
 bool	LocationBlock::getClientMaxBodySizeSet() const {
 	return _isSetClientMaxBodySize;
+}
+
+std::string const&	LocationBlock::getUploadStore() const {
+	return _uploadStore;
 }
 
 CgiDirective const&	LocationBlock::getCgi() const {
@@ -448,7 +479,7 @@ bool	LocationBlock::isRedirection() const {
  * Tells if this location allows a given method.
  */
 bool	LocationBlock::isAllowedMethod(std::string const& method) const {
-	return _limitExcept.empty() || (_limitExcept.find(method) != _limitExcept.end());
+	return _allowedMethods.empty() || (_allowedMethods.find(method) != _allowedMethods.end());
 }
 
 bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& method) const {
@@ -469,25 +500,24 @@ bool	LocationBlock::isDefaultLocation() const {
 std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	std::string const in = "  "; // indentation
 	os << in << "- Default location: " << (rhs.isDefaultLocation() ? "yes" : "no") << "\n";
-	os << in << "- path: " << (rhs.getPath().empty() ? "[empty]" : rhs.getPath()) << "\n";
-	os << in << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
-	os << in << "- autoindex: " << (rhs.getAutoindex().empty() ? "[empty]" : rhs.getAutoindex()) << "\n";
+	os << in << "- path: " << PrintableString(rhs.getPath()) << "\n";
+	os << in << "- root: " << PrintableString(rhs.getRoot()) << "\n";
+	os << in << "- autoindex: " << PrintableString(rhs.getAutoindex()) << "\n";
 
-	std::set<std::string> const& limitExcept = rhs.getLimitExcept();
-	os << in << "- limit_except: " << limitExcept.size() << "\n";
-	for (std::set<std::string>::const_iterator it = limitExcept.begin(); it != limitExcept.end(); ++it)
+	std::set<std::string> const& _allowedMethods = rhs.getAllowedMethods();
+	os << in << "- allowed_methods: " << _allowedMethods.size() << "\n";
+	for (std::set<std::string>::const_iterator it = _allowedMethods.begin(); it != _allowedMethods.end(); ++it)
 		os << in << "  - " << *it << "\n";
 
-	std::pair<int, std::string> const& retrn = rhs.getReturn();
-	if (retrn.first != -1)
-		os << in << "- return: " << retrn.first << " -> " << (retrn.second.empty() ? "[empty]" : retrn.second) << "\n";
-	else
-		os << in << "- return: [empty]\n";
+	std::pair<int, std::string> const& ret = rhs.getReturn();
+	os << in << "- return: " << (ret.first != -1
+		? utils::toString(ret.first) + " -> " + PrintableString(ret.second)
+		: "[empty]") << "\n";
 
-	if (rhs.getClientMaxBodySizeSet())
-		os << in << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
-	else
-		os << in << "- client_max_body_size: [empty]\n";
+	os << in << "- client_max_body_size: " << PrintableString(rhs.getClientMaxBodySizeSet()
+		? utils::toString(rhs.getClientMaxBodySize()) : "") << "\n";
+
+	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";
 
 	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();
 	os << in << "- index_files: " << indexFiles.size() << "\n";

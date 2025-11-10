@@ -31,6 +31,7 @@ class Request
 		Request& operator=(const Request& other);
 		~Request();
 
+		static std::set<std::string> const& getSupportedMethods();
 		static bool	isSupportedMethod(std::string const& method);
 		static bool	isExistingMethod(std::string const& method);
 

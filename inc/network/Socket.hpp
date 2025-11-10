@@ -12,7 +12,7 @@
 		struct addrinfo _hints;
 		struct addrinfo *_servinfo;
 		int _sock;
-		HostPortPair _listen_on;
+		HostPortPair _listenOn;
 
 		void setAddrStruct();
 		void loadAddressInfo();

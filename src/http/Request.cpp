@@ -52,14 +52,19 @@ Request& Request::operator=(const Request& other)
 
 Request::~Request() {}
 
-bool	Request::isSupportedMethod(std::string const& method) {
+std::set<std::string> const&	Request::getSupportedMethods() {
 	if (_supportedMethods.empty()) {
 		_supportedMethods.insert("GET");
 		_supportedMethods.insert("POST");
 		_supportedMethods.insert("DELETE");
-		// More supported methods can be added here
+		// -- more supported methods can be added here --
 	}
-	return _supportedMethods.find(method) != _supportedMethods.end();
+	return _supportedMethods;
+}
+
+bool Request::isSupportedMethod(const std::string& method) {
+    getSupportedMethods();
+    return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
 bool	Request::isExistingMethod(std::string const& method) {

@@ -89,7 +89,7 @@ void	RoutingDecision::_setLocation() {
 			}
 		}
 	}
-	if (!best)
+	if (!best) // Should never happen because ServerBlock creates a DefaultLocation (path "/") if no location defined in server block
 		best = &LocationBlock::getDefaultLocation(_server);
 	_location = best;
 }
