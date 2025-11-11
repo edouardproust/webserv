@@ -144,13 +144,16 @@ std::string StaticHandler::_welcomePageHtml() const
  */
 std::string	StaticHandler::_autoindexHtml() const
 {
+	std::string currentPath = _routingDecision.getRequest().getPath();
+	if (!currentPath.empty() && currentPath[currentPath.length() - 1] != '/')
+		currentPath += "/";
 	std::stringstream html;
-	html << "<html>\n<head><title>Index of " << _finalPath << "</title></head>\n<body>\n"
-		 << "<h1>Index of " << _finalPath << "</h1><hr><pre>\n"
+	html << "<html>\n<head><title>Index of " << currentPath << "</title></head>\n<body>\n"
+		 << "<h1>Index of " << currentPath << "</h1><hr><pre>\n"
 		 << "<a href=\"../\">../</a>\n";
 	DIR* dir = opendir(_finalPath.c_str());
 	std::vector<std::string> files;
-	struct dirent* entry; //required by readdir
+	struct dirent* entry;
 	while ((entry = readdir(dir)) != NULL)
 	{
 		std::string name = entry->d_name;
@@ -171,7 +174,7 @@ std::string	StaticHandler::_autoindexHtml() const
 		if (stat(fullPath.c_str(), &fileStat) == 0)
 			dateStr = _getCurrentDateLocal(fileStat.st_mtime);
 		std::string displayName = files[i] + (isDir ? "/" : "");
-		html << "<a href=\"" << files[i] << (isDir ? "/" : "") << "\">" 
+		html << "<a href=\"" << currentPath << files[i] << (isDir ? "/" : "") << "\">"
 			 << displayName << "</a>"
 			 << std::setw(50 - displayName.length()) << " "
 			 << dateStr << std::setw(20) << sizeStr << "\n";
