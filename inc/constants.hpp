@@ -24,6 +24,11 @@ std::string const	SERVER_SOFTWARE = SERVER_NAME + "/" + SERVER_VERSION;
 #define FT_DEFAULT_CLIENT_BUFFER_SIZE 1024
 #define FT_MAX_EVENT_SIZE 100
 
+// parser
+
+size_t const		PATH_MAX = 4096;
+size_t const		HEADER_MAX_SIZE = 8192;
+
 // config
 
 size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)

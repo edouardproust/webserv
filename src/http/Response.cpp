@@ -102,13 +102,32 @@ void	Response::setHeader(const std::string& name, const std::string& value)
 void	Response::setBody(const std::string& body)
 {
 	_body = body;
+	_updateContentLength();
+	_manageContentType();
+}
+
+void	Response::setConnectionFromRequest(const Request& request)
+{
+	const std::map<std::string, std::string>& headers = request.getHeaders();
+	if (headers.find("connection") != headers.end())
+		setHeader("Connection", headers.find("connection")->second);
+	else
+		setHeader("Connection", "keep-alive");
+}
+
+void	Response::_updateContentLength()
+{
 	std::stringstream lengthStream;
-	lengthStream << body.length();
+	lengthStream << _body.length();
 	_headers["content-length"] = lengthStream.str();
-	if (_headers.find("content-type") == _headers.end() && !body.empty())
-		_headers["content-type"] = "text/html";
-	if (body.empty())
+}
+
+void	Response::_manageContentType()
+{
+	if (_body.empty())
 		_headers.erase("content-type");
+	else if (_headers.find("content-type") == _headers.end() && !_body.empty())
+		_headers["content-type"] = "text/html";
 }
 
 std::string Response::_getCurrentDate() const
@@ -146,12 +165,17 @@ std::string Response::_buildHeaders() const
 		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
 	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
 	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
+	if (_headers.find("location") != _headers.end())
+		headerStream << "Location: " << _headers.find("location")->second << "\r\n";
+	if (_headers.find("cache-control") != _headers.end())
+		headerStream << "Cache-Control: " << _headers.find("cache-control")->second << "\r\n";
 	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
 		it != _headers.end(); ++it)
 		{
 			const std::string& key = it->first;
 			if (key != "server" && key != "date" && key != "content-type" &&
-				key != "content-length" && key != "connection")
+				key != "content-length" && key != "connection" &&
+				key != "location" && key != "cache-control")
 					headerStream << key << ": " << it->second << "\r\n";
 		}
 	return headerStream.str();

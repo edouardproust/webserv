@@ -13,6 +13,7 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{411, "Length Required", "length_required"},
 	{413, "Content Too Large", "content_too_large"},
 	{414, "URI Too Long", "uri_too_long"},
+	{431, "Request Header Fields Too Large", "request_header_fields_too_large"},
 	{500, "Internal Server Error", "internal_server_error"}, // default (do not delete!)
 	{501, "Not Implemented", "not_implemented"},
 	{502, "Bad Gateway", "bad_gateway"},

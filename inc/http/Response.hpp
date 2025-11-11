@@ -14,14 +14,15 @@ class Response
 	std::map<std::string, std::string> _headers;
 	std::string _body;
 
+	void		_updateContentLength();
+	void		_manageContentType();
+	std::string	_getCurrentDate() const;
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
-	std::string	_getCurrentDate() const;
-	void _initDefaultHeaders();
-	void _parseRawResponse(const std::string& rawResponse);
-	int _setHeaders(const std::string& headersPart);
-	bool _hasHeader(const std::string& keyLowcase) const;
-
+	void		_initDefaultHeaders();
+	void		_parseRawResponse(const std::string& rawResponse);
+	int			_setHeaders(const std::string& headersPart);
+	bool		_hasHeader(const std::string& keyLowcase) const;
 
 	public:
 
@@ -33,10 +34,11 @@ class Response
 
 	std::string stringify() const;
 
-	void setStatus(const HttpStatus& status);
-	void setContentType(const std::string& value);
-	void setHeader(const std::string& name, const std::string& value);
-	void setBody(const std::string& body);
+	void	setStatus(const HttpStatus& status);
+	void	setContentType(const std::string& value);
+	void	setHeader(const std::string& name, const std::string& value);
+	void	setBody(const std::string& body);
+	void	setConnectionFromRequest(const Request& request);
 
 	const HttpStatus& getStatus() const;
 	const std::map<std::string, std::string>& getHeaders() const;
