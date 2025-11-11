@@ -2,6 +2,10 @@
 #include "http/HttpStatus.hpp"
 #include "constants.hpp"
 #include "utils/utils.hpp"
+#include <dirent.h>
+#include <algorithm>
+#include <ctime>
+#include <iomanip>
 
 StaticHandler::StaticHandler(RoutingDecision const& rd)
 : _routingDecision(rd),
@@ -26,6 +30,10 @@ Response	StaticHandler::handleGet()
 
 	if (utils::isAccessibleDirectory(_finalPath))
 	{
+		DIR* dir = opendir(_finalPath.c_str());
+		if (!dir)
+			return handleError(HttpStatus("forbidden"));
+		closedir(dir);
 		// Trying serving index files
 		for (size_t i = 0; i < locIndexes.size(); ++i)
 		{
@@ -121,18 +129,63 @@ std::string StaticHandler::_welcomePageHtml() const
 	);
 }
 
+/**
+ * Generates an automatic directory listing HTML page.
+ * 
+ * Creates a user-friendly file browser showing all files and subdirectories in the current directory.
+ * For each entry, displays:
+ * - Clickable filename/link (with "/" suffix for directories)
+ * - Last modification date
+ * - File size (or "-" for directories)
+ * 
+ * The layout uses fixed-width spacing (50 characters for names) for aligned columns,
+ * though exact alignment may vary depending on font and browser rendering.
+ * Entries are sorted alphabetically for consistent browsing.
+ */
 std::string	StaticHandler::_autoindexHtml() const
 {
-	return std::string(
-		"<!DOCTYPE html>"
-		"<html>"
-		"<head>"
-		" <title>Index of " + _finalPath + "</title>"
-		"<body>"
-		" <h1>[TODO: StaticHandler::_autoindexHtml]</h1>" // TODO (Ava)
-		"</body>"
-		"</html>"
-	);
+	std::stringstream html;
+	html << "<html>\n<head><title>Index of " << _finalPath << "</title></head>\n<body>\n"
+		 << "<h1>Index of " << _finalPath << "</h1><hr><pre>\n"
+		 << "<a href=\"../\">../</a>\n";
+	DIR* dir = opendir(_finalPath.c_str());
+	std::vector<std::string> files;
+	struct dirent* entry; //required by readdir
+	while ((entry = readdir(dir)) != NULL)
+	{
+		std::string name = entry->d_name;
+		if (name == "." || name == "..")
+			continue;
+		files.push_back(name);
+	}
+	closedir(dir);
+	std::sort(files.begin(), files.end());
+	for (size_t i = 0; i < files.size(); i++)
+	{
+		std::string fullPath = utils::pathsJoin(_finalPath, files[i]);
+		bool isDir = utils::isAccessibleDirectory(fullPath);
+		size_t fileSize = utils::getFileSize(fullPath);
+		std::string sizeStr = isDir ? "-" : utils::toString(fileSize);
+		struct stat fileStat;
+		std::string dateStr = "?";
+		if (stat(fullPath.c_str(), &fileStat) == 0)
+			dateStr = _getCurrentDateLocal(fileStat.st_mtime);
+		std::string displayName = files[i] + (isDir ? "/" : "");
+		html << "<a href=\"" << files[i] << (isDir ? "/" : "") << "\">" 
+			 << displayName << "</a>"
+			 << std::setw(50 - displayName.length()) << " "
+			 << dateStr << std::setw(20) << sizeStr << "\n";
+	}
+	html << "</pre><hr></body>\n</html>";
+	return html.str();
+}
+
+std::string StaticHandler::_getCurrentDateLocal(time_t time) const
+{
+	struct tm* timeinfo = localtime(&time);
+	char buffer[20];
+	strftime(buffer, sizeof(buffer), "%d-%b-%Y %H:%M", timeinfo);
+	return buffer;
 }
 
 std::string StaticHandler::_errorPageHtml(HttpStatus const& status) const
@@ -233,4 +286,3 @@ std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs) {
 
 	return os;
 }
-

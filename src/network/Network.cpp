@@ -194,7 +194,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 			}
 		}
 	}
-	if (!total_request.empty())
+	if (!total_request.empty() && total_request.find("\r\n\r\n") != std::string::npos)
 	{
 		events_setup.data.fd = client_fd;
 		events_setup.events = EPOLLOUT;

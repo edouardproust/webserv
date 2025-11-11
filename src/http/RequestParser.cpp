@@ -1,5 +1,6 @@
 #include "http/RequestParser.hpp"
 #include "utils/utils.hpp"
+#include "constants.hpp"
 #include <iostream>
 
 RequestParser::RequestParser() {}
@@ -19,6 +20,7 @@ RequestParser::~RequestParser() {}
 
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
+	std::cout << "RAW REQUEST DATA: '" << rawRequest << "'" << std::endl;
 	if (rawRequest.empty())
 		return request.setStatus(HttpStatus("bad_request"));
 	size_t requestStart;
@@ -27,7 +29,7 @@ void	RequestParser::parseRequest(Request& request, const std::string& rawRequest
 	size_t	headersEnd = rawRequest.find("\r\n\r\n", requestStart);
 	if (headersEnd == std::string::npos)
 		return request.setStatus(HttpStatus("bad_request"));
-	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd - requestStart);
+	std::string partBeforeBody = rawRequest.substr(requestStart, headersEnd + 2 - requestStart);
 	size_t requestLineEnd = partBeforeBody.find("\r\n");
 	if (requestLineEnd == std::string::npos)
 		return request.setStatus(HttpStatus("bad_request"));
@@ -41,7 +43,8 @@ void	RequestParser::parseRequest(Request& request, const std::string& rawRequest
 	if (result.getSlug() != "ok")
 		return request.setStatus(result);
 	size_t bodyStart = headersEnd + 4;
-	if (hasBody)
+	bool hasBodyHeaders = _headersIndicateBody(request);
+	if (hasBody || hasBodyHeaders)
 	{
 		std::string body = rawRequest.substr(bodyStart);
 		request.setBody(body);
@@ -69,17 +72,19 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 		if (c != ' ')
 			return HttpStatus("bad_request");
 	}
+	if (uri.length() > PATH_MAX)
+		return HttpStatus("uri_too_long");
 	HttpStatus result = _parseUri(request, uri);
 	if (result.getSlug() != "ok")
 	 	return result;
-	if (!_isValidMethod(methodStr))
-		return HttpStatus("bad_request");
-	if (Request::isExistingMethod(methodStr))
-		return HttpStatus("not_implemented");
 	if (!_isValidVersion(versionStr))
 		return HttpStatus("bad_request");
 	if (versionStr != "HTTP/1.1")
 		return HttpStatus("version_not_supported");
+	if (!_isValidMethod(methodStr))
+		return HttpStatus("bad_request");
+	if (Request::isExistingMethod(methodStr))
+		return HttpStatus("not_implemented");
 	request.setMethod(methodStr);
 	request.setVersion(versionStr);
 	return HttpStatus("ok");
@@ -147,6 +152,8 @@ HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& hea
 	std::string	line;
 	while (std::getline(headersStream, line))
 	{
+		if (line.length() > HEADER_MAX_SIZE)
+			return HttpStatus("request_header_fields_too_large");
 		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length()-1);
 		if (line.empty())
@@ -189,6 +196,11 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& 
 	if (!_isValidHeaderValue(value))
 		return HttpStatus("bad_request");
 	std::string normalizedName = _normalizeHeaderName(name);
+	if (normalizedName == "content-length")
+	{
+		if (!_isValidContentLength(value))
+			return HttpStatus("bad_request");
+	}
 	if (normalizedName == "content-type")
 	{
 		if (!_isValidContentType(value))
@@ -360,6 +372,13 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 			return false;
 	}
 	return true;
+}
+
+bool	RequestParser::_headersIndicateBody(const Request& request) const
+{
+	const std::map<std::string, std::string>& headers = request.getHeaders();
+	return (headers.find("content-length") != headers.end() || 
+			headers.find("transfer-encoding") != headers.end());
 }
 
 bool	RequestParser::_isValidHeaderValue(const std::string& value) const

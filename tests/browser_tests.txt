@@ -1,0 +1,24 @@
+Open a browser (I used Chrome)-> Open Developer Tools (F12)
+Tick preserve log box to see the reirections and all the log in general
+
+Network Tab:
+Check the HTTP requests/responses in real-time
+See status codes, headers, timing (click on any request on the list)
+
+-----Normal Pages Tests-----
+
+http://localhost:8080/
+http://localhost:8080/index/
+http://localhost:8080/invalid-path -> custom error page
+http://localhost:8080/index/invalid-path -> built-in error page
+
+-----Autoindex Tests-----
+
+http://localhost:8080/autoindex/on/
+http://localhost:8080/autoindex/on/subdir/
+http://localhost:8080/autoindex/off/
+
+-----Redirection Tests-----
+
+http://localhost:8080/redirect/perm (check how from perm a second request is made to index redirection)
+http://localhost:8080/redirect/tmp

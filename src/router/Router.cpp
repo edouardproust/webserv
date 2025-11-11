@@ -35,7 +35,8 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 		resp = statiq.handleError(HttpStatus(rd.getErrorSlug()));
 	else if (decision == RoutingDecision::REDIRECTION) {
 		std::pair<int, std::string> const& ret = loc->getReturn();
-		resp = RedirectionHandler::run(ret.first, ret.second);
+		RedirectionHandler redirect(rd, ret.first, ret.second);
+		resp = redirect.execute();
 	}
 	// Routing decision: CGI
 	else if (decision == RoutingDecision::CGI) {
@@ -64,7 +65,7 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	// fallback
 	else
 		resp = statiq.handleError(HttpStatus("internal_server_error"));
-
+	resp.setConnectionFromRequest(req);
 	if (DEVMODE && statiq.hasUpdatedFinalPath())
 		std::cout << "StaticHandler:\n" << statiq << std::endl;
 	return resp;
