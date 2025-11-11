@@ -20,6 +20,7 @@ class RequestParser
 	bool		_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
 	bool		_isValidMethod(const std::string& _method) const;
 	bool		_isValidPath(const std::string& _path) const;
+	void		_extractScriptAndPathInfo(Request& request, const std::string& path);
 	bool		_isValidVersion(const std::string& _version) const;
 	bool		_isValidVersionNumber(const std::string& numStr) const;
 	bool		_isValidHeaderName(const std::string& name) const;
