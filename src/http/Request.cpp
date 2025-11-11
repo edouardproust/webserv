@@ -202,13 +202,12 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "- Status: " << request.getStatus() << "\n";
 	std::string const& method = request.getMethod();
 	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
-	os << "- URI: " << request.getUri() << "\n";
-	if (!request.getQueryString().empty()) {
-		os << "  - Path: " << request.getPath() << "\n";
-		os << "  - Script Name: " << request.getScriptName() << "\n";
-		os << "  - Path Info: " << request.getPathInfo() << "\n";
-		os << "  - Query String: " << request.getQueryString() << "\n";
-	}
+	os << "- URI: " << request.getUri() << "\n"; 
+	os << "- Path: " << request.getPath() << "\n";
+	os << "- Script Name: " << request.getScriptName() << "\n";
+	os << "- Path Info: " << request.getPathInfo() << "\n";
+	if (!request.getQueryString().empty())
+		os << "- Query String: " << request.getQueryString() << "\n";
 	os << "- Version: " << request.getVersion() << "\n";
 	os << "- Headers: " << request.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = request.getHeaders();

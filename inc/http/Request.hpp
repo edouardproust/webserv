@@ -16,7 +16,7 @@ class Request
 		static std::set<std::string> _existingMethods;
 		std::string	_method;
 		std::string	_uri; // URI = path + query string
-		std::string _path;
+		std::string _path; // Path = script name + path info
 		std::string _scriptName;
 		std::string	_pathInfo;
 		std::string	_queryString;
