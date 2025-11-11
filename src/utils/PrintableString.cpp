@@ -10,7 +10,7 @@
  * Changes the display rules of a PrintableString
  */
 std::ostream&	operator<<(std::ostream& os, const PrintableString& p) {
-	os << (!p.get().empty() ? p.get() : "[empty]" );
+	os << (!p.get().empty() ? "\"" + p.get() + "\"" : "[empty]" );
 
 	return os;
 }

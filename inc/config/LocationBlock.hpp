@@ -16,7 +16,7 @@ class LocationBlock {
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
 	size_t						_clientMaxBodySize; 	// optional, overrides server limit.
 	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location.
-	std::string					_uploadStore;			// mandatory if PUT method is allowed
+	std::string					_uploadStore;			// mandatory if PUT method is allowed. Overrides value in server
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	ErrorPages					_errorPages;			// optional. Has priority over _server->getErrorPages()
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})

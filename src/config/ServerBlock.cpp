@@ -31,6 +31,7 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
         _root = other._root;
         _listen = other._listen;
         _clientMaxBodySize = other._clientMaxBodySize;
+		_uploadStore = other._uploadStore;
         _errorPages = other._errorPages;
         _indexFiles = other._indexFiles;
 		// locations
@@ -142,10 +143,12 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
 			_setErrorPages(tokens);
 		else if (directiveName == "index")
 			_setIndexFiles(tokens);
+		else if (directiveName == "upload_store")
+			_setUploadStore(tokens);
 		// -- additional directives can be added here --
 		else {
 			throw std::runtime_error(directiveName + ": Unsupported directive.\n"
-				"Supported list: root, listen, client_max_body_size, error_page, index");
+				"Supported list: listen, root, upload_store, index, error_page, client_max_body_size");
 				// -- update this list if directives added --
 		}
 	} catch (std::exception& e) {
@@ -278,6 +281,34 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
 }
 
 /**
+ * Sets upload store directory for this server.
+ *
+ * Syntax: `upload_store path;`
+ * Path can be absolute, or relative to the server root.
+ * A server root is required for relative paths.
+ *
+ * If not set, uploads are disabled unless a location overrides it.
+ *
+ * Exception is thrown if:
+ * - arguments are invalid
+ * - the path is an empty string
+ * - a relative path is given but no server root is set
+ */
+void	ServerBlock::_setUploadStore(Tokens const& tokens) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Format must be \"upload_store path;\"");
+	std::string path = tokens[1];
+	if (path.empty())
+		throw std::runtime_error("Path is an empty string");
+	std::string const& root = getRoot();
+	if (utils::isRelativePath(path) && root.empty())
+		throw std::runtime_error("A relative path requires a server root");
+	if (utils::isRelativePath(path))
+		path = utils::pathsJoin(root, path);
+	_uploadStore = path;
+}
+
+/**
  * Sets custom error pages for this server.
  *
  * Syntax: `error_page code1 [code2 ...] path;`
@@ -368,6 +399,10 @@ size_t	ServerBlock::getClientMaxBodySize() const {
 	return _clientMaxBodySize;
 }
 
+std::string const&	ServerBlock::getUploadStore() const {
+	return _uploadStore;
+}
+
 ErrorPages const&	ServerBlock::getErrorPages() const {
 	return _errorPages;
 }
@@ -385,6 +420,8 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 		os << "  - " << it->getHost() << " -> " << it->getPort() << "\n";
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
+
+	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";
 
 	ErrorPages const& errorPages = rhs.getErrorPages();
 	os << "- error_pages: " << errorPages.size() << "\n";

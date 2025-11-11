@@ -22,7 +22,7 @@ LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string
 	_setPath(path);
 	_parse(blockContent);
 	// Extra checks
-	if (isAllowedMethod("PUT") && _uploadStore.empty())
+	if (isAllowedMethod("PUT") && getUploadStore().empty())
 		throw std::runtime_error("Directive upload_store is mandatory for PUT method");
 }
 
@@ -259,6 +259,21 @@ void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
     _isSetClientMaxBodySize = true;
 }
 
+/**
+ * Overrides server's upload store directory for this location.
+ *
+ * Syntax: `upload_store path;`
+ * Path can be absolute, or relative to the server root.
+ * A server root is required for relative paths.
+ *
+ * Server's upload store is used if not set in this location.
+ * If no upload_store is defined, PUT method will be disabled for this location.
+ *
+ * Exception is thrown if:
+ * - arguments are invalid
+ * - the path is an empty string
+ * - a relative path is given without a server root
+ */
 void	LocationBlock::_setUploadStore(Tokens const& tokens) {
 	if (tokens.size() != 2)
 		throw std::runtime_error("Format must be \"upload_store path;\"");
@@ -421,6 +436,8 @@ bool	LocationBlock::getClientMaxBodySizeSet() const {
 }
 
 std::string const&	LocationBlock::getUploadStore() const {
+	if (!_isSetClientMaxBodySize && _server)
+		return _server->getUploadStore();
 	return _uploadStore;
 }
 
