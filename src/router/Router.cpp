@@ -78,7 +78,11 @@ void	Router::_handleStaticDecision(Response& resp, std::string const& method, St
 		resp = statiq.handleGet();
 	else if (method == "DELETE")
 		resp = statiq.handleDelete();
-	// -- additional supported methods can be added here -- // TODO PUT method
+	else if (method == "HEAD")
+		resp = statiq.handleHead();
+	else if (method == "PUT")
+		resp = statiq.handlePut();
+	// -- additional supported methods can be added here --
 	else
 		resp = statiq.handleError(HttpStatus("method_not_allowed"));
 }

@@ -50,7 +50,7 @@ Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::stri
 	// Timeout reached
     kill(pid, SIGKILL);
     waitpid(pid, &status, 0); // clean up
-    throw ExecException("CGI timeout");
+    throw TimeoutException("CGI timeout after " + utils::toString(waited) + " seconds");
 }
 
 void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {

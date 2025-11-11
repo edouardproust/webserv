@@ -57,6 +57,8 @@ std::set<std::string> const&	Request::getSupportedMethods() {
 		_supportedMethods.insert("GET");
 		_supportedMethods.insert("POST");
 		_supportedMethods.insert("DELETE");
+		_supportedMethods.insert("HEAD");
+		_supportedMethods.insert("PUT");
 		// -- more supported methods can be added here --
 	}
 	return _supportedMethods;
@@ -69,8 +71,6 @@ bool Request::isSupportedMethod(const std::string& method) {
 
 bool	Request::isExistingMethod(std::string const& method) {
 	if (_existingMethods.empty()) {
-		_existingMethods.insert("HEAD");
-		_existingMethods.insert("PUT");
 		_existingMethods.insert("OPTIONS");
 		_existingMethods.insert("PATCH");
 		_existingMethods.insert("CONNECT");
