@@ -17,6 +17,8 @@ class Request
 		std::string	_method;
 		std::string	_uri; // URI = path + query string
 		std::string _path;
+		std::string _scriptName;
+		std::string	_pathInfo;
 		std::string	_queryString;
 		std::string	_version;
 		std::map<std::string, std::string> _headers;
@@ -39,6 +41,8 @@ class Request
 		const std::string&	getMethod() const;
 		const std::string&	getUri() const;
 		const std::string&	getPath() const;
+		const std::string&	getScriptName() const;
+		const std::string&	getPathInfo() const;
 		const std::string&	getQueryString() const;
 		const std::string&	getVersion() const;
 		const std::map<std::string, std::string>&	getHeaders() const;
@@ -49,6 +53,8 @@ class Request
 		void	setMethod(std::string const& method);
 		void	setUri(std::string const& uri);
 		void	setPath(std::string const& path);
+		void	setScriptName(std::string const& scriptName);
+		void	setPathInfo(std::string const& pathInfo);
 		void	setQueryString(std::string const& queryString);
 		void	setVersion(std::string const& version);
 		void	addHeader(std::string const& name, std::string const& value);

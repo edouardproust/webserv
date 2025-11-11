@@ -9,6 +9,8 @@ Request::Request()
   _method(""),
   _uri(""),
   _path(""),
+  _scriptName(""),
+  _pathInfo(""),
   _queryString(""),
   _version(""),
   _contentType(""),
@@ -20,6 +22,8 @@ Request::Request(std::string const& rawRequest)
   _method(""),
   _uri(""),
   _path(""),
+  _scriptName(""),
+  _pathInfo(""),
   _queryString(""),
   _version(""),
   _contentType(""),
@@ -41,6 +45,8 @@ Request& Request::operator=(const Request& other)
 		this->_method = other._method;
 		this->_uri = other._uri;
 		this->_path = other._path;
+		this->_scriptName = other._scriptName;
+		this->_pathInfo = other._pathInfo;
 		this->_queryString = other._queryString;
 		this->_version = other._version;
 		this->_headers = other._headers;
@@ -100,6 +106,16 @@ const std::string& Request::getPath() const
 	return _path.empty() ? root : _path;
 }
 
+const std::string& Request::getScriptName() const
+{
+	return this->_scriptName;
+}
+
+const std::string& Request::getPathInfo() const
+{
+	return this->_pathInfo;
+}
+
 const std::string& Request::getQueryString() const
 {
 	return this->_queryString;
@@ -138,6 +154,16 @@ void	Request::setMethod(std::string const& method)
 void	Request::setUri(const std::string& uri)
 {
 	this->_uri = uri;
+}
+
+void	Request::setScriptName(const std::string& scriptName)
+{
+	this->_scriptName = scriptName;
+}
+
+void	Request::setPathInfo(const std::string& pathInfo)
+{
+	this->_pathInfo = pathInfo;
 }
 
 void	Request::setPath(const std::string& path)
@@ -179,6 +205,8 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "- URI: " << request.getUri() << "\n";
 	if (!request.getQueryString().empty()) {
 		os << "  - Path: " << request.getPath() << "\n";
+		os << "  - Script Name: " << request.getScriptName() << "\n";
+		os << "  - Path Info: " << request.getPathInfo() << "\n";
 		os << "  - Query String: " << request.getQueryString() << "\n";
 	}
 	os << "- Version: " << request.getVersion() << "\n";
