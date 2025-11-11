@@ -24,5 +24,5 @@ http://localhost:8080/autoindex/off/invalid -> 404 (errors/404.html)
 
 -----Redirection-----
 
-http://localhost:8080/redirect/perm (check how from perm a second request is made to index redirection)
-http://localhost:8080/redirect/tmp
+http://localhost:8080/redirect/perm -> 301 then 200 (next request: 200 as browser saves in cache -> think of clearing cache before test!)
+http://localhost:8080/redirect/tmp -> 302 then 200
