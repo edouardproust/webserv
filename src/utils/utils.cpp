@@ -28,6 +28,11 @@ bool	utils::isRelativePath(std::string const& path) {
 	return (!path.empty() && path[0] != '/');
 }
 
+/**
+ * Path needs to be an absolute path even if stat and access can take relative paths as param.
+ * This prevents unexpected behaviour as it forces the config parser to resolve all paths into absolute
+ * before running this function.
+ */
 static bool	_checkFileTypeAndAccess(std::string const& path, mode_t expectedType, int accessMode) {
     if (path.empty() || path[0] != '/')
         return false;

@@ -1,20 +1,19 @@
 #include "network/Socket.hpp"
 
-Socket::Socket(const HostPortPair &listen_pair) : _listen_on(listen_pair)
+Socket::Socket(const HostPortPair &listen_pair) : _listenOn(listen_pair)
 {
-	std::cout << FT_SETUP << "Setting up socket on " << FT_HIGH_LIGHT_COLOR << _listen_on.getHost() << RESET_COLOR << " socket on port : " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort() << RESET_COLOR << "." << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Setting up socket on " << FT_HIGH_LIGHT_COLOR << _listenOn << RESET_COLOR << "." << std::endl;
 
 	loadAddressInfo();
 	createSocket();
 
-	std::cout << FT_OK << FT_HIGH_LIGHT_COLOR << _listen_on.getHost()  << RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort()<< RESET_COLOR << " is in a nice." << std::endl;
-	std::cout << std::endl;
+	if (DEVMODE) std::cout << FT_OK << "Socket created on " << FT_HIGH_LIGHT_COLOR << _listenOn  << RESET_COLOR << "." << std::endl;
 }
 
 Socket::~Socket()
 {
-	std::cout << FT_CLOSE << "Closing " << FT_HIGH_LIGHT_COLOR << _listen_on.getHost()<< RESET_COLOR << " socket on port " << FT_HIGH_LIGHT_COLOR << _listen_on.getPort() << RESET_COLOR << "." << std::endl;
 	close(_sock);
+	std::cout << FT_OK << "Socket " << FT_HIGH_LIGHT_COLOR << _listenOn << RESET_COLOR << " closed." << std::endl;
 }
 
 void Socket::setAddrStruct(void)
@@ -27,56 +26,50 @@ void Socket::setAddrStruct(void)
 
 void Socket::loadAddressInfo()
 {
-	std::cout << FT_SETUP << "Loading address info." << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Loading address info..." << std::endl;
 	int status;
-
 	setAddrStruct();
 
 	// Convert size_t (port) to C-string
-	std::string portStr = utils::toString(_listen_on.getPort());
+	std::string portStr = utils::toString(_listenOn.getPort());
 
 	// Get host. If it's "0.0.0.0" or "*", we use NULL for getaddrinfo
-	std::string hostStr = _listen_on.getHost();
+	std::string hostStr = _listenOn.getHost();
 	const char* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str(); //TODO
 
-	// Use the values from _listen_on
+	// Use the values from _listenOn
 	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
 
 	if (status) {
 		std::cout << FT_STATUS << "Address info status: " << gai_strerror(status) << std::endl;
 		throw GetAddrInfoException();
 	}
-
-	std::cout << FT_OK << "Address loaded successfully!" << std::endl;
 }
 
 void Socket::createSocket()
 {
 	_sock = ::socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 
-	std::cout << FT_SETUP << "Creating Socket." << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Creating Socket..." << std::endl;
 	if (_sock < 0) {
 		::freeaddrinfo(_servinfo);
 		throw SocketException();
 	}
-	std::cout << FT_OK << "Socket created successfully!" << std::endl;
 
 	int yes = 1;
 
-	std::cout << FT_SETUP << "Setting up Socket." << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Configuring Socket..." << std::endl;
 	if (::setsockopt(_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
 		::freeaddrinfo(_servinfo);
 		throw SetSockOptException();
 	}
-	std::cout << FT_OK << "Socket configured successfully!" << std::endl;
 
-	std::cout << FT_SETUP << "Setting Socket to non blocking mode." << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Setting Socket to non-blocking mode..." << std::endl;
 	int status = ::fcntl(_sock, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 	if (status < 0) {
 		::freeaddrinfo(_servinfo);
 		throw FcntlException();
 	}
-	std::cout << FT_OK << "Socket are now in non blocking mode!" << std::endl;
 }
 
 int Socket::getSock()
@@ -88,11 +81,7 @@ void Socket::bind()
 {
 	int status;
 
-	std::cout
-		<< FT_SETUP
-		<< "Binding Socket "
-		<< FT_HIGH_LIGHT_COLOR << _listen_on.getHost()<< ":" << _listen_on.getPort() << RESET_COLOR
-		<< "." << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Binding socket on " << FT_HIGH_LIGHT_COLOR << _listenOn << RESET_COLOR << "..." << std::endl;
 
 	status = ::bind(_sock, _servinfo->ai_addr, _servinfo->ai_addrlen);
 
@@ -102,30 +91,22 @@ void Socket::bind()
 		throw BindException();
 	}
 
-	std::cout << FT_OK << "Bind successfull!" << std::endl;
-
-	std::cout << FT_SETUP << "Freeing Address Info memory" << std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Freeing Address Info memory..." << std::endl;
 	freeaddrinfo(_servinfo);
-	std::cout << FT_OK << "Address Info memory is now free" << std::endl;
 }
 
 void Socket::listen()
 {
 	int status;
 
-	std::cout
-		<< FT_SETUP
-		<< "Putting Socket "
-		<< FT_HIGH_LIGHT_COLOR << _listen_on.getHost() << _listen_on.getPort() << RESET_COLOR
-		<< " in Listen Mode."
-		<< std::endl;
+	if (DEVMODE) std::cout << FT_SETUP << "Putting Socket " << FT_HIGH_LIGHT_COLOR << _listenOn << RESET_COLOR << " in Listen Mode..." << std::endl;
 
 	status = ::listen(_sock, 10);
 	if (status < 0) {
 		std::cout << FT_STATUS << "Listen status: " << strerror(errno) << std::endl;
 		throw ListenException();
 	}
-	std::cout << FT_OK << "Socket is now in Listen Mode!" << std::endl;
+	std::cout << FT_OK << "Now listening on " << FT_HIGH_LIGHT_COLOR << _listenOn << RESET_COLOR << "." << std::endl;
 }
 
 int Socket::accept()
@@ -147,7 +128,7 @@ int Socket::accept()
 
 const HostPortPair& Socket::getHostPortPair() const
 {
-    return (_listen_on);
+    return (_listenOn);
 }
 
 const char *Socket::GetAddrInfoException::what() const throw()
