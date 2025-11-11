@@ -5,24 +5,41 @@ Network Tab:
 Check the HTTP requests/responses in real-time
 See status codes, headers, timing (click on any request on the list)
 
------Normal Pages-----
+----- Static OK -----
 
-http://localhost:8080/ -> 200 (/home.htm with css, image and font)
-http://localhost:8080/index/ -> 200 (index/index.html)
-http://localhost:8080/index/no-extension -> 200 (browser downloads file /index/no-extension)
+http://localhost:8080/ -> ✅ 200 (/home.htm with css, image and font)
+http://localhost:8080/index/ -> ✅ 200 (index/index.html)
+http://localhost:8080/index/no-extension -> ✅ 200 (browser downloads file /index/no-extension)
 
------Autoindex-----
+----- Static Autoindex -----
 
-http://localhost:8080/autoindex -> 200 (autoindex listing)
-http://localhost:8080/autoindex/off/ -> 403 (forbidden)
+http://localhost:8080/autoindex -> ✅ 200 (autoindex listing) ❌ URLs of hyperlinks are incorrects (parent folder is trimmed)
+http://localhost:8080/autoindex/off/ -> ✅ 403 (forbidden)
 
------Errors-----
+----- Static Errors -----
 
-http://localhost:8080/invalid-path -> 404 (errors/404.html)
-http://localhost:8080/index/invalid-path -> 404 (Built-in 404 page)
-http://localhost:8080/autoindex/off/invalid -> 404 (errors/404.html)
+http://localhost:8080/invalid-path -> ✅ 404 (errors/404.html)
+http://localhost:8080/index/invalid-path -> ✅ 404 (Built-in 404 page)
+http://localhost:8080/autoindex/off/invalid -> ✅ 404 (errors/404.html)
 
------Redirection-----
+----- Redirections -----
 
-http://localhost:8080/redirect/perm -> 301 then 200 (next request: 200 as browser saves in cache -> think of clearing cache before test!)
-http://localhost:8080/redirect/tmp -> 302 then 200
+http://localhost:8080/redirect/perm -> ✅ 301 then 200 (next request: 200 as browser saves in cache -> think of clearing cache before test!)
+http://localhost:8080/redirect/tmp -> ✅ 302 then 200
+
+----- CGI OK -----
+
+--- .php ---
+http://localhost:8080/cgi/info.php -> ✅ 200 (phpinfo table)
+http://localhost:8080/cgi/test.php?var1=hello&var2=world -> ✅ 200 (PHP test page: displays GET params)
+--- .py ---
+// TODO
+
+----- CGI Errors -----
+
+--- .php ---
+http://localhost:8080/cgi/invalid-path.php -> ✅ 404
+http://localhost:8080/cgi/bad-syntax.php -> ✅ 500 (PHP syntax problem -> browser displays something like "Looks like there’s a problem with this site")
+http://localhost:8080/cgi/timeout.php -> ❌ 200 -> Should be 504
+--- .py ---
+// TODO

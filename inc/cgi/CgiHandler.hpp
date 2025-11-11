@@ -6,11 +6,12 @@
 #include "config/LocationBlock.hpp"
 #include "utils/utils.hpp"
 #include "typedefs.hpp"
+#include "colors.hpp"
 #include <sys/wait.h>
 
 class CgiHandler {
 
-	std::string					_filePath;
+	std::string					_scriptPath;
 	std::string					_extension;
 	std::string					_executor;
 	std::vector<std::string>	_envp;
@@ -27,13 +28,13 @@ class CgiHandler {
 	pid_t		_forkAndExec();
 	void		_communicateWithChild(Request const&);
 	Response	_handleStatus(int);
-	void		_redirectIOInChild() const;
+	void		_redirectIoInChild() const;
 
 	// static utils
 	static std::string			_headerToEnvVar(std::string const&);
 	static std::vector<char*>	_toCharPtrArray(const std::vector<std::string>&);
 
-	// Not used
+	// Not used // TODO canonical
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 
@@ -44,7 +45,7 @@ class CgiHandler {
 
 		Response run(Request const&, LocationBlock const*, std::string const&);
 
-		std::string const&				getFilePath() const;
+		std::string const&				getScriptPath() const;
 		std::string const&				getExecutor() const;
 		std::vector<std::string> const&	getEnvp() const;
 		std::vector<std::string> const&	getArgv() const;
@@ -53,7 +54,12 @@ class CgiHandler {
 
 		class ExecException: public std::runtime_error {
 			public:
-				explicit ExecException(std::string const& msg);
+				ExecException(std::string const& msg);
+		};
+
+		class TimeoutException: public std::runtime_error {
+			public:
+				TimeoutException(std::string const& msg);
 		};
 
 };

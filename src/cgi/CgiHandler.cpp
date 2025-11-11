@@ -7,6 +7,9 @@ CgiHandler::~CgiHandler() {}
 CgiHandler::ExecException::ExecException(std::string const& msg)
 : std::runtime_error(msg) {}
 
+CgiHandler::TimeoutException::TimeoutException(std::string const& msg)
+: std::runtime_error(msg) {}
+
 /**
  * Handle the CGI request, and returns a parsed Response object.
  *
@@ -18,9 +21,9 @@ CgiHandler::ExecException::ExecException(std::string const& msg)
  * Notes:
  * - Status code in the Response is set from the CGI raw response.
  */
-Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& filePath) {
-	_filePath = filePath;
-	_extension = utils::getFileExtension(_filePath);
+Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptPath) {
+	_scriptPath = scriptPath;
+	_extension = utils::getFileExtension(_scriptPath);
 	_executor = loc->getCgiExecutor(_extension);
 	if (pipe(_stdinPipe) == -1 || pipe(_stdoutPipe) == -1 || pipe(_stderrPipe) == -1)
 		throw ExecException("pipe() failed");
@@ -29,12 +32,25 @@ Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::stri
 	_buildArgv();
 	pid_t pid = _forkAndExec();
 
-	_communicateWithChild(req);
-	if (DEVMODE) std::cout << *this <<std::endl;
-
-	int status;
-	waitpid(pid, &status, 0);
-	return _handleStatus(status); // throw
+	int status = 0;
+    size_t waited = 0;
+    while (waited < DEFAULT_CGI_TIMEOUT) {
+		pid_t ret = waitpid(pid, &status, WNOHANG);
+		if (ret == 0) {
+            sleep(1);  // wait 1 sec
+            waited++;
+        } else if (ret == pid) {
+			_communicateWithChild(req);
+			if (DEVMODE) std::cout << *this <<std::endl;
+            return _handleStatus(status); // throw
+		} else {
+            throw ExecException("waitpid failed");
+		}
+	}
+	// Timeout reached
+    kill(pid, SIGKILL);
+    waitpid(pid, &status, 0); // clean up
+    throw ExecException("CGI timeout");
 }
 
 void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
@@ -42,10 +58,11 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
 	std::map<std::string, std::string> tmp;
 	// Essential CGI environment variables
 	tmp["REQUEST_METHOD"] = req.getMethod();
+    tmp["PATH_INFO"] = "/"; // TODO in RequestParser (mandatory for ubuntu_cgi_tester)
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();
 	tmp["CONTENT_LENGTH"] = utils::toString(req.getBody().length());
-	tmp["SCRIPT_FILENAME"] = _filePath;
+	tmp["SCRIPT_FILENAME"] = _scriptPath;
 	tmp["SCRIPT_NAME"] = req.getPath();
 	tmp["DOCUMENT_ROOT"] = locRoot;
 	// Server protocol information
@@ -69,7 +86,7 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
 void	CgiHandler::_buildArgv() {
     _argv.clear(); // security
 	_argv.push_back(_executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
-	_argv.push_back(_filePath); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
+	_argv.push_back(_scriptPath); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
 }
 
 pid_t	CgiHandler::_forkAndExec() {
@@ -78,7 +95,7 @@ pid_t	CgiHandler::_forkAndExec() {
 		throw ExecException("fork() failed");
 
 	if (pid == 0) { // Child
-		_redirectIOInChild();
+		_redirectIoInChild();
 		std::vector<char*> envp = _toCharPtrArray(_envp);
 		std::vector<char*> argv = _toCharPtrArray(_argv);
 		execve(_executor.c_str(), argv.data(), envp.data());
@@ -118,7 +135,7 @@ Response	CgiHandler::_handleStatus(int status) {
 		if (!_cgiOutput.empty()) {
 			Response res(_cgiOutput); // throw Response::RawException (raw response invalid syntax)
 			if (!_cgiError.empty()) // warning
-				std::cerr << "[WARNING] CGI (" << _executor << "): " << _cgiError << std::endl;
+				std::cerr << FT_WARNING << "CGI (" << _executor << "): " << _cgiError << std::endl;
 			return res;
 		}
 		int exitCode = WEXITSTATUS(status);
@@ -133,7 +150,7 @@ Response	CgiHandler::_handleStatus(int status) {
 }
 
 // TODO: replace _error ? (It is not listed in allowed function of the subject)
-void	CgiHandler::_redirectIOInChild() const {
+void	CgiHandler::_redirectIoInChild() const {
 	// redirect stdin
 	close(_stdinPipe[1]); // close writing
 	if (dup2(_stdinPipe[0], STDIN_FILENO) == -1)
@@ -150,8 +167,8 @@ void	CgiHandler::_redirectIOInChild() const {
 	close(_stderrPipe[1]);
 }
 
-std::string const&	CgiHandler::getFilePath() const {
-	return _filePath;
+std::string const&	CgiHandler::getScriptPath() const {
+	return _scriptPath;
 }
 
 std::string const&	CgiHandler::getExecutor() const {
@@ -176,7 +193,7 @@ std::string const&	CgiHandler::getCgiError() const {
 
 std::ostream&	operator<<(std::ostream& os, CgiHandler const& rhs) {
 	os << "CgiHandler:\n";
-	os << "- filePath: '" << rhs.getFilePath() << "'\n";
+	os << "- script path: '" << rhs.getScriptPath() << "'\n";
 	os << "- executor: '" << rhs.getExecutor() << "'\n";
 
 	std::vector<std::string> envp = rhs.getEnvp();
