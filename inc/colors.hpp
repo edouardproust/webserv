@@ -6,6 +6,7 @@
 #define FT_SETUP        "[\033[1;34mSETUP\033[0m] "
 #define FT_CLOSE        "[\033[1;31mCLOSE\033[0m] "
 #define FT_WARNING      "[\033[1;33mWARNING\033[0m] "
+#define FT_INFO   		"[\033[1;33mINFO\033[0m] "
 #define FT_EVENT        "[\033[1;35mEVENT\033[0m] "
 #define FT_STATUS       "[\033[1;36mSTATUS\033[0m] "
 #define FT_HIGH_LIGHT_COLOR "\033[1;36m"

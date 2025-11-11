@@ -21,37 +21,33 @@ Network::Network(Config const& config) : _config(config)
 			_connections.clear();
 			throw;
 		}
-		std::cout << std::endl;
 	}
 }
 
 Network::~Network()
 {
-	std::cout << FT_CLOSE << "Closing Web server." << std::endl;
+	if (DEVMODE) std::cout << FT_CLOSE << "Closing Web server..." << std::endl;
 
-	std::cout << FT_CLOSE << "Freeing Socket memory." << std::endl;
+	if(DEVMODE) std::cout << FT_CLOSE << "Freeing Socket memory." << std::endl;
 	for (size_t i = 0; i < _connections.size(); ++i)
 		delete _connections[i];
 
-	std::cout << FT_OK << "Socket memory is now free!" << std::endl;
-
-	std::cout << FT_CLOSE << "Closing epoll." << std::endl;
+	if (DEVMODE) std::cout << FT_CLOSE << "Closing epoll..." << std::endl;
 	close(_epoll);
-	std::cout << FT_OK << "Epoll closed!" << std::endl;
 
-	std::cout << FT_OK << "Web server closed!" << std::endl;
+	std::cout << FT_OK << SERVER_NAME << " closed." << std::endl;
 	std::cout << std::endl;
 }
 
-void Network::start_servers()
+void Network::startServers()
 {
-	std::cout << FT_SETUP << "Starting up Web server" << std::endl;
-	std::cout << FT_WARNING << "Press Ctrl + C to stop the Web server." << std::endl;
-
 	int number_of_events;
 	int new_conn;
 	struct epoll_event events[FT_MAX_EVENT_SIZE];
 	struct epoll_event events_setup;
+
+	std::cout << FT_OK << SERVER_NAME << " started." << std::endl;
+	std::cout << FT_INFO << "Press Ctrl + C to stop the Web server." << std::endl;
 
 	epoll();
 	epollAddServers();

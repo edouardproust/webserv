@@ -1,11 +1,13 @@
 #include "config/ServerBlock.hpp"
 #include "config/Config.hpp"
+#include "colors.hpp"
 
 ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
 
 /**
  * Parse the content of a server block and sets default index files and listening port `0.0.0.0:80`
  * if empty after parsing.
+ * If no location block is defined, a default location is created (path "/" and PUT method forbidden)
  *
  * Parsing may throw an exception.
  */
@@ -14,6 +16,10 @@ ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(
 	_setDefaultIndexFiles();
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0:80"));
+	if (_locations.empty()) {
+		_locations.push_back(LocationBlock(this));
+		std::cout << FT_WARNING << "Config: server: No location block defined, a default one was created. PUT method is no allowed in this location." << RESET_COLOR << std::endl;
+	}
 }
 
 ServerBlock::ServerBlock(const ServerBlock &other): _isSetClientBodySize(false) {
@@ -25,6 +31,7 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
         _root = other._root;
         _listen = other._listen;
         _clientMaxBodySize = other._clientMaxBodySize;
+		_uploadStore = other._uploadStore;
         _errorPages = other._errorPages;
         _indexFiles = other._indexFiles;
 		// locations
@@ -96,8 +103,11 @@ void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t
 		if (blockName == "location")
 			_addLocation(tokens, content, i, braceDepth);
 		// -- additional blocks can be added here --
-		else
-			throw std::runtime_error("Unsupported block");
+		else {
+			throw std::runtime_error("Unsupported block "
+				"(supported: location)");
+				// -- update this list if blocks added --
+		}
 	} catch (std::exception& e) {
 		throw std::runtime_error(blockName + (blockName == "location" && tokens.size() > 1 ? " \"" + tokens[1] + "\"" : "") + ": " + e.what()); // wrap error msg with the block name
 	}
@@ -123,19 +133,23 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
 
 	std::string directiveName = tokens[0];
 	try {
-		if (tokens[0] == "root")
+		if (directiveName == "root")
 			_setRoot(tokens);
-		else if (tokens[0] == "listen")
+		else if (directiveName == "listen")
 			_setListen(tokens);
-		else if (tokens[0] == "client_max_body_size")
+		else if (directiveName == "client_max_body_size")
 			_setClientMaxBodySize(tokens);
-		else if (tokens[0] == "error_page")
+		else if (directiveName == "error_page")
 			_setErrorPages(tokens);
-		else if (tokens[0] == "index")
+		else if (directiveName == "index")
 			_setIndexFiles(tokens);
+		else if (directiveName == "upload_store")
+			_setUploadStore(tokens);
 		// -- additional directives can be added here --
 		else {
-			throw std::runtime_error("Unsupported directive");
+			throw std::runtime_error(directiveName + ": Unsupported directive.\n"
+				"Supported list: listen, root, upload_store, index, error_page, client_max_body_size");
+				// -- update this list if directives added --
 		}
 	} catch (std::exception& e) {
 		throw std::runtime_error(directiveName + ": " + e.what()); // wrap error msg with the directive name
@@ -267,6 +281,34 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
 }
 
 /**
+ * Sets upload store directory for this server.
+ *
+ * Syntax: `upload_store path;`
+ * Path can be absolute, or relative to the server root.
+ * A server root is required for relative paths.
+ *
+ * If not set, uploads are disabled unless a location overrides it.
+ *
+ * Exception is thrown if:
+ * - arguments are invalid
+ * - the path is an empty string
+ * - a relative path is given but no server root is set
+ */
+void	ServerBlock::_setUploadStore(Tokens const& tokens) {
+	if (tokens.size() != 2)
+		throw std::runtime_error("Format must be \"upload_store path;\"");
+	std::string path = tokens[1];
+	if (path.empty())
+		throw std::runtime_error("Path is an empty string");
+	std::string const& root = getRoot();
+	if (utils::isRelativePath(path) && root.empty())
+		throw std::runtime_error("A relative path requires a server root");
+	if (utils::isRelativePath(path))
+		path = utils::pathsJoin(root, path);
+	_uploadStore = path;
+}
+
+/**
  * Sets custom error pages for this server.
  *
  * Syntax: `error_page code1 [code2 ...] path;`
@@ -326,8 +368,8 @@ void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 		if (path.empty())
 			throw std::runtime_error("An index file is an emtpy string");
 		if (utils::isRelativePath(path) && _root.empty())
-			throw std::runtime_error("Path \"" + path + "\" is relative but root is not set");
-		_indexFiles.push_back(path);
+			throw std::runtime_error("A relative path requires a server root");
+		_indexFiles.push_back(path); // Relative paths are not resolved into absolute yet (done at runtime using request URI)
 	}
 	if (!utils::hasVectorUniqEntries(_indexFiles))
 		throw std::runtime_error("Duplicate index file in server");
@@ -357,6 +399,10 @@ size_t	ServerBlock::getClientMaxBodySize() const {
 	return _clientMaxBodySize;
 }
 
+std::string const&	ServerBlock::getUploadStore() const {
+	return _uploadStore;
+}
+
 ErrorPages const&	ServerBlock::getErrorPages() const {
 	return _errorPages;
 }
@@ -366,7 +412,7 @@ std::vector<std::string> const&	ServerBlock::getIndexFiles() const {
 }
 
 std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
-	os << "- root: " << (rhs.getRoot().empty() ? "[empty]" : rhs.getRoot()) << "\n";
+	os << "- root: " << PrintableString(rhs.getRoot()) << "\n";
 
 	std::set<HostPortPair> const& listen = rhs.getListen();
 	os << "- listen: " << listen.size() << "\n";
@@ -374,6 +420,8 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 		os << "  - " << it->getHost() << " -> " << it->getPort() << "\n";
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
+
+	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";
 
 	ErrorPages const& errorPages = rhs.getErrorPages();
 	os << "- error_pages: " << errorPages.size() << "\n";

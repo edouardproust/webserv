@@ -13,6 +13,7 @@ subject/
 tests/
 test_files/
 .vscode/
+YoupiBanane/
 
 # Specific files
 webserv
@@ -21,6 +22,7 @@ README.md
 .gitignore
 .gitkeep
 log*
+/*.config
 
 # Development files
 dev.*

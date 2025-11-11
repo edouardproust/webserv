@@ -4,6 +4,7 @@
 class ServerBlock;
 #include "http/Request.hpp"
 #include "utils/utils.hpp"
+#include "utils/PrintableString.hpp"
 #include "typedefs.hpp"
 
 class LocationBlock {
@@ -11,11 +12,11 @@ class LocationBlock {
 	ServerBlock const*			_server;				// Pointer to parent server block, set during validation
 	std::string					_path;					// URI prefix (e.g. "/cgi-bin/")
 	std::string					_autoindex;				// optional
-	std::set<std::string>		_limitExcept;			// optional (if empty, all methods are allowed)
+	std::set<std::string>		_allowedMethods;			// optional (if empty, all methods are allowed)
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
 	size_t						_clientMaxBodySize; 	// optional, overrides server limit.
 	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location.
-	std::string					_upload_store;			// TODO optional: uploads target directory (used if request method is POST and path is a static file)
+	std::string					_uploadStore;			// mandatory if PUT method is allowed. Overrides value in server
 	std::vector<std::string>	_indexFiles;			// optional, overrides server index files
 	ErrorPages					_errorPages;			// optional. Has priority over _server->getErrorPages()
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
@@ -28,9 +29,10 @@ class LocationBlock {
 
 	void	_setPath(std::string&);
 	void	_setAutoindex(Tokens const&);
-	void	_setLimitExcept(Tokens const&);
+	void	_setAllowedMethods(Tokens const&);
 	void	_setReturn(Tokens const&);
 	void	_setClientMaxBodySize(Tokens const&);
+	void	_setUploadStore(Tokens const&);
 	void	_setIndexFiles(Tokens const&);
 	void	_setErrorPages(Tokens const&);
 	void	_setCgi(Tokens const&);
@@ -49,10 +51,11 @@ class LocationBlock {
 		std::string const&					getPath() const;
 		std::string const					getRoot() const;
 		std::string const					getAutoindex() const;
-		std::set<std::string> const&		getLimitExcept() const;
+		std::set<std::string> const&		getAllowedMethods() const;
 		std::pair<int, std::string>	const&	getReturn() const;
 		bool								getClientMaxBodySizeSet() const;
 		size_t								getClientMaxBodySize() const;
+		std::string const&					getUploadStore() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		ErrorPages const&	getErrorPages() const;
 		CgiDirective const&					getCgi() const;

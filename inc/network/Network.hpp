@@ -34,7 +34,7 @@ class Network {
 		Network();
 		Network(Config const& _config_file);
 		~Network();
-		void start_servers();
+		void startServers();
 		int getEpollFd() const;
     	const std::vector<Socket*>& getConnections() const;
     	const std::map<int, std::string>& getRequestList() const;
