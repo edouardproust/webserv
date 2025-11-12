@@ -68,7 +68,7 @@
 				<td class="notes">Custom 404 page</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/index/invalid-path" class="test-link">http://localhost:8080/index/invalid-path</a></td>
-				<td class="status-error"></td>404</td>
+				<td class="status-error">404</td>
 				<td class="notes">Built-in 404 page</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/autoindex/off/invalid" class="test-link">http://localhost:8080/autoindex/off/invalid</a></td>
@@ -120,7 +120,7 @@
 			</tr><tr>
 				<td><a href="http://localhost:8080/cgi/env.py/path/info?var1=hello&var2=world" class="test-link">http://localhost:8080/cgi/env.py/path/info?var1=hello&var2=world</a></td>
 				<td class="status-ok">200</td>
-				<td class="notes">Display env variables as plain text (with <code>PATH_INFO</code> and <code>QUERY_STRING</code>)</td>
+				<td class="notes">Display env variables as plain text, with values for <code>PATH_INFO</code> and <code>QUERY_STRING</code>. <code>CONTENT_TYPE</code> is empty because it is a <code>GET</code> request.</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/cgi/test.py" class="test-link">http://localhost:8080/cgi/test.py</a></td>
 				<td class="status-ok">200</td>
@@ -144,5 +144,14 @@
 			</tr>
 		</tbody>
 	</table>
+
+	<h2>POST tests using CLI</h2>
+
+	<ul>
+		<li><code>curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "var1=hello&var2=world" http://localhost:8080/cgi/env.py</code></li>
+	</ul>
+
+	<br>
+
 </body>
 </html>
