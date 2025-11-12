@@ -5,7 +5,7 @@ Network::Network(Config const& config) : _config(config)
 	// Get all unique host:port pairs directly from config
 	std::vector<HostPortPair> listen_ports = _config.getAllListenPorts();
 
-    // Create socket for each HostPortPair
+	// Create socket for each HostPortPair
 	for (size_t i = 0; i < listen_ports.size() && sig::keepRunning(); ++i)
 		_connections.push_back(new Socket(listen_ports[i]));
 
@@ -120,21 +120,21 @@ int Network::epoll_wait(struct epoll_event *events)
 
 int Network::isServerSideEvent(int epoll_fd)
 {
-    // Iterate through listening sockets (servers)
-    for (size_t i = 0; i < _connections.size(); ++i)
-    {
-        // IF and ONLY IF the event fd equals one of my server sockets
-        if (epoll_fd == _connections[i]->getSock())
-        {
-            std::cout << FT_EVENT << "Server side event on fd " << FT_HIGH_LIGHT_COLOR << epoll_fd << RESET_COLOR << "." << std::endl;
-            int new_conn = _connections[i]->accept();
-            if (new_conn > 0)
-                _client_server_map[new_conn] = _connections[i];
-            return (new_conn);
-        }
-    }
-    // If not a server event, don't print anything and return 0
-    return (0);
+	// Iterate through listening sockets (servers)
+	for (size_t i = 0; i < _connections.size(); ++i)
+	{
+		// IF and ONLY IF the event fd equals one of my server sockets
+		if (epoll_fd == _connections[i]->getSock())
+		{
+			std::cout << FT_EVENT << "Server side event on fd " << FT_HIGH_LIGHT_COLOR << epoll_fd << RESET_COLOR << "." << std::endl;
+			int new_conn = _connections[i]->accept();
+			if (new_conn > 0)
+				_client_server_map[new_conn] = _connections[i];
+			return (new_conn);
+		}
+	}
+	// If not a server event, don't print anything and return 0
+	return (0);
 }
 
 void Network::_handleClientDisconnect(int client_fd, struct epoll_event &events_setup)
@@ -225,16 +225,16 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 
 	Response response;
 	try {
-        Request request(_request_list[client_fd]);
+		Request request(_request_list[client_fd]);
 		if (DEVMODE)
 			std::cout << request << std::endl;
-        if (_client_server_map.find(client_fd) == _client_server_map.end())
-            throw std::runtime_error("Network logic error: client_fd not in map.");
-        Socket* serverSocket = _client_server_map.at(client_fd);
-        HostPortPair listenPair = serverSocket->getHostPortPair();
+		if (_client_server_map.find(client_fd) == _client_server_map.end())
+			throw std::runtime_error("Network logic error: client_fd not in map.");
+		Socket* serverSocket = _client_server_map.at(client_fd);
+		HostPortPair listenPair = serverSocket->getHostPortPair();
 
 		// Call router
-        response = Router::dispatchRequest(_config, request, listenPair);
+		response = Router::dispatchRequest(_config, request, listenPair);
 		if (DEVMODE)
 			std::cout << response << std::endl;
 		std::string msg = response.stringify();
@@ -242,7 +242,7 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 		if (ret == -1)
 			throw std::runtime_error("Send failed");
 		_request_list.erase(client_fd);
-        _client_server_map.erase(client_fd);
+		_client_server_map.erase(client_fd);
 		events_setup.data.fd = client_fd;
 		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 		close(client_fd);
@@ -250,7 +250,7 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 	catch (std::exception& e) {
 		std::cout << FT_STATUS << "Error during send/dispatch: " << e.what() << std::endl;
         _request_list.erase(client_fd);
-        _client_server_map.erase(client_fd);
+		_client_server_map.erase(client_fd);
 		epoll_ctl(_epoll, EPOLL_CTL_DEL, client_fd, &events_setup);
 		close(client_fd);
 	}
@@ -274,21 +274,18 @@ const std::map<int, Socket*>& Network::getClientServerMap() const {
 
 std::ostream& operator<<(std::ostream& os, const Network& rhs)
 {
-    os << "--- Network Debug Status ---\n";
-    os << "- Epoll FD: " << rhs.getEpollFd() << "\n";
-    os << "- Listening Sockets: " << rhs.getConnections().size() << "\n";
-    const std::vector<Socket*>& sockets = rhs.getConnections();
-    for (size_t i = 0; i < sockets.size(); ++i)
-    {
-        os << "  - Socket " << i << " (FD: " << sockets[i]->getSock() << ") on "
-           << sockets[i]->getHostPortPair().getHost() << ":"
-           << sockets[i]->getHostPortPair().getPort() << "\n";
-    }
-    os << "- Pending Requests (waiting send): " << rhs.getRequestList().size() << "\n";
-    os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
+	os << "Network:\n";
+	os << "- Epoll fd: " << rhs.getEpollFd() << "\n";
 
-    os << "------------------------------" << std::endl;
-    return os;
+	os << "- Listening Sockets: " << rhs.getConnections().size() << "\n";
+	const std::vector<Socket*>& sockets = rhs.getConnections();
+	for (size_t i = 0; i < sockets.size(); ++i)
+		os << "  - Socket " << i << " (fd" << sockets[i]->getSock() << ") -> " << sockets[i]->getHostPortPair() << "\n";
+
+	os << "- Pending Requests (waiting send): " << rhs.getRequestList().size() << "\n";
+	os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
+
+	return os;
 }
 
 const char *Network::EpollException::what() const throw()

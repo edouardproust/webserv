@@ -5,13 +5,21 @@
 #include <sstream>
 #include <string>
 
+#define FT_EMPTY "[empty]"
+
 class PrintableString {
 
 	const std::string& _ref;
 
+	// Not used // TODO Make canonical
+	PrintableString();
+	PrintableString(PrintableString const&);
+	PrintableString& operator=(PrintableString const&);
+
 	public:
-		PrintableString(const std::string&);
-		const std::string& get() const;
+		PrintableString(std::string const&);
+		~PrintableString();
+		std::string const& get() const;
 
 };
 

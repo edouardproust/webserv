@@ -103,8 +103,8 @@ Response	RedirectionHandler::run(RoutingDecision const& rd, int code, std::strin
 std::ostream& operator<<(std::ostream& os, RedirectionHandler const& rhs)
 {
 	os << "RedirectionHandler:\n"
-		<< "- code: " << rhs.getCode() << " (" << HttpStatus(rhs.getCode()).getReason() << ")\n"
-		<< "- path: " << (rhs.getPath().empty() ? "[empty]" : rhs.getPath()) << "\n"
+		<< "- code: " << HttpStatus(rhs.getCode()) << "\n"
+		<< "- path: " << PrintableString(rhs.getPath()) << "\n"
 		<< "- type: " << (rhs.getCode() >= 300 && rhs.getCode() < 400 ? "HTTP Redirection" : "Return Code");
 	return os;
 }

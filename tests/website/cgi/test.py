@@ -1,82 +1,142 @@
 #!/usr/bin/env python3
-
 import cgi
 import cgitb
 import os
-import sys
-import urllib.parse
-from html import escape
-from datetime import datetime
+import datetime
+import html
 
-cgitb.enable()  # activate debug on CGI
+# Enable CGI error reporting
+cgitb.enable()
 
-print("Content-Type: text/html\r") # mandatory
-print("\r") # empty line to seperate headers and body
+print("Content-Type: text/html; charset=utf-8")
+print()
 
-method = os.environ.get("REQUEST_METHOD", "UNKNOWN")
+# Get form data
+form = cgi.FieldStorage()
 
-print(f"""<!DOCTYPE html>
+html_template = """<!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Webserv CGI Universal Test (Python)</title>
-</head>
-<body>
-<h1>Python CGI Universal Test</h1>
-<p><strong>Request Method:</strong> {method}</p>
-""")
+	<head>
+	<meta charset="UTF-8">
+		<title>Python CGI Tester</title>
+	</head>
 
-# GET parameters
-query_string = os.environ.get("QUERY_STRING", "")
-if query_string:
-    get_params = urllib.parse.parse_qs(query_string)
-    print("<h2>GET Parameters:</h2><pre>")
-    for k, v in get_params.items():
-        print(f"{escape(k)} = {escape(','.join(v))}")
-    print("</pre>")
+	<body>
+		<h1>Python CGI Tester</h1>
 
-# POST parameters (application/x-www-form-urlencoded)
-if method == "POST":
-    try:
-        form = cgi.FieldStorage()
-        if form:
-            print("<h2>POST Parameters:</h2><pre>")
-            for key in form.keys():
-                value = form.getvalue(key)
-                print(f"{escape(key)} = {escape(str(value))}")
-            print("</pre>")
-    except Exception as e:
-        print(f"<p>Error parsing POST: {e}</p>")
+		<p><strong>Request Method:</strong> {request_method}</p>
+		<p>Current server time: {current_time}</p>
+		<p>Your user agent: {user_agent}</p>
 
-# Raw input (PUT, DELETE, or anything else)
-if method in ["PUT", "DELETE"] or (method not in ["GET", "POST"]):
-    try:
-        raw_body = sys.stdin.read()
-        if raw_body:
-            print(f"<h2>Raw Input ({method}):</h2><pre>{escape(raw_body)}</pre>")
-    except Exception as e:
-        print(f"<p>Error reading raw input: {e}</p>")
+		{post_section}
+		{get_section}
+		{raw_body_section}
 
-# Headers (HTTP_*)
-print("<h2>Request Headers:</h2><pre>")
-for k, v in os.environ.items():
-    if k.startswith("HTTP_"):
-        print(f"{escape(k)} = {escape(v)}")
-print("</pre>")
+		<h2>Request Headers:</h2>
+		<pre>{headers_section}</pre>
 
-# User agent & server time
-user_agent = os.environ.get("HTTP_USER_AGENT", "(unknown)")
-print(f"<p>Current server time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>")
-print(f"<p>Your user agent: {escape(user_agent)}</p>")
+	</body>
+</html>"""
 
-# Optional simple POST form
-print("""
-<p>Fill a simple form for POST test:</p>
-<form action="" method="POST">
-<label for="name">Your name:</label><br>
-<input type="text" id="name" name="name"><br><br>
-<input type="submit" value="Submit">
-</form>
-""")
+# Helper functions
+def escape(text):
+	return html.escape(str(text))
 
-print("</body></html>")
+def get_headers():
+	headers = []
+	for key, value in os.environ.items():
+		if key.startswith('HTTP_'):
+			headers.append(f"{escape(key)} = {escape(value)}")
+	return "\n".join(headers)
+
+def get_form_data(form, method):
+	if not form.keys():
+		return ""
+
+	data = []
+	for key in form.keys():
+		field = form[key]
+		if isinstance(field, list):
+			values = [escape(item.value) for item in field]
+			value = ", ".join(values)
+		else:
+			value = escape(field.value)
+		data.append(f"{escape(key)} = {value}")
+	return "\n".join(data)
+
+# Build sections
+request_method = escape(os.environ.get('REQUEST_METHOD', 'GET'))
+current_time = escape(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+user_agent = escape(os.environ.get('HTTP_USER_AGENT', '(unknown)'))
+
+# POST section
+if request_method == 'POST' and form.keys():
+	post_data = get_form_data(form, 'POST')
+	post_section = f"""
+		<h2>POST Parameters:</h2>
+		<pre>{post_data}</pre>
+	"""
+else:
+	post_section = """
+		<p><h2>POST test form:</h2></p>
+		<form action="" method="POST">
+			<table>
+				<tr>
+					<td><label for="name">Your name:</label></td>
+					<td><input type="text" id="name" name="name"></td>
+				</tr><tr>
+					<td><label for="age">Your age:</label></td>
+					<td><input type="text" id="age" name="age"></td>
+				</tr><tr>
+					<td></td>
+					<td><input type="submit" value="Submit"></td>
+				</tr>
+			</table>
+		</form>
+	"""
+
+# GET section
+get_params = os.environ.get('QUERY_STRING', '')
+if get_params:
+	get_data = []
+	for param in get_params.split('&'):
+		if '=' in param:
+			key, value = param.split('=', 1)
+			get_data.append(f"{escape(key)} = {escape(value)}")
+		else:
+			get_data.append(f"{escape(param)} = ")
+	get_section = f"""
+		<h2>GET Parameters:</h2>
+		<pre>{"\n".join(get_data)}</pre>
+	"""
+else:
+    get_section = ""
+
+# Raw body section (for other methods like PUT)
+raw_body_section = ""
+if request_method not in ['GET', 'POST'] or (request_method == 'POST' and not form.keys()):
+	try:
+		raw_body = sys.stdin.read()
+		if raw_body and not form.keys():
+			raw_body_section = f"""
+				<h2>Raw Input ({escape(request_method)}):</h2>
+				<pre>{escape(raw_body)}</pre>
+			"""
+		elif not get_params and not form.keys():
+			raw_body_section = "<p>No GET or POST parameters received.</p>"
+	except:
+		pass
+
+# Headers section
+headers_section = get_headers()
+
+# Output the final HTML
+print(html_template.format(
+	request_method=request_method,
+	current_time=current_time,
+	user_agent=user_agent,
+	post_section=post_section,
+	get_section=get_section,
+	raw_body_section=raw_body_section,
+	headers_section=headers_section
+))

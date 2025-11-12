@@ -17,6 +17,7 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{500, "Internal Server Error", "internal_server_error"}, // default (do not delete!)
 	{501, "Not Implemented", "not_implemented"},
 	{502, "Bad Gateway", "bad_gateway"},
+	{504, "Gateway Timeout", "timeout"},
 	{505, "HTTP Version Not Supported", "version_not_supported"},
 };
 
@@ -65,6 +66,11 @@ HttpStatus::~HttpStatus() {}
 int	HttpStatus::getCode() const {
 	return _code;
 }
+
+std::string	HttpStatus::getCodeStr() const {
+	return utils::toString(_code);
+}
+
 std::string const&	HttpStatus::getReason() const {
 	return _reason;
 }
@@ -87,8 +93,11 @@ bool	HttpStatus::isError(int code) {
 }
 
 std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
-	os << "HttpStatus: {"<< rhs.getCode()
-		<< ", \"" << rhs.getReason() << "\", " << rhs.getSlug() << "}";
+	os << "HttpStatus: {"
+		<< rhs.getCode() << ", "
+		<< PrintableString(rhs.getReason()) << ", "
+		<< PrintableString(rhs.getSlug())
+		<< "}";
 	return os;
 }
 
