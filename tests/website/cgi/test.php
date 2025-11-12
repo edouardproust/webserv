@@ -2,22 +2,17 @@
 <html lang="en">
 	<head>
 	<meta charset="UTF-8">
-		<title>Webserv CGI Test (PHP)</title>
+		<title>PHP CGI Tester</title>
 	</head>
 
 	<body>
-		<h1>PHP CGI Universal Test</h1>
+		<h1>PHP CGI Tester</h1>
 
 		<p><strong>Request Method:</strong> <?= htmlspecialchars($_SERVER['REQUEST_METHOD']); ?></p>
-
-		<?php if (!empty($_GET)): ?>
-			<h2>GET Parameters:</h2>
-			<pre><?php
-				foreach ($_GET as $key => $value) {
-					echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
-				}
-			?></pre>
-		<?php endif ?>
+		<p>Current server time: <?= date("Y-m-d H:i:s"); ?></p>
+		<p>Your user agent: <?= isset($_SERVER['HTTP_USER_AGENT']) ?
+				htmlspecialchars($_SERVER['HTTP_USER_AGENT']) : '(unknown)'; ?>
+		</p>
 
 		<?php if (!empty($_POST)): ?>
 			<h2>POST Parameters:</h2>
@@ -26,7 +21,31 @@
 					echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
 				}
 			?></pre>
+		<?php else: ?>
+			<p><h2>POST test form:</h2></p>
+				<form action="" method="POST">
+					<table>
+						<tr>
+							<td><label for="name">Your name:</label></td>
+							<td><input type="text" id="name" name="name"></td>
+						</tr><tr>
+							<td><label for="age">Your age:</label></td>
+							<td><input type="text" id="age" name="age"></td>
+						</tr><tr>
+							<td></td>
+							<td><input type="submit" value="Submit"></td>
+						</tr>
+					</table>
+				</form>
+		<?php endif; ?>
 
+		<?php if (!empty($_GET)): ?>
+			<h2>GET Parameters:</h2>
+			<pre><?php
+				foreach ($_GET as $key => $value) {
+					echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
+				}
+			?></pre>
 		<?php else:
 			$raw_body = file_get_contents('php://input');
 			if (!empty($raw_body)): ?>
@@ -35,7 +54,6 @@
 			<?php else: ?>
 				<p>No GET or POST parameters received.</p>
 			<?php endif; ?>
-
 		<?php endif; ?>
 
 		<h2>Request Headers:</h2>
@@ -46,18 +64,6 @@
 			}
 		}
 		?></pre>
-
-		<p>Current server time: <?= date("Y-m-d H:i:s"); ?></p>
-		<p>Your user agent: <?= isset($_SERVER['HTTP_USER_AGENT']) ?
-				htmlspecialchars($_SERVER['HTTP_USER_AGENT']) : '(unknown)'; ?>
-		</p>
-
-		<p>Fill a simple form for POST test:</p>
-		<form action="" method="POST">
-			<label for="name">Your name:</label><br>
-			<input type="text" id="name" name="name"><br><br>
-			<input type="submit" value="Submit">
-		</form>
 
 	</body>
 </html>

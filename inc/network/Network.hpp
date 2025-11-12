@@ -36,9 +36,9 @@ class Network {
 		~Network();
 		void startServers();
 		int getEpollFd() const;
-    	const std::vector<Socket*>& getConnections() const;
-    	const std::map<int, std::string>& getRequestList() const;
-   	 	const std::map<int, Socket*>& getClientServerMap() const;
+		const std::vector<Socket*>& getConnections() const;
+		const std::map<int, std::string>& getRequestList() const;
+		const std::map<int, Socket*>& getClientServerMap() const;
 
 		class EpollException : public std::exception {
 			public:

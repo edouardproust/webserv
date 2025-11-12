@@ -526,32 +526,30 @@ std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 	std::set<std::string> const& _allowedMethods = rhs.getAllowedMethods();
 	os << in << "- allowed_methods: " << _allowedMethods.size() << "\n";
 	for (std::set<std::string>::const_iterator it = _allowedMethods.begin(); it != _allowedMethods.end(); ++it)
-		os << in << "  - " << *it << "\n";
+		os << in << "  - " << PrintableString(*it) << "\n";
 
 	std::pair<int, std::string> const& ret = rhs.getReturn();
 	os << in << "- return: " << (ret.first != -1
 		? utils::toString(ret.first) + " -> " + PrintableString(ret.second)
-		: "[empty]") << "\n";
+		: FT_EMPTY) << "\n";
 
-	os << in << "- client_max_body_size: " << PrintableString(rhs.getClientMaxBodySizeSet()
-		? utils::toString(rhs.getClientMaxBodySize()) : "") << "\n";
-
+	os << in << "- client_max_body_size: " << (rhs.getClientMaxBodySizeSet() ? utils::toString(rhs.getClientMaxBodySize()) : FT_EMPTY) << "\n";
 	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";
 
 	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();
 	os << in << "- index_files: " << indexFiles.size() << "\n";
 	for (size_t i = 0; i < indexFiles.size(); ++i)
-		os << in << "  - " << indexFiles[i] << "\n";
+		os << in << "  - " << PrintableString(indexFiles[i]) << "\n";
 
 	ErrorPages const& errorPages = rhs.getErrorPages();
 	os << in << "- error_page: " << errorPages.size() << "\n";
 	for (ErrorPages::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
-		os << in << "  - " << it->first << " -> " << it->second << "\n";
+		os << in << "  - " << it->first << " -> " << PrintableString(it->second) << "\n";
 
 	CgiDirective const& cgi = rhs.getCgi();
 	os << in << "- cgi: " << cgi.size() << "\n";
 	for (CgiDirective::const_iterator it = cgi.begin(); it != cgi.end(); it++) {
-		os << in << "  - " << it->first << " -> " << it->second << "\n";
+		os << in << "  - " << PrintableString(it->first) << " -> " << PrintableString(it->second) << "\n";
 	}
 
 	return os;

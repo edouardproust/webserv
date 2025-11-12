@@ -46,7 +46,7 @@ class Response
 
 	class RawException: public std::runtime_error {
 		public:
-			explicit RawException(const std::string& msg);
+			RawException(const std::string& msg);
 	};
 
 };

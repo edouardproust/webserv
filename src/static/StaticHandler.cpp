@@ -80,6 +80,18 @@ Response	StaticHandler::handleDelete()
 		return handleError(HttpStatus("internal_server_error"));
 }
 
+// TODO
+Response	StaticHandler::handleHead()
+{
+	return Response();
+}
+
+// TODO
+Response	StaticHandler::handlePut()
+{
+	return Response();
+}
+
 Response	StaticHandler::handleError(HttpStatus const& status)
 {
 	std::string const& locRoot = _location->getRoot();
@@ -281,8 +293,7 @@ bool	StaticHandler::hasUpdatedFinalPath() const {
 }
 
 std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs) {
-	os << "- finalPath: " << rhs.getFinalPath()
-		<< "\n";
+	os << "- finalPath: " << PrintableString(rhs.getFinalPath()) << "\n";
 
 	return os;
 }

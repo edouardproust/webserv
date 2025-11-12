@@ -417,7 +417,7 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	std::set<HostPortPair> const& listen = rhs.getListen();
 	os << "- listen: " << listen.size() << "\n";
 	for (std::set<HostPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
-		os << "  - " << it->getHost() << " -> " << it->getPort() << "\n";
+		os << "  - " << PrintableString(it->getHost()) << " -> " << it->getPort() << "\n";
 	}
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 
@@ -426,12 +426,12 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
 	ErrorPages const& errorPages = rhs.getErrorPages();
 	os << "- error_pages: " << errorPages.size() << "\n";
 	for (ErrorPages::const_iterator it = errorPages.begin(); it != errorPages.end(); ++it)
-		os << "  - " << it->first << " -> " << it->second << "\n";
+		os << "  - " << it->first << " -> " << PrintableString(it->second) << "\n";
 
 	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();
 	os << "- index_files: " << indexFiles.size() << "\n";
 	for (size_t i = 0; i < indexFiles.size(); ++i)
-		os << "  - " << indexFiles[i] << "\n";
+		os << "  - " << PrintableString(indexFiles[i]) << "\n";
 
 	std::vector<LocationBlock> const& locations = rhs.getLocations();
 	os << "- locations: " << locations.size() << "\n";

@@ -3,6 +3,7 @@
 
 # include "http/HttpStatus.hpp"
 # include "utils/utils.hpp"
+# include "utils/PrintableString.hpp"
 # include <iostream>
 # include <map>
 # include <set>

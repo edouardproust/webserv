@@ -63,6 +63,8 @@ std::set<std::string> const&	Request::getSupportedMethods() {
 		_supportedMethods.insert("GET");
 		_supportedMethods.insert("POST");
 		_supportedMethods.insert("DELETE");
+		_supportedMethods.insert("HEAD");
+		_supportedMethods.insert("PUT");
 		// -- more supported methods can be added here --
 	}
 	return _supportedMethods;
@@ -75,8 +77,6 @@ bool Request::isSupportedMethod(const std::string& method) {
 
 bool	Request::isExistingMethod(std::string const& method) {
 	if (_existingMethods.empty()) {
-		_existingMethods.insert("HEAD");
-		_existingMethods.insert("PUT");
 		_existingMethods.insert("OPTIONS");
 		_existingMethods.insert("PATCH");
 		_existingMethods.insert("CONNECT");
@@ -200,21 +200,19 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "Request:\n";
 	os << "- Status: " << request.getStatus() << "\n";
-	std::string const& method = request.getMethod();
-	os << "- Method: " << (!method.empty() ? method : "[empty]") << "\n";
-	os << "- URI: " << request.getUri() << "\n"; 
-	os << "- Path: " << request.getPath() << "\n";
-	os << "- Script Name: " << request.getScriptName() << "\n";
-	os << "- Path Info: " << request.getPathInfo() << "\n";
-	if (!request.getQueryString().empty())
-		os << "- Query String: " << request.getQueryString() << "\n";
-	os << "- Version: " << request.getVersion() << "\n";
+	os << "- Method: " << PrintableString(request.getMethod()) << "\n";
+	os << "- URI: " << PrintableString(request.getUri()) << "\n";
+	os << "  - Path: " << PrintableString(request.getPath()) << "\n";
+	os << "  - Script Name: " << PrintableString(request.getScriptName()) << "\n";
+	os << "  - Path Info: " << PrintableString(request.getPathInfo()) << "\n";
+	os << "  - Query String: " << PrintableString(request.getQueryString()) << "\n";
+	os << "- Version: " << PrintableString(request.getVersion()) << "\n";
 	os << "- Headers: " << request.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = request.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
-		os << "  - " << it->first << ": " << it->second << "\n";
-	os << "- Body: [" << utils::excerpt(EXCERPT_LENGTH, request.getBody()) << "]\n";
+		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
+	os << "- Body: " << PrintableString(utils::excerpt(EXCERPT_LENGTH, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
     return os;
 }

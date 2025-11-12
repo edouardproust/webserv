@@ -5,9 +5,14 @@
 #include "router/RedirectionHandler.hpp"
 #include "static/StaticHandler.hpp"
 #include "cgi/CgiHandler.hpp"
+#include "colors.hpp"
 
 class Router
 {
+
+	static void	_handleRedirectionDecision(Response&, RoutingDecision const&);
+	static void	_handleCgiDecision(Response&, RoutingDecision const&, StaticHandler&);
+	static void	_handleStaticDecision(Response&, std::string const&, StaticHandler&);
 
 	// TODO make canonical
 	Router();
