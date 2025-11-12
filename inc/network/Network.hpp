@@ -26,13 +26,15 @@ class Network {
 
 		void _handleClientDisconnect(int client_fd, struct epoll_event &events_setup);
 		void _handleRecvError(int client_fd, struct epoll_event &events_setup);
-
+		bool _isRequestComplete(const std::string& total_request);
+		bool _shouldCloseConnection(const Request& request, const Response& response);
+    void _manageConnection(int client_fd, bool should_close, struct epoll_event &events_setup);
 		int			getRequestTotalLength(std::string request);
 		std::string getBoundry(std::string request);
 
 	public:
 		Network();
-		Network(Config const& _config_file);
+		Network(Config const& _config);
 		~Network();
 		void startServers();
 		int getEpollFd() const;
