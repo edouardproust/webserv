@@ -129,6 +129,10 @@ char	utils::hexToChar(const std::string& hex)
 	return static_cast<char>(value);
 }
 
+useconds_t	utils::secondsToMicroseconds(size_t seconds) {
+	return seconds * 1000000;
+}
+
 std::string	utils::readFile(const std::string& path)
 {
 	std::ifstream file(path.c_str(), std::ios::binary);

@@ -46,7 +46,7 @@ void	RoutingDecision::_makeDecision() {
 		_setError("content_too_large");
 	else if (_location->isRedirection())
 		_decision = REDIRECTION;
-	else if (_location->isCgi(utils::getFileExtension(_request.getPath())))
+	else if (_location->isCgi(utils::getFileExtension(_request.getScriptName())))
 		_decision = CGI;
 	else
 		_decision = STATIC;
@@ -102,7 +102,7 @@ void	RoutingDecision::_setFinalPath() {
 		_setServer();
 	if (!_location)
 		_setLocation();
-	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), _request.getPath());
+	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), _request.getScriptName());
 	_finalPath = joinedPath;
 }
 
@@ -137,20 +137,21 @@ std::string const&	RoutingDecision::getErrorSlug() const {
 
 std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 	int d = rhs.getDecision();
-	os << "RoutingDecision:\n"
-		<< "- Decision: " << (d == RoutingDecision::ERROR ? "ERROR"
+	os << "RoutingDecision:\n";
+	os << "- Decision: " << (d == RoutingDecision::ERROR ? "ERROR"
 			: (d == RoutingDecision::REDIRECTION ? "REDIRECTION"
 				: (d == RoutingDecision::STATIC ? "STATIC"
 					: d == RoutingDecision::CGI ? "CGI"
-						: "UNKNOWN"))) << "\n"
-		<< "- finalPath: '" << rhs.getFinalPath() << "'\n"
-		<< "- Matching server:\n"
-		<< "  - root: '" << rhs.getServer()->getRoot() << "'\n"
-		<< "- Request path: '" << rhs.getRequest().getPath() << "'\n"
-		<< "- Matching location:";
+						: "UNKNOWN"))) << "\n";
+	os << "- finalPath: " << PrintableString(rhs.getFinalPath()) << "\n";
+	os << "- Matching server:\n";
+	os << "  - root: " << PrintableString(rhs.getServer()->getRoot()) << "'\n";
+	os << "- Request path: " << PrintableString(rhs.getRequest().getPath()) << "\n";
+
+	os << "- Matching location:";
 	LocationBlock const* location = rhs.getLocation();
 	if (location) os << "\n" << *location;
-	else os << "[empty]";
+	else os << FT_EMPTY;
 
 	return os;
 }

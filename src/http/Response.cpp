@@ -184,15 +184,15 @@ std::string Response::_buildHeaders() const
 std::ostream& operator<<(std::ostream& os, const Response& response)
 {
 	os << "Response:\n";
-	os << "- Status: " << response.getStatus().getCode() << " " << response.getStatus().getReason() << "\n";
+	os << "- Status: " << PrintableString(response.getStatus().toString()) << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = response.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
-			os << "  - " << it->first << ": " << it->second << "\n";
+			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n[" << utils::excerpt(EXCERPT_LENGTH, response.stringify()) << "]\n";
+	os << "- Raw HTTP Response Preview:\n" << PrintableString(utils::excerpt(EXCERPT_LENGTH, response.stringify())) << "\n";
 	return os;
 }
 

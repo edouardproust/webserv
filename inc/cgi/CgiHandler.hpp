@@ -11,7 +11,7 @@
 
 class CgiHandler {
 
-	std::string					_scriptPath;
+	std::string					_scriptName;
 	std::string					_extension;
 	std::string					_executor;
 	std::vector<std::string>	_envp;
@@ -25,9 +25,10 @@ class CgiHandler {
 
 	void		_buildEnvp(Request const&, std::string const&);
 	void		_buildArgv();
-	pid_t		_forkAndExec();
-	void		_communicateWithChild(Request const&);
-	Response	_handleStatus(int);
+	pid_t		_forkAndExec() const;
+	void		_prepareIo(std::string const&, std::string const&);
+	void		_readAllPipes();
+	Response	_handleStatus(int) const;
 	void		_redirectIoInChild() const;
 
 	// static utils
@@ -45,7 +46,7 @@ class CgiHandler {
 
 		Response run(Request const&, LocationBlock const*, std::string const&);
 
-		std::string const&				getScriptPath() const;
+		std::string const&				getScriptName() const;
 		std::string const&				getExecutor() const;
 		std::vector<std::string> const&	getEnvp() const;
 		std::vector<std::string> const&	getArgv() const;

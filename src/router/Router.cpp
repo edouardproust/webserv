@@ -51,23 +51,23 @@ void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& r
 }
 
 void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, StaticHandler& statiq) {
-	std::string const& scriptPath = rd.getFinalPath();
-	if (!utils::fileExists(scriptPath)) {
+	std::string const& scriptName = rd.getFinalPath();
+	if (!utils::fileExists(scriptName)) {
 		resp = statiq.handleError(HttpStatus("not_found"));
-	} else if (!utils::isReadableFile(scriptPath)) {
+	} else if (!utils::isReadableFile(scriptName)) {
 		resp = statiq.handleError(HttpStatus("forbidden"));
 	} else {
 		CgiHandler cgi;
 		try {
-			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptPath);
+			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptName);
 		} catch (CgiHandler::ExecException& e) {
-			std::cerr << FT_WARNING << "CGI (" << scriptPath << "): " << e.what() << std::endl;
+			std::cerr << FT_WARNING << "CGI (" << scriptName << "): " << e.what() << std::endl;
 			resp = statiq.handleError(HttpStatus("internal_server_error"));
 		} catch (Response::RawException& e) {
-			std::cerr << FT_WARNING << "CGI (" << scriptPath << "): " << e.what() << std::endl;
+			std::cerr << FT_WARNING << "CGI (" << scriptName << "): " << e.what() << std::endl;
 			resp = statiq.handleError(HttpStatus("bad_gateway"));
 		} catch (CgiHandler::TimeoutException& e) {
-			std::cerr << FT_WARNING << "CGI (" << scriptPath << "): " << e.what() << std::endl;
+			std::cerr << FT_WARNING << "CGI (" << scriptName << "): " << e.what() << std::endl;
 			resp = statiq.handleError(HttpStatus("timeout"));
 		}
 	}

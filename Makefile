@@ -96,4 +96,4 @@ test: all
 
 test_dev: dev
 	@clear
-	./$(NAME_DEV) ./tests/webserv.config
+	valgrind ./$(NAME_DEV) ./tests/webserv.config

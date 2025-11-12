@@ -1,6 +1,8 @@
 #ifndef HTTP_STATUS_HPP
 #define HTTP_STATUS_HPP
 
+#include "utils/utils.hpp"
+#include "utils/PrintableString.hpp"
 #include <string>
 #include <sstream>
 
@@ -31,6 +33,7 @@ class HttpStatus {
 		~HttpStatus();
 
 		int					getCode() const;
+		std::string			getCodeStr() const;
 		std::string const&	getReason() const;
 		std::string const&	getSlug() const;
 

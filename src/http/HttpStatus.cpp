@@ -66,6 +66,11 @@ HttpStatus::~HttpStatus() {}
 int	HttpStatus::getCode() const {
 	return _code;
 }
+
+std::string	HttpStatus::getCodeStr() const {
+	return utils::toString(_code);
+}
+
 std::string const&	HttpStatus::getReason() const {
 	return _reason;
 }
@@ -88,8 +93,11 @@ bool	HttpStatus::isError(int code) {
 }
 
 std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
-	os << "HttpStatus: {"<< rhs.getCode()
-		<< ", \"" << rhs.getReason() << "\", " << rhs.getSlug() << "}";
+	os << "HttpStatus: {"
+		<< rhs.getCode() << ", "
+		<< PrintableString(rhs.getReason()) << ", "
+		<< PrintableString(rhs.getSlug())
+		<< "}";
 	return os;
 }
 

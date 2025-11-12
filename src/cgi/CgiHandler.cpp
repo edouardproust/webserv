@@ -21,9 +21,9 @@ CgiHandler::TimeoutException::TimeoutException(std::string const& msg)
  * Notes:
  * - Status code in the Response is set from the CGI raw response.
  */
-Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptPath) {
-	_scriptPath = scriptPath;
-	_extension = utils::getFileExtension(_scriptPath);
+Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptName) {
+	_scriptName = scriptName;
+	_extension = utils::getFileExtension(_scriptName);
 	_executor = loc->getCgiExecutor(_extension);
 	if (pipe(_stdinPipe) == -1 || pipe(_stdoutPipe) == -1 || pipe(_stderrPipe) == -1)
 		throw ExecException("pipe() failed");
@@ -32,15 +32,18 @@ Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::stri
 	_buildArgv();
 	pid_t pid = _forkAndExec();
 
+	_prepareIo(req.getMethod(), req.getBody());
+
 	int status = 0;
-    size_t waited = 0;
-    while (waited < DEFAULT_CGI_TIMEOUT) {
+	useconds_t step = 10000; // 10ms
+    useconds_t waited = 0;
+    while (waited < utils::secondsToMicroseconds(CGI_TIMEOUT)) {
 		pid_t ret = waitpid(pid, &status, WNOHANG);
 		if (ret == 0) {
-            sleep(1);  // wait 1 sec
-            waited++;
+            usleep(step); // wait
+            waited += step;
         } else if (ret == pid) {
-			_communicateWithChild(req);
+			_readAllPipes();
 			if (DEVMODE) std::cout << *this <<std::endl;
             return _handleStatus(status); // throw
 		} else {
@@ -53,43 +56,7 @@ Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::stri
     throw TimeoutException("CGI timeout after " + utils::toString(waited) + " seconds");
 }
 
-void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
-	_envp.clear(); // security
-	std::map<std::string, std::string> tmp;
-	// Essential CGI environment variables
-	tmp["REQUEST_METHOD"] = req.getMethod();
-    tmp["PATH_INFO"] = "/"; // TODO in RequestParser (mandatory for ubuntu_cgi_tester)
-	tmp["QUERY_STRING"] = req.getQueryString();
-	tmp["CONTENT_TYPE"] = req.getContentType();
-	tmp["CONTENT_LENGTH"] = utils::toString(req.getBody().length());
-	tmp["SCRIPT_FILENAME"] = _scriptPath;
-	tmp["SCRIPT_NAME"] = req.getPath();
-	tmp["DOCUMENT_ROOT"] = locRoot;
-	// Server protocol information
-	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
-	tmp["SERVER_PROTOCOL"] = req.getVersion();
-	tmp["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
-	// HTTP headers (prefixed with HTTP_)
-	Headers headers = req.getHeaders();
-	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)
-		tmp[_headerToEnvVar(it->first)] = it->second;
-	// PHP specific variables
-	if (utils::getFileExtension(req.getPath()) == ".php") {
-		tmp["REDIRECT_STATUS"] = "200";
-		tmp["PHP_SELF"] = req.getPath();
-	}
-	// Build "KEY=VALUE" strings in persistent storage
-	for (std::map<std::string, std::string>::const_iterator it = tmp.begin(); it != tmp.end(); ++it)
-		_envp.push_back(it->first + "=" + it->second);
-}
-
-void	CgiHandler::_buildArgv() {
-    _argv.clear(); // security
-	_argv.push_back(_executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
-	_argv.push_back(_scriptPath); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
-}
-
-pid_t	CgiHandler::_forkAndExec() {
+pid_t	CgiHandler::_forkAndExec() const {
 	pid_t pid = fork();
 	if (pid == -1)
 		throw ExecException("fork() failed");
@@ -104,21 +71,22 @@ pid_t	CgiHandler::_forkAndExec() {
 	return pid;
 }
 
-void	CgiHandler::_communicateWithChild(Request const& req) {
+void	CgiHandler::_prepareIo(std::string const& method, std::string const& reqBody) {
 	// close unused pipe ends
-	close(_stdinPipe[0]); // body reading
+	close(_stdinPipe[0]); // reading body
 	close(_stdoutPipe[1]); // writing stdout
 	close(_stderrPipe[1]); // writing stderr
 
-	// write body in CGI's stdin (if PUT/POST)
-	if (req.getMethod() == "POST" || req.getMethod() == "PUT") {
-		ssize_t n = write(_stdinPipe[1], req.getBody().c_str(), req.getBody().size());
+	// Write request body in CGI's stdin (if PUT/POST)
+	if (method == "POST" || method == "PUT") {
+		ssize_t n = write(_stdinPipe[1], reqBody.c_str(), reqBody.size());
 		(void)n; // mute compiler error
 	}
-	close(_stdinPipe[1]);
+	close(_stdinPipe[1]); // stdin write
+}
 
-	// Read from pipes
-	char buffer[4096];
+void	CgiHandler::_readAllPipes() {
+	char buffer[READ_BUFFER];
 	ssize_t n;
 	while ((n = read(_stdoutPipe[0], buffer, sizeof(buffer))) > 0)
 		_cgiOutput.append(buffer, n);
@@ -130,7 +98,7 @@ void	CgiHandler::_communicateWithChild(Request const& req) {
 	close(_stderrPipe[0]);
 }
 
-Response	CgiHandler::_handleStatus(int status) {
+Response	CgiHandler::_handleStatus(int status) const {
 	if (WIFEXITED(status)) {
 		if (!_cgiOutput.empty()) {
 			Response res(_cgiOutput); // throw Response::RawException (raw response invalid syntax)
@@ -167,8 +135,44 @@ void	CgiHandler::_redirectIoInChild() const {
 	close(_stderrPipe[1]);
 }
 
-std::string const&	CgiHandler::getScriptPath() const {
-	return _scriptPath;
+void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
+	_envp.clear(); // security
+	std::map<std::string, std::string> tmp;
+	// Essential CGI environment variables
+	tmp["REQUEST_METHOD"] = req.getMethod();
+	tmp["SCRIPT_FILENAME"] = _scriptName; // absolute path
+	tmp["SCRIPT_NAME"] = req.getScriptName(); // relative path
+    tmp["PATH_INFO"] = req.getPathInfo();
+	tmp["QUERY_STRING"] = req.getQueryString();
+	tmp["CONTENT_TYPE"] = req.getContentType();
+	tmp["CONTENT_LENGTH"] = utils::toString(req.getBody().length());
+	tmp["DOCUMENT_ROOT"] = locRoot;
+	// Server protocol information
+	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
+	tmp["SERVER_PROTOCOL"] = req.getVersion();
+	tmp["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
+	// HTTP headers (prefixed with HTTP_)
+	Headers headers = req.getHeaders();
+	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)
+		tmp[_headerToEnvVar(it->first)] = it->second;
+	// PHP specific variables
+	if (_extension == ".php") {
+		tmp["REDIRECT_STATUS"] = HttpStatus("ok").getCodeStr();
+		tmp["PHP_SELF"] = req.getPath();
+	}
+	// Build "KEY=VALUE" strings in persistent storage
+	for (std::map<std::string, std::string>::const_iterator it = tmp.begin(); it != tmp.end(); ++it)
+		_envp.push_back(it->first + "=" + it->second);
+}
+
+void	CgiHandler::_buildArgv() {
+    _argv.clear(); // security
+	_argv.push_back(_executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
+	_argv.push_back(_scriptName); // argv[1] = script (/var/www/index.php, /var/www/website/script.py, etc)
+}
+
+std::string const&	CgiHandler::getScriptName() const {
+	return _scriptName;
 }
 
 std::string const&	CgiHandler::getExecutor() const {
@@ -193,20 +197,20 @@ std::string const&	CgiHandler::getCgiError() const {
 
 std::ostream&	operator<<(std::ostream& os, CgiHandler const& rhs) {
 	os << "CgiHandler:\n";
-	os << "- script path: '" << rhs.getScriptPath() << "'\n";
-	os << "- executor: '" << rhs.getExecutor() << "'\n";
+	os << "- script path: " << PrintableString(rhs.getScriptName()) << "\n";
+	os << "- executor: " << PrintableString(rhs.getExecutor()) << "\n";
 
 	std::vector<std::string> envp = rhs.getEnvp();
 	os << "- envp: " << envp.size() << "\n";
 	for (size_t i = 0; i < envp.size(); ++i)
-		os << "  - " << envp[i] << "\n";
+		os << "  - " << PrintableString(envp[i]) << "\n";
 
 	std::vector<std::string> argv = rhs.getArgv();
 	os << "- argv: " << argv.size() << "\n";
 	for (size_t i = 0; i < argv.size(); ++i)
-		os << "  - " << argv[i] << "\n";
+		os << "  - " << PrintableString(argv[i]) << "\n";
 
-	os << "- CGI error: [" << (rhs.getCgiError().empty() ? "empty" : rhs.getCgiError()) << "]\n";
+	os << "- CGI error: " << PrintableString(rhs.getCgiError()) << "\n";
 	os << "- CGI raw response:\n[" << utils::excerpt(EXCERPT_LENGTH, rhs.getCgiOutput()) << "]\n";
 
 	return os;

@@ -1,16 +1,18 @@
 #include "utils/PrintableString.hpp"
 
-	PrintableString::PrintableString(const std::string& s) : _ref(s) {}
+PrintableString::PrintableString(const std::string& s) : _ref(s) {}
 
-		const std::string&	PrintableString::get() const {
-			return _ref;
-		}
+PrintableString::~PrintableString() {}
+
+std::string const&	PrintableString::get() const {
+	return _ref;
+}
 
 /**
  * Changes the display rules of a PrintableString
  */
 std::ostream&	operator<<(std::ostream& os, const PrintableString& p) {
-	os << (!p.get().empty() ? "\"" + p.get() + "\"" : "[empty]" );
+	os << (!p.get().empty() ? "\"" + p.get() + "\"" : FT_EMPTY );
 
 	return os;
 }

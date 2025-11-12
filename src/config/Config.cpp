@@ -167,6 +167,6 @@ std::ostream&	operator<<(std::ostream& os, Config const& rhs) {
 			os << "Server " << i << ":\n" << servers[i];
 		}
 	} else
-		os <<"[empty]" << std::endl;
+		os << FT_EMPTY << std::endl;
 	return os;
 }
