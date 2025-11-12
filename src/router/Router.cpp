@@ -61,13 +61,13 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, Stati
 		try {
 			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptName);
 		} catch (CgiHandler::ExecException& e) {
-			std::cerr << FT_WARNING << "CGI (" << scriptName << "): " << e.what() << std::endl;
+			std::cerr << FT_WARNING << "CGI execution error: " << scriptName << ": " << e.what() << std::endl;
 			resp = statiq.handleError(HttpStatus("internal_server_error"));
 		} catch (Response::RawException& e) {
-			std::cerr << FT_WARNING << "CGI (" << scriptName << "): " << e.what() << std::endl;
+			std::cerr << FT_WARNING << "CGI invalid raw output: " << scriptName << ": " << e.what() << std::endl;
 			resp = statiq.handleError(HttpStatus("bad_gateway"));
 		} catch (CgiHandler::TimeoutException& e) {
-			std::cerr << FT_WARNING << "CGI (" << scriptName << "): " << e.what() << std::endl;
+			std::cerr << FT_WARNING << "CGI timeout :" << scriptName << ": " << e.what() << std::endl;
 			resp = statiq.handleError(HttpStatus("timeout"));
 		}
 	}

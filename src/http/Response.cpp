@@ -217,12 +217,15 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 
 	// Split headers and body
 	size_t headerEnd = rawResponse.find("\r\n\r\n");
-	if (headerEnd == std::string::npos)
+	size_t skip = 4;
+	if (headerEnd == std::string::npos) {
 		headerEnd = rawResponse.find("\n\n");
+		skip = 2;
+	}
 	if (headerEnd == std::string::npos)
 		throw RawException("malformed raw response: missing header/body separator");
 	std::string headersPart = rawResponse.substr(0, headerEnd);
-	std::string bodyPart = rawResponse.substr(headerEnd + 4);
+	std::string bodyPart = rawResponse.substr(headerEnd + skip);
 
 	// Set Response attributes
 	int statusCode = _setHeaders(headersPart);
@@ -235,7 +238,7 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 int	Response::_setHeaders(const std::string& headersPart) {
 	std::istringstream headersStream(headersPart);
 	std::string line;
-	int statusCode = 200; // default if no Status header found
+	int statusCode = HttpStatus("ok").getCode(); // default if no Status header found
 
 	while (std::getline(headersStream, line)) {
 		if (!line.empty() && line[line.size() - 1] == '\r')

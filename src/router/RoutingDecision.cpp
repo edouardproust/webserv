@@ -102,7 +102,9 @@ void	RoutingDecision::_setFinalPath() {
 		_setServer();
 	if (!_location)
 		_setLocation();
-	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), _request.getScriptName());
+	std::string const& scriptName = _request.getScriptName();
+	std::string const& append = !scriptName.empty() ? scriptName : _request.getPath();
+	std::string joinedPath = utils::securedPathsJoin(_location->getRoot(), append);
 	_finalPath = joinedPath;
 }
 
@@ -145,7 +147,7 @@ std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 						: "UNKNOWN"))) << "\n";
 	os << "- finalPath: " << PrintableString(rhs.getFinalPath()) << "\n";
 	os << "- Matching server:\n";
-	os << "  - root: " << PrintableString(rhs.getServer()->getRoot()) << "'\n";
+	os << "  - root: " << PrintableString(rhs.getServer()->getRoot()) << "\n";
 	os << "- Request path: " << PrintableString(rhs.getRequest().getPath()) << "\n";
 
 	os << "- Matching location:";

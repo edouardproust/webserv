@@ -27,7 +27,9 @@ class CgiHandler {
 	void		_buildArgv();
 	pid_t		_forkAndExec() const;
 	void		_prepareIo(std::string const&, std::string const&);
-	void		_readAllPipes();
+	void		_readPipes(int, pid_t);
+
+	void		_readPipesLeftovers();
 	Response	_handleStatus(int) const;
 	void		_redirectIoInChild() const;
 

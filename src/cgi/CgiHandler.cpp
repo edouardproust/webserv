@@ -21,41 +21,42 @@ CgiHandler::TimeoutException::TimeoutException(std::string const& msg)
  * Notes:
  * - Status code in the Response is set from the CGI raw response.
  */
-Response	CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptName) {
+Response CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptName) {
 	_scriptName = scriptName;
 	_extension = utils::getFileExtension(_scriptName);
 	_executor = loc->getCgiExecutor(_extension);
+
 	if (pipe(_stdinPipe) == -1 || pipe(_stdoutPipe) == -1 || pipe(_stderrPipe) == -1)
 		throw ExecException("pipe() failed");
 
 	_buildEnvp(req, loc->getRoot());
 	_buildArgv();
 	pid_t pid = _forkAndExec();
-
 	_prepareIo(req.getMethod(), req.getBody());
 
 	int status = 0;
-	useconds_t step = 10000; // 10ms
-    useconds_t waited = 0;
-    while (waited < utils::secondsToMicroseconds(CGI_TIMEOUT)) {
-		pid_t ret = waitpid(pid, &status, WNOHANG);
-		if (ret == 0) {
-            usleep(step); // wait
-            waited += step;
-        } else if (ret == pid) {
-			_readAllPipes();
-			if (DEVMODE) std::cout << *this <<std::endl;
-            return _handleStatus(status); // throw
-		} else {
-            throw ExecException("waitpid failed");
-		}
+	size_t waited_ms = 0;
+	while (waited_ms < CGI_TIMEOUT_MS) {
+		_readPipes(status, pid);
+		if (waitpid(pid, &status, WNOHANG) == pid)
+			break;
+		waited_ms += CGI_STEP_MS;
 	}
-	// Timeout reached
-    kill(pid, SIGKILL);
-    waitpid(pid, &status, 0); // clean up
-    throw TimeoutException("CGI timeout after " + utils::toString(waited) + " seconds");
+	if (waited_ms >= CGI_TIMEOUT_MS) {
+		kill(pid, SIGKILL);
+		waitpid(pid, &status, 0);
+		throw TimeoutException("CGI timeout after " + utils::toString(waited_ms) + " ms");
+	}
+	_readPipesLeftovers();
+	return _handleStatus(status);
 }
 
+/**
+ * Forks the current process and executes the CGI script in the child.
+ *
+ * Returns the PID of the child process.
+ * Throws ExecException if fork() fails.
+ */
 pid_t	CgiHandler::_forkAndExec() const {
 	pid_t pid = fork();
 	if (pid == -1)
@@ -71,6 +72,12 @@ pid_t	CgiHandler::_forkAndExec() const {
 	return pid;
 }
 
+/**
+ * Prepares the standard input/output/error pipes for the CGI process.
+ *
+ * Writes the request body to the CGI stdin if needed.
+ * Closes unused pipe ends.
+ */
 void	CgiHandler::_prepareIo(std::string const& method, std::string const& reqBody) {
 	// close unused pipe ends
 	close(_stdinPipe[0]); // reading body
@@ -85,8 +92,50 @@ void	CgiHandler::_prepareIo(std::string const& method, std::string const& reqBod
 	close(_stdinPipe[1]); // stdin write
 }
 
-void	CgiHandler::_readAllPipes() {
-	char buffer[READ_BUFFER];
+/**
+ * Reads available data from stdout and stderr of the CGI process using select().
+ *
+ * Appends data to _cgiOutput and _cgiError.
+ * Throws ExecException if select() fails.
+ */
+void	CgiHandler::_readPipes(int status, pid_t childPid) {
+    fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(_stdoutPipe[0], &readfds);
+	FD_SET(_stderrPipe[0], &readfds);
+
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = CGI_STEP_MS * 1000;
+
+    int fdsNb = std::max(_stdoutPipe[0], _stderrPipe[0]) + 1;
+
+	int sel = select(fdsNb, &readfds, NULL, NULL, &tv);
+	if (sel == -1) {
+		kill(childPid, SIGKILL);
+		waitpid(childPid, &status, 0);
+		throw ExecException("select() failed");
+	}
+
+	char buffer[CGI_READ_BUFFER];
+	ssize_t n;
+	if (FD_ISSET(_stdoutPipe[0], &readfds)) {
+		while ((n = read(_stdoutPipe[0], buffer, sizeof(buffer))) > 0)
+			_cgiOutput.append(buffer, n);
+	}
+	if (FD_ISSET(_stderrPipe[0], &readfds)) {
+		while ((n = read(_stderrPipe[0], buffer, sizeof(buffer))) > 0)
+			_cgiError.append(buffer, n);
+	}
+}
+
+/**
+ * Reads any remaining data from stdout and stderr after the CGI process has exited.
+ *
+ * Keeps only the first line of _cgiError.
+ */
+void	CgiHandler::_readPipesLeftovers() {
+	char buffer[CGI_READ_BUFFER];
 	ssize_t n;
 	while ((n = read(_stdoutPipe[0], buffer, sizeof(buffer))) > 0)
 		_cgiOutput.append(buffer, n);
@@ -98,18 +147,18 @@ void	CgiHandler::_readAllPipes() {
 	close(_stderrPipe[0]);
 }
 
+/**
+ * Checks the termination status of the CGI process and returns a Response.
+ *
+ * Throws ExecException if the process exited with error or was killed by signal.
+ */
 Response	CgiHandler::_handleStatus(int status) const {
 	if (WIFEXITED(status)) {
-		if (!_cgiOutput.empty()) {
-			Response res(_cgiOutput); // throw Response::RawException (raw response invalid syntax)
-			if (!_cgiError.empty()) // warning
-				std::cerr << FT_WARNING << "CGI (" << _executor << "): " << _cgiError << std::endl;
-			return res;
-		}
 		int exitCode = WEXITSTATUS(status);
-		if (exitCode != 0) // error
+		if (exitCode != 0)
 			throw ExecException(_cgiError.empty() ? ("Error code " + utils::toString(exitCode)) : _cgiError);
-		throw ExecException("exited with no output"); // improbable fallback
+		Response res(_cgiOutput); // throw Response::RawException if raw response invalid syntax
+		return res;
 	} else if (WIFSIGNALED(status)) {
 		int signal = WTERMSIG(status);
 		throw ExecException("process killed by signal " + utils::toString(signal));
@@ -117,7 +166,12 @@ Response	CgiHandler::_handleStatus(int status) const {
 	throw ExecException("unknown termination status"); // improbable fallback
 }
 
-// TODO: replace _error ? (It is not listed in allowed function of the subject)
+/**
+ * Redirects stdin, stdout, and stderr in the child process to the corresponding pipes.
+ *
+ * Called only in the child process before execve.
+ * Exits child process with _exit(1) if any dup2 fails.
+ */
 void	CgiHandler::_redirectIoInChild() const {
 	// redirect stdin
 	close(_stdinPipe[1]); // close writing
@@ -135,6 +189,11 @@ void	CgiHandler::_redirectIoInChild() const {
 	close(_stderrPipe[1]);
 }
 
+/**
+ * Builds the environment variables for the CGI script from the Request and LocationBlock.
+
+ * Stores them in _envp.
+ */
 void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
 	_envp.clear(); // security
 	std::map<std::string, std::string> tmp;
@@ -165,6 +224,11 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot) {
 		_envp.push_back(it->first + "=" + it->second);
 }
 
+/**
+ * Builds the argument vector for execve, including the executor and script path.
+ *
+ * Stores them in _argv.
+ */
 void	CgiHandler::_buildArgv() {
     _argv.clear(); // security
 	_argv.push_back(_executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
@@ -218,6 +282,10 @@ std::ostream&	operator<<(std::ostream& os, CgiHandler const& rhs) {
 
 // static utils
 
+/**
+ * Converts a header name (e.g., "Content-Type") into a CGI environment variable format
+ * (e.g., "HTTP_CONTENT_TYPE").
+ */
 std::string	CgiHandler::_headerToEnvVar(const std::string& headerName) {
 	std::string result = "HTTP_";
 	for (size_t i = 0; i < headerName.length(); ++i) {
@@ -230,6 +298,11 @@ std::string	CgiHandler::_headerToEnvVar(const std::string& headerName) {
 	return result;
 }
 
+/**
+ * Converts a vector of std::string into a vector of char* suitable for execve.
+ *
+ * Adds a terminating NULL at the end.
+ */
 std::vector<char*>	CgiHandler::_toCharPtrArray(const std::vector<std::string>& src) {
 	std::vector<char*> result;
 	result.reserve(src.size() + 1);

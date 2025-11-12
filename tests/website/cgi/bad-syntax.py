@@ -1,3 +1,4 @@
 #!/usr/bin/env python3
 print("Content-Type: text/html\n")
-raise Exception("Intentional error")
+
+print("The closing parenthesis is missing here ->"

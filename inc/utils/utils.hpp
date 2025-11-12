@@ -52,8 +52,6 @@ namespace utils {
 	std::string	trim(std::string const&);
 	std::string	excerpt(size_t, std::string const&);
 
-	useconds_t	secondsToMicroseconds(size_t);
-
 }
 
 #include "../src/utils/utils.tpp"
