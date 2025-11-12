@@ -38,6 +38,7 @@ class Response
 	void	setContentType(const std::string& value);
 	void	setHeader(const std::string& name, const std::string& value);
 	void	setBody(const std::string& body);
+	void	clearBody();
 	void	setConnectionFromRequest(const Request& request);
 
 	const HttpStatus& getStatus() const;

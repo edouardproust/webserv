@@ -58,6 +58,10 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 			resp = statiq.handleGet();
 		else if (method == "DELETE")
 			resp = statiq.handleDelete();
+		else if (method == "HEAD"){
+			resp = statiq.handleGet();
+			resp.clearBody();
+		}
 		// -- additional supported methods can be added here -- // TODO PUT method
 		else
 			resp = statiq.handleError(HttpStatus("method_not_allowed"));
