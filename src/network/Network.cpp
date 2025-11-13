@@ -194,7 +194,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 			}
 		}
 	}
-	//WARNING : tmp fix so the tester can move on!!!
+	//WARNING : tmp fix so the tester can move on, will be replaced by Daniel's PR
 	if (!total_request.empty() && total_request.find("\r\n\r\n") != std::string::npos)
 	{
     	if (total_request.find("Transfer-Encoding: chunked") != std::string::npos)
@@ -238,6 +238,7 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 		if (DEVMODE)
 			std::cout << response << std::endl;
 		std::string msg = response.stringify();
+		std::cout << msg << "'" << std::endl;
 		int ret = ::send(client_fd, msg.data(), msg.length(), 0);
 		if (ret == -1)
 			throw std::runtime_error("Send failed");

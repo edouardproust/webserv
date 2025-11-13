@@ -31,7 +31,8 @@ size_t const	HEADER_MAX_SIZE = 8192;
 
 // config
 
-size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)
+//size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 1024 * 1024; // 1MB (safe beacause < INT_MAX)
+size_t const	DEFAULT_MAX_CLIENT_BODY_SIZE = 200 * 1024 * 1024; // raised to 200 MB for tester
 
 // static
 

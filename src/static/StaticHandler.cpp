@@ -56,7 +56,7 @@ Response	StaticHandler::handleGet()
 			return resp;
 
 		}
-		return handleError(HttpStatus("forbidden"));
+		return handleError(HttpStatus("not_found"));
 	}
 	else if (utils::isReadableFile(_finalPath))
 		return _serveFile();
@@ -80,13 +80,13 @@ Response	StaticHandler::handleDelete()
 		return handleError(HttpStatus("internal_server_error"));
 }
 
-// TODO
 Response	StaticHandler::handleHead()
 {
-	return Response();
+	Response response = handleGet();
+	response.clearBody();
+	return response;
 }
 
-// TODO
 Response	StaticHandler::handlePut()
 {
 	return Response();
