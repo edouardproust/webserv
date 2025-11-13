@@ -44,6 +44,18 @@
 				<td><a href="http://localhost:8080/index/no-extension" class="test-link">http://localhost:8080/index/no-extension</a></td>
 				<td class="status-ok">200</td>
 				<td class="notes">Browser downloads file</td>
+			</tr><tr>
+				<td><a href="http://localhost:8080/put-demo.txt" class="test-link">http://localhost:8080/put-demo.txt</a></td>
+				<td class="status-ok">200</td>
+				<td class="notes">Demo file for PUT testing<br>
+					<small>Test PUT: <code>curl -X PUT http://localhost:8080/put-demo.txt -d "new content"</code></small>
+				</td>
+			</tr><tr>
+				<td><a href="http://localhost:8080/autoindex/put-test.txt" class="test-link">http://localhost:8080/autoindex/put-test.txt</a></td>
+				<td class="status-ok">200</td>
+				<td class="notes">Demo file in autoindex<br>
+					<small>Test PUT: <code>curl -X PUT http://localhost:8080/autoindex/put-test.txt -d "demo"</code></small>
+				</td>
 			</tr>
 
 			<!-- Autoindex Tests -->
@@ -68,7 +80,7 @@
 				<td class="notes">Custom 404 page</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/index/invalid-path" class="test-link">http://localhost:8080/index/invalid-path</a></td>
-				<td class="status-error"></td>404</td>
+				<td class="status-error">404</td>
 				<td class="notes">Built-in 404 page</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/autoindex/off/invalid" class="test-link">http://localhost:8080/autoindex/off/invalid</a></td>

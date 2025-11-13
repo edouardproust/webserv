@@ -10,8 +10,7 @@
 StaticHandler::StaticHandler(RoutingDecision const& rd)
 : _routingDecision(rd),
   _location(rd.getLocation()),
-  _finalPath(rd.getFinalPath()),
-  _request(rd.getRequest()) //tmp fix for tester
+  _finalPath(rd.getFinalPath())
 {}
 
 StaticHandler::~StaticHandler() {}
@@ -81,15 +80,15 @@ Response	StaticHandler::handleDelete()
 		return handleError(HttpStatus("internal_server_error"));
 }
 
-// For testing, just return 200 OK
+/* For testing, just return 200 OK
 Response StaticHandler::handlePost() {
 	Response response;
 	response.setStatus(HttpStatus("ok"));
 	response.setBody("random content");
-	//response.setBody(_request.getBody()); -> this is what we actually want to return for test #14
+	//response.setBody("return all the actual 100 MB characters");
 	response.setHeader("Content-Length", "100000000");
     return response;
-}
+}*/
 
 Response	StaticHandler::handleHead()
 {
@@ -100,7 +99,40 @@ Response	StaticHandler::handleHead()
 
 Response	StaticHandler::handlePut()
 {
-	return Response();
+	Response response;
+	const Request& request = _routingDecision.getRequest();
+
+	std::string directory = _finalPath;
+	if (utils::isAccessibleDirectory(_finalPath))
+        return handleError(HttpStatus("forbidden"));
+	else
+	{
+		size_t lastSlash = _finalPath.find_last_of('/');
+		if (lastSlash != std::string::npos)
+			directory = _finalPath.substr(0, lastSlash);
+    }
+	if (directory.empty())
+		directory = "/";
+	if (!utils::isWritableDirectory(directory))
+		return handleError(HttpStatus("forbidden"));
+	const std::string& body = request.getBody();
+	bool fileExists = utils::fileExists(_finalPath);
+	std::ofstream file(_finalPath.c_str(), std::ios::binary);
+	if (!file.is_open())
+		return handleError(HttpStatus("internal_server_error"));
+	file.write(body.c_str(), body.size());
+	file.close();
+    if (fileExists)
+	{
+        response.setStatus(HttpStatus("ok"));
+		response.setHeader("Content-Location", request.getPath());
+	}
+	else
+	{
+		response.setStatus(HttpStatus("created"));
+		response.setHeader("Location", request.getPath());
+	}
+	return response;
 }
 
 Response	StaticHandler::handleError(HttpStatus const& status)

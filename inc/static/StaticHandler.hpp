@@ -4,7 +4,6 @@
 #include "http/Response.hpp"
 #include "config/LocationBlock.hpp"
 #include "router/RoutingDecision.hpp"
-#include "http/Request.hpp"
 #include "utils/utils.hpp"
 #include "typedefs.hpp"
 
@@ -14,7 +13,6 @@ class StaticHandler
 	LocationBlock const*	_location;
 
 	std::string				_finalPath;
-	Request					_request;
 
 	Response _serveFile();
 

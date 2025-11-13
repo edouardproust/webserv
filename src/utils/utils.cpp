@@ -53,6 +53,10 @@ bool	utils::isAccessibleDirectory(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFDIR, R_OK | X_OK);
 }
 
+bool	utils::isWritableDirectory(const std::string& path) {
+	return _checkFileTypeAndAccess(path, S_IFDIR, W_OK | X_OK);
+}
+
 bool	utils::isReadableFile(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFREG, R_OK);
 }

@@ -82,8 +82,8 @@ void	Router::_handleStaticDecision(Response& resp, std::string const& method, St
 		resp = statiq.handleHead();
 	else if (method == "PUT")
 		resp = statiq.handlePut();
-	else if (method == "POST") //TMP only to check test #14 since it fails with broken pipe from CGI
-		resp = statiq.handlePost();
+	//else if (method == "POST") //TMP only to check test #14 since it fails with broken pipe from CGI
+	//	resp = statiq.handlePost();
 	// -- additional supported methods can be added here --
 	else
 		resp = statiq.handleError(HttpStatus("method_not_allowed"));

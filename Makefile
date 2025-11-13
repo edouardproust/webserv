@@ -92,7 +92,7 @@ re: fclean all
 
 test: all
 	@clear
-	./$(NAME) ./tests/42tester.config
+	./$(NAME) ./tests/webserv.config
 
 test_dev: dev
 	@clear
