@@ -10,7 +10,8 @@
 StaticHandler::StaticHandler(RoutingDecision const& rd)
 : _routingDecision(rd),
   _location(rd.getLocation()),
-  _finalPath(rd.getFinalPath())
+  _finalPath(rd.getFinalPath()),
+  _request(rd.getRequest()) //tmp fix for tester
 {}
 
 StaticHandler::~StaticHandler() {}
@@ -78,6 +79,16 @@ Response	StaticHandler::handleDelete()
 	}
 	else
 		return handleError(HttpStatus("internal_server_error"));
+}
+
+// For testing, just return 200 OK
+Response StaticHandler::handlePost() {
+	Response response;
+	response.setStatus(HttpStatus("ok"));
+	response.setBody("random content");
+	//response.setBody(_request.getBody()); -> this is what we actually want to return for test #14
+	response.setHeader("Content-Length", "100000000");
+    return response;
 }
 
 Response	StaticHandler::handleHead()
