@@ -10,11 +10,11 @@ int main(int argc, char** argv) {
 	sig::setup();
 	try {
 		Config config(argv[1]);
-		if (DEVMODE) std::cout << config << std::endl;
+		Log::dev("debug", "Config:\n" + utils::str(config));
 		Network network(config);
 		network.startServers();
 	} catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
+		Log::prod("error", e.what());
 		return 1;
 	}
 

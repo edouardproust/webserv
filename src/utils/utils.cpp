@@ -129,6 +129,14 @@ char	utils::hexToChar(const std::string& hex)
 	return static_cast<char>(value);
 }
 
+std::string	utils::toUpper(std::string const& s) {
+	std::string up = s;
+	for (std::string::size_type i = 0; i < s.size(); ++i) {
+		up[i] = std::toupper(static_cast<unsigned char>(s[i]));
+	}
+	return up;
+}
+
 std::string	utils::readFile(const std::string& path)
 {
 	std::ifstream file(path.c_str(), std::ios::binary);
@@ -272,9 +280,20 @@ std::string	utils::trim(const std::string& str)
  *
  * Will display `... (x bytes total)` after a truncated text.
  */
-std::string	utils::excerpt(size_t n, std::string const& str) {
-	std::string excerpt = str.substr(0, n);
-	if (str.size() > n)
-    	excerpt += "... (" + toString(str.size()) + " bytes total)";
+std::string	utils::excerpt(size_t n, std::string const& s) {
+	std::string excerpt = s.substr(0, n);
+	if (s.size() > n)
+    	excerpt += "... (" + str(s.size()) + " bytes total)";
 	return excerpt;
+}
+
+/**
+ * Get current time in a given format (UTC).
+ */
+std::string utils::getCurrentDate(std::string const& format) {
+	time_t now = time(0);
+	struct tm* timeinfo = gmtime(&now);
+	char buffer[64];
+	strftime(buffer, sizeof(buffer), format.c_str(), timeinfo);
+	return buffer;
 }

@@ -4,7 +4,7 @@
 class ServerBlock;
 #include "http/Request.hpp"
 #include "utils/utils.hpp"
-#include "utils/PrintableString.hpp"
+#include "utils/Log.hpp"
 #include "typedefs.hpp"
 
 class LocationBlock {

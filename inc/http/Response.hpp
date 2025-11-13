@@ -16,7 +16,6 @@ class Response
 
 	void		_updateContentLength();
 	void		_manageContentType();
-	std::string	_getCurrentDate() const;
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
 	void		_initDefaultHeaders();

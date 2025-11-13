@@ -3,7 +3,7 @@
 
 # include "http/HttpStatus.hpp"
 # include "utils/utils.hpp"
-# include "utils/PrintableString.hpp"
+# include "utils/Log.hpp"
 # include <iostream>
 # include <map>
 # include <set>
@@ -25,6 +25,7 @@ class Request
 		std::map<std::string, std::string> _headers;
 		std::string	_contentType;
 		std::string	_body;
+		std::string	_rawRequest;
 
 	public:
 
@@ -49,6 +50,7 @@ class Request
 		const std::map<std::string, std::string>&	getHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
+		const std::string&	getRawRequest() const;
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
@@ -61,6 +63,7 @@ class Request
 		void	addHeader(std::string const& name, std::string const& value);
 		void	setContentType(const std::string& value);
 		void	setBody(std::string const& body);
+		void	setRawRequest(std::string const& rawRequest);
 };
 
 std::ostream&	operator<<(std::ostream& os, const Request& request);

@@ -177,7 +177,7 @@ std::string	StaticHandler::_autoindexHtml() const
 		std::string fullPath = utils::pathsJoin(_finalPath, files[i]);
 		bool isDir = utils::isAccessibleDirectory(fullPath);
 		size_t fileSize = utils::getFileSize(fullPath);
-		std::string sizeStr = isDir ? "-" : utils::toString(fileSize);
+		std::string sizeStr = isDir ? "-" : utils::str(fileSize);
 		struct stat fileStat;
 		std::string dateStr = "?";
 		if (stat(fullPath.c_str(), &fileStat) == 0)
@@ -206,10 +206,10 @@ std::string StaticHandler::_errorPageHtml(HttpStatus const& status) const
 		"<!DOCTYPE html>"
 		"<html>"
 		"<head>"
-		" <title>" + status.toString() + "</title>\n"
+		" <title>" + status.toStr() + "</title>\n"
 		"</head>\n"
 		"<body>\n"
-		" <center><h1>" + status.toString() + "</h1></center>\n"
+		" <center><h1>" + status.toStr() + "</h1></center>\n"
 		" <hr><center>webserv/1.0</center>\n"
 		" </body>\n"
 		"</html>"

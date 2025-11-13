@@ -2,12 +2,16 @@
 #include <sstream>
 #include <set>
 
-template<typename T>
-std::string	utils::toString(T const& value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
+/**
+ * Turns any printable value into a string.
+ */
+template <typename T>
+std::string	utils::str(T const& value) {
+	std::ostringstream oss;
+	oss << value;
+	return oss.str();
 }
+
 
 template<typename T>
 bool	utils::hasVectorUniqEntries(std::vector<T> const& vec) {

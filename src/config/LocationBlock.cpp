@@ -227,11 +227,11 @@ void LocationBlock::_setReturn(Tokens const& tokens) {
 		target = tokens[2];
 	}
 	if (code < 100 || code > 599)
-		throw std::runtime_error("Code " + utils::toString(code) + " is out of range 100-599");
+		throw std::runtime_error("Code " + utils::str(code) + " is out of range 100-599");
 	if (code >= 300 && code < 400 && target.empty())
-		throw std::runtime_error("Target missing for redirection " + utils::toString(code));
+		throw std::runtime_error("Target missing for redirection " + utils::str(code));
 	if (_server->getErrorPages().find(code) != _server->getErrorPages().end())
-        throw std::runtime_error("Return '" + utils::toString(code) + "' conflicts with error_page in server block");
+        throw std::runtime_error("Return '" + utils::str(code) + "' conflicts with error_page in server block");
 	_return.first = code;
 	_return.second = target;
 }
@@ -530,10 +530,10 @@ std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
 
 	std::pair<int, std::string> const& ret = rhs.getReturn();
 	os << in << "- return: " << (ret.first != -1
-		? utils::toString(ret.first) + " -> " + PrintableString(ret.second)
+		? utils::str(ret.first) + " -> " + PrintableString(ret.second)
 		: FT_EMPTY) << "\n";
 
-	os << in << "- client_max_body_size: " << (rhs.getClientMaxBodySizeSet() ? utils::toString(rhs.getClientMaxBodySize()) : FT_EMPTY) << "\n";
+	os << in << "- client_max_body_size: " << (rhs.getClientMaxBodySizeSet() ? utils::str(rhs.getClientMaxBodySize()) : FT_EMPTY) << "\n";
 	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";
 
 	std::vector<std::string> const& indexFiles = rhs.getIndexFiles();

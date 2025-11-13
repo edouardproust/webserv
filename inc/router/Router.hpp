@@ -5,7 +5,6 @@
 #include "router/RedirectionHandler.hpp"
 #include "static/StaticHandler.hpp"
 #include "cgi/CgiHandler.hpp"
-#include "colors.hpp"
 
 class Router
 {

@@ -14,8 +14,8 @@ namespace utils {
 
 	// templated
 
-	template<typename T>
-	std::string	toString(T const&);
+	template <typename T>
+	std::string	str(T const&);
 
 	template<typename T>
 	bool	hasVectorUniqEntries(std::vector<T> const&);
@@ -38,6 +38,8 @@ namespace utils {
 	size_t	toSizeT(std::string const&);
 	size_t	hexToSizeT(std::string const&);
 	char	hexToChar(std::string const&);
+	std::string	toUpper(std::string const& s);
+
 
 	std::string	readFile(std::string const&);
 	std::string	getFileExtension(std::string const&);
@@ -51,6 +53,7 @@ namespace utils {
 
 	std::string	trim(std::string const&);
 	std::string	excerpt(size_t, std::string const&);
+	std::string	getCurrentDate(std::string const&);
 
 }
 

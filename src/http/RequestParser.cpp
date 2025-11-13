@@ -20,7 +20,8 @@ RequestParser::~RequestParser() {}
 
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
-	std::cout << "RAW REQUEST DATA: '" << rawRequest << "'" << std::endl; // DEBUG
+	request.setRawRequest(rawRequest);
+
 	if (rawRequest.empty())
 		return request.setStatus(HttpStatus("bad_request"));
 	size_t requestStart;

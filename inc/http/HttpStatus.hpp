@@ -2,13 +2,13 @@
 #define HTTP_STATUS_HPP
 
 #include "utils/utils.hpp"
-#include "utils/PrintableString.hpp"
+#include "utils/Log.hpp"
 #include <string>
 #include <sstream>
 
 class HttpStatus {
 
-	struct Entry { int code; char const* reason; char const* slug; };
+	struct Entry { int code; std::string const reason; std::string const slug; };
 
 	int			_code;		// eg. 404
 	std::string _reason;	// eg. "Not Found"
@@ -37,7 +37,7 @@ class HttpStatus {
 		std::string const&	getReason() const;
 		std::string const&	getSlug() const;
 
-		std::string			toString() const;
+		std::string			toStr() const;
 		static bool			isError(int);
 
 };

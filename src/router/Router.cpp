@@ -19,7 +19,7 @@ Router::~Router() {}
  */
 Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen) {
 	RoutingDecision rd(config, req, listen);
-	if (DEVMODE) std::cout << rd << std::endl;
+	Log::dev("debug", rd);
 
 	Response resp;
 	StaticHandler statiq(rd);
@@ -39,8 +39,8 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 		resp = statiq.handleError(HttpStatus("internal_server_error"));
 
 	resp.setConnectionFromRequest(req);
-	if (DEVMODE && statiq.hasUpdatedFinalPath())
-		std::cout << "StaticHandler:\n" << statiq << std::endl;
+	if (statiq.hasUpdatedFinalPath())
+		Log::dev("debug", "StaticHandler:\n" + utils::str(statiq));
 	return resp;
 }
 
@@ -61,13 +61,13 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, Stati
 		try {
 			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptName);
 		} catch (CgiHandler::ExecException& e) {
-			std::cerr << FT_WARNING << "CGI execution error: " << scriptName << ": " << e.what() << std::endl;
+			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("internal_server_error"));
 		} catch (Response::RawException& e) {
-			std::cerr << FT_WARNING << "CGI invalid raw output: " << scriptName << ": " << e.what() << std::endl;
+			Log::prod("warning", "CGI invalid raw output: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("bad_gateway"));
 		} catch (CgiHandler::TimeoutException& e) {
-			std::cerr << FT_WARNING << "CGI timeout :" << scriptName << ": " << e.what() << std::endl;
+			Log::prod("warning", "CGI timeout :" + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("timeout"));
 		}
 	}

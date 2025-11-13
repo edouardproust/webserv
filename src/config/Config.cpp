@@ -151,7 +151,7 @@ size_t	Config::parseSize(std::string const& sizeStr) {
 	size_t number = utils::toSizeT(numberStr); // throw exception if empty, invalid number or overflow
 	if (number > (MAX_SIZE_T / multiplier)) // this calculation is overflow-safe
 		throw std::runtime_error("Too large number: "
-			+ sizeStr + " (max is " + utils::toString(MAX_SIZE_T) + " bytes)");
+			+ sizeStr + " (max is " + utils::str(MAX_SIZE_T) + " bytes)");
 	return number * multiplier;
 }
 
@@ -160,7 +160,6 @@ std::vector<ServerBlock> const&	Config::getServers() const {
 }
 
 std::ostream&	operator<<(std::ostream& os, Config const& rhs) {
-	os << "Config:\n";
 	std::vector<ServerBlock> servers = rhs.getServers();
 	if (!servers.empty()) {
 		for (size_t i = 0; i < servers.size(); ++i) {

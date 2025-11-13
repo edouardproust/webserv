@@ -26,6 +26,7 @@ BASE_SRC_FILES = \
 	cgi/CgiHandler.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \
+	utils/Log.cpp \
 	utils/PrintableString.cpp \
 
 DEV_SRC_FILES =

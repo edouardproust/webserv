@@ -2,7 +2,6 @@
 #define SOCKET_HPP
 
 #include "config/Config.hpp"
-#include "colors.hpp"
 #include <fcntl.h>
 #include <cstring>
 

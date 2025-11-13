@@ -26,14 +26,16 @@ html_template = """<!DOCTYPE html>
 
 		<p><strong>Request Method:</strong> {request_method}</p>
 		<p>Current server time: {current_time}</p>
-		<p>Your user agent: {user_agent}</p>
 
-		{post_section}
 		{get_section}
+		{post_section}
 		{raw_body_section}
 
-		<h2>Request Headers:</h2>
-		<pre>{headers_section}</pre>
+		<h2>Environment variables:</h2>
+		<h3>Request headers</h3>
+		<pre>{env_headers_section}</pre>
+		<h3>Others</h3>
+		<pre>{env_others_section}</pre>
 
 	</body>
 </html>"""
@@ -42,12 +44,20 @@ html_template = """<!DOCTYPE html>
 def escape(text):
 	return html.escape(str(text))
 
-def get_headers():
+def get_header_env_vars():
 	headers = []
 	for key, value in os.environ.items():
 		if key.startswith('HTTP_'):
 			headers.append(f"{escape(key)} = {escape(value)}")
 	return "\n".join(headers)
+
+
+def get_other_env_vars():
+	others = []
+	for key, value in os.environ.items():
+		if not key.startswith('HTTP_'):
+			others.append(f"{escape(key)} = {escape(value)}")
+	return "\n".join(others)
 
 def get_form_data(form, method):
 	if not form.keys():
@@ -56,18 +66,35 @@ def get_form_data(form, method):
 	data = []
 	for key in form.keys():
 		field = form[key]
-		if isinstance(field, list):
-			values = [escape(item.value) for item in field]
-			value = ", ".join(values)
-		else:
-			value = escape(field.value)
-		data.append(f"{escape(key)} = {value}")
+		if key not in get_params:
+			if isinstance(field, list):
+				values = [escape(item.value) for item in field]
+				value = ", ".join(values)
+			else:
+				value = escape(field.value)
+			data.append(f"{escape(key)} = {value}")
 	return "\n".join(data)
 
 # Build sections
 request_method = escape(os.environ.get('REQUEST_METHOD', 'GET'))
 current_time = escape(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-user_agent = escape(os.environ.get('HTTP_USER_AGENT', '(unknown)'))
+
+# GET section
+get_params = os.environ.get('QUERY_STRING', '')
+if get_params:
+	get_data = []
+	for param in get_params.split('&'):
+		if '=' in param:
+			key, value = param.split('=', 1)
+			get_data.append(f"{escape(key)} = {escape(value)}")
+		else:
+			get_data.append(f"{escape(param)} = ")
+	get_section = f"""
+		<h2>GET Parameters:</h2>
+		<pre>{"\n".join(get_data)}</pre>
+	"""
+else:
+    get_section = ""
 
 # POST section
 if request_method == 'POST' and form.keys():
@@ -95,23 +122,6 @@ else:
 		</form>
 	"""
 
-# GET section
-get_params = os.environ.get('QUERY_STRING', '')
-if get_params:
-	get_data = []
-	for param in get_params.split('&'):
-		if '=' in param:
-			key, value = param.split('=', 1)
-			get_data.append(f"{escape(key)} = {escape(value)}")
-		else:
-			get_data.append(f"{escape(param)} = ")
-	get_section = f"""
-		<h2>GET Parameters:</h2>
-		<pre>{"\n".join(get_data)}</pre>
-	"""
-else:
-    get_section = ""
-
 # Raw body section (for other methods like PUT)
 raw_body_section = ""
 if request_method not in ['GET', 'POST'] or (request_method == 'POST' and not form.keys()):
@@ -127,16 +137,17 @@ if request_method not in ['GET', 'POST'] or (request_method == 'POST' and not fo
 	except:
 		pass
 
-# Headers section
-headers_section = get_headers()
+# Environment variables sections
+env_headers_section = get_header_env_vars()
+env_others_section = get_other_env_vars()
 
 # Output the final HTML
 print(html_template.format(
 	request_method=request_method,
 	current_time=current_time,
-	user_agent=user_agent,
-	post_section=post_section,
 	get_section=get_section,
+	post_section=post_section,
 	raw_body_section=raw_body_section,
-	headers_section=headers_section
+	env_headers_section=env_headers_section,
+	env_others_section=env_others_section
 ))

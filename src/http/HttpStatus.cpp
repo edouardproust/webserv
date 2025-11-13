@@ -68,7 +68,7 @@ int	HttpStatus::getCode() const {
 }
 
 std::string	HttpStatus::getCodeStr() const {
-	return utils::toString(_code);
+	return utils::str(_code);
 }
 
 std::string const&	HttpStatus::getReason() const {
@@ -82,7 +82,7 @@ std::string const&	HttpStatus::getSlug() const {
 /**
  * Returns the HttpStatus as a string like "404 Not Found".
  */
-std::string	HttpStatus::toString() const {
+std::string	HttpStatus::toStr() const {
 	std::ostringstream oss;
 	oss << _code << " " << _reason;
 	return oss.str();

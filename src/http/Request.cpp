@@ -141,6 +141,10 @@ const std::string& Request::getBody() const
 	return this->_body;
 }
 
+std::string const&	Request::getRawRequest() const {
+	return _rawRequest;
+}
+
 void	Request::setStatus(HttpStatus const& status)
 {
 	this->_status = status;
@@ -196,9 +200,12 @@ void	Request::setBody(const std::string& body)
 	this->_body = body;
 }
 
+void	Request::setRawRequest(const std::string& rawRequest) {
+	this->_rawRequest = rawRequest;
+}
+
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
-	os << "Request:\n";
 	os << "- Status: " << request.getStatus() << "\n";
 	os << "- Method: " << PrintableString(request.getMethod()) << "\n";
 	os << "- URI: " << PrintableString(request.getUri()) << "\n";
@@ -214,5 +221,6 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << PrintableString(utils::excerpt(EXCERPT_LENGTH, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
+	os << "- raw request: " << PrintableString(request.getRawRequest()) << "\n";
     return os;
 }

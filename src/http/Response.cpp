@@ -36,7 +36,7 @@ Response::RawException::RawException(std::string const& msg)
 
 void	Response::_initDefaultHeaders() {
 	_headers["server"] = SERVER_SOFTWARE;
-	_headers["date"] = _getCurrentDate();
+	_headers["date"] = utils::getCurrentDate("%a, %d %b %Y %H:%M:%S GMT");
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
 }
@@ -130,15 +130,6 @@ void	Response::_manageContentType()
 		_headers["content-type"] = "text/html";
 }
 
-std::string Response::_getCurrentDate() const
-{
-	time_t now = time(0);
-	struct tm* timeinfo = gmtime(&now);
-	char buffer[80];
-	strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
-	return buffer;
-}
-
 bool	Response::_hasHeader(const std::string& keyLowcase) const {
 	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
 		if (utils::toLowerCase(it->first) == keyLowcase)
@@ -183,8 +174,7 @@ std::string Response::_buildHeaders() const
 
 std::ostream& operator<<(std::ostream& os, const Response& response)
 {
-	os << "Response:\n";
-	os << "- Status: " << PrintableString(response.getStatus().toString()) << "\n";
+	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = response.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
