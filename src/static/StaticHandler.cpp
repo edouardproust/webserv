@@ -79,6 +79,14 @@ Response	StaticHandler::handleDelete()
 	else
 		return handleError(HttpStatus("internal_server_error"));
 }
+/* To test #14 with Static instead - don't forget to set POST also inside _handleStaticDecision()
+Response StaticHandler::handlePost() {
+    Response response;
+    response.setStatus(HttpStatus("ok"));
+	response.setHeader("Content-Length", "100000000");
+    response.setBody("we need to send the exact same characters back");
+    return response;
+}*/
 
 Response	StaticHandler::handleHead()
 {

@@ -37,6 +37,7 @@ class StaticHandler
 
 		Response	handleGet();
 		Response	handleDelete();
+	//	Response	handlePost();
 		Response	handleHead();
 		Response	handlePut();
 		Response	handleError(HttpStatus const& status);
