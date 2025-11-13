@@ -10,9 +10,9 @@
 
 class Log {
 
-	#define DEBUG_STREAM	std::cout
+	#define DEBUG_STREAM	std::cerr
 	#define ACCESS_STREAM	std::cout
-	#define ERROR_STREAM	std::cout
+	#define ERROR_STREAM	std::cerr
 
 	#define RESET     	"\033[0m"
 	#define BOLD		"\033[1m"

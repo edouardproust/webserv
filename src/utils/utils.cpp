@@ -292,7 +292,7 @@ std::string	utils::excerpt(size_t n, std::string const& s) {
  */
 std::string utils::getCurrentDate(std::string const& format) {
 	time_t now = time(0);
-	struct tm* timeinfo = gmtime(&now);
+	struct tm* timeinfo = localtime(&now);
 	char buffer[64];
 	strftime(buffer, sizeof(buffer), format.c_str(), timeinfo);
 	return buffer;

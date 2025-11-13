@@ -3,7 +3,7 @@
 const Log::Entry Log::TYPE_TABLE[] = {
 	{"ok", BOLD GREEN, ACCESS_STREAM}, // Succeeded requests
 	{"event", BLUE, ACCESS_STREAM}, // Request event
-	{"status", BOLD CYAN, ACCESS_STREAM}, // Status, metrics
+	{"status", CYAN, ACCESS_STREAM}, // Status, metrics
 	{"info", YELLOW, ACCESS_STREAM}, // General acitivity informations
 
 	{"error", BOLD RED, ERROR_STREAM}, // Critical errors

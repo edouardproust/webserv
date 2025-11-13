@@ -139,7 +139,6 @@ std::string const&	RoutingDecision::getErrorSlug() const {
 
 std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
 	int d = rhs.getDecision();
-	os << "RoutingDecision:\n";
 	os << "- Decision: " << (d == RoutingDecision::ERROR ? "ERROR"
 			: (d == RoutingDecision::REDIRECTION ? "REDIRECTION"
 				: (d == RoutingDecision::STATIC ? "STATIC"

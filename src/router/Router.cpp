@@ -19,7 +19,7 @@ Router::~Router() {}
  */
 Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen) {
 	RoutingDecision rd(config, req, listen);
-	Log::dev("debug", rd);
+	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
 
 	Response resp;
 	StaticHandler statiq(rd);
@@ -40,7 +40,7 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 
 	resp.setConnectionFromRequest(req);
 	if (statiq.hasUpdatedFinalPath())
-		Log::dev("debug", "StaticHandler:\n" + utils::str(statiq));
+		Log::dev("debug", "Static Handler:\n" + utils::str(statiq));
 	return resp;
 }
 
