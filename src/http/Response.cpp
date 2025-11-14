@@ -106,6 +106,12 @@ void	Response::setBody(const std::string& body)
 	_manageContentType();
 }
 
+void	Response::clearBody()
+{
+	_body.clear();
+	_manageContentType();
+}
+
 void	Response::setConnectionFromRequest(const Request& request)
 {
 	const std::map<std::string, std::string>& headers = request.getHeaders();

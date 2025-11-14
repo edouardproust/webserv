@@ -88,7 +88,7 @@ std::string	RedirectionHandler::_generateRedirectionHtml() const
 		html << "<p>The document has moved <a href=\"" << _path << "\">here</a>.</p>"
 			 << "<p>If you are not redirected automatically, follow the <a href=\"" << _path << "\">link</a>.</p>";
 	}
-	html << "<hr><center>" << SERVER_NAME << SERVER_VERSION << "</center>"
+	html << "<hr><center>" << SERVER_SOFTWARE << "</center>"
 		 << "</body>"
 		 << "</html>";
 	return html.str();

@@ -56,7 +56,7 @@ Response	StaticHandler::handleGet()
 			return resp;
 
 		}
-		return handleError(HttpStatus("forbidden"));
+		return handleError(HttpStatus("not_found"));
 	}
 	else if (utils::isReadableFile(_finalPath))
 		return _serveFile();
@@ -80,16 +80,59 @@ Response	StaticHandler::handleDelete()
 		return handleError(HttpStatus("internal_server_error"));
 }
 
-// TODO
+/* For testing, just return 200 OK
+Response StaticHandler::handlePost() {
+	Response response;
+	response.setStatus(HttpStatus("ok"));
+	response.setBody("random content");
+	//response.setBody("return all the actual 100 MB characters");
+	response.setHeader("Content-Length", "100000000");
+    return response;
+}*/
+
 Response	StaticHandler::handleHead()
 {
-	return Response();
+	Response response = handleGet();
+	response.clearBody();
+	return response;
 }
 
-// TODO
 Response	StaticHandler::handlePut()
 {
-	return Response();
+	Response response;
+	const Request& request = _routingDecision.getRequest();
+
+	std::string directory = _finalPath;
+	if (utils::isAccessibleDirectory(_finalPath))
+        return handleError(HttpStatus("forbidden"));
+	else
+	{
+		size_t lastSlash = _finalPath.find_last_of('/');
+		if (lastSlash != std::string::npos)
+			directory = _finalPath.substr(0, lastSlash);
+    }
+	if (directory.empty())
+		directory = "/";
+	if (!utils::isWritableDirectory(directory))
+		return handleError(HttpStatus("forbidden"));
+	const std::string& body = request.getBody();
+	bool fileExists = utils::fileExists(_finalPath);
+	std::ofstream file(_finalPath.c_str(), std::ios::binary);
+	if (!file.is_open())
+		return handleError(HttpStatus("internal_server_error"));
+	file.write(body.c_str(), body.size());
+	file.close();
+    if (fileExists)
+	{
+        response.setStatus(HttpStatus("ok"));
+		response.setHeader("Content-Location", request.getPath());
+	}
+	else
+	{
+		response.setStatus(HttpStatus("created"));
+		response.setHeader("Location", request.getPath());
+	}
+	return response;
 }
 
 Response	StaticHandler::handleError(HttpStatus const& status)
@@ -156,13 +199,16 @@ std::string StaticHandler::_welcomePageHtml() const
  */
 std::string	StaticHandler::_autoindexHtml() const
 {
+	std::string currentPath = _routingDecision.getRequest().getPath();
+	if (!currentPath.empty() && currentPath[currentPath.length() - 1] != '/')
+		currentPath += "/";
 	std::stringstream html;
-	html << "<html>\n<head><title>Index of " << _finalPath << "</title></head>\n<body>\n"
-		 << "<h1>Index of " << _finalPath << "</h1><hr><pre>\n"
+	html << "<html>\n<head><title>Index of " << currentPath << "</title></head>\n<body>\n"
+		 << "<h1>Index of " << currentPath << "</h1><hr><pre>\n"
 		 << "<a href=\"../\">../</a>\n";
 	DIR* dir = opendir(_finalPath.c_str());
 	std::vector<std::string> files;
-	struct dirent* entry; //required by readdir
+	struct dirent* entry;
 	while ((entry = readdir(dir)) != NULL)
 	{
 		std::string name = entry->d_name;
@@ -183,7 +229,7 @@ std::string	StaticHandler::_autoindexHtml() const
 		if (stat(fullPath.c_str(), &fileStat) == 0)
 			dateStr = _getCurrentDateLocal(fileStat.st_mtime);
 		std::string displayName = files[i] + (isDir ? "/" : "");
-		html << "<a href=\"" << files[i] << (isDir ? "/" : "") << "\">" 
+		html << "<a href=\"" << currentPath << files[i] << (isDir ? "/" : "") << "\">"
 			 << displayName << "</a>"
 			 << std::setw(50 - displayName.length()) << " "
 			 << dateStr << std::setw(20) << sizeStr << "\n";

@@ -155,53 +155,6 @@ void Network::_handleRecvError(int client_fd, struct epoll_event &events_setup)
 	close(client_fd);
 }
 
-// void Network::recv(int client_fd, struct epoll_event &events_setup)
-// {
-// 	std::cout
-// 		<< FT_EVENT
-// 		<< "Recv event happened on fd "
-// 		<< FT_HIGH_LIGHT_COLOR << client_fd << RESET_COLOR
-// 		<< "." << std::endl;
-
-// 	char client_buffer[FT_DEFAULT_CLIENT_BUFFER_SIZE];
-//     std::string& total_request = _request_list[client_fd];
-// 	int bytes;
-
-// 	while (sig::keepRunning())
-// 	{
-// 		bytes = ::recv(client_fd, client_buffer, FT_DEFAULT_CLIENT_BUFFER_SIZE, 0);
-
-// 		if (bytes > 0)
-// 		{
-// 			std::cout << FT_EVENT << "Receiving " << bytes
-// 					  << ((bytes <= 1) ? " byte." : " bytes.")
-// 					  << std::endl;
-// 			total_request.append(client_buffer, bytes);
-// 		}
-// 		else if (bytes == 0)
-// 		{
-// 			_handleClientDisconnect(client_fd, events_setup);
-// 			return;
-// 		}
-// 		else // bytes == -1
-// 		{
-// 			if (errno == EAGAIN || errno == EWOULDBLOCK)
-// 				break; // No more data to read right now
-// 			else
-// 			{
-// 				_handleRecvError(client_fd, events_setup);
-// 				return;
-// 			}
-// 		}
-// 	}
-// 	if (!total_request.empty() && total_request.find("\r\n\r\n") != std::string::npos)
-// 	{
-// 		events_setup.data.fd = client_fd;
-// 		events_setup.events = EPOLLOUT;
-// 		epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);
-// 	}
-// }
-
 void Network::recv(int client_fd, struct epoll_event &events_setup)
 {
     std::cout
@@ -362,12 +315,7 @@ bool Network::_shouldCloseConnection(const Request& request, const Response& res
         }
     }
 
-    // Regra 2: É HTTP/1.0? (O default é 'close' a menos que peçam 'keep-alive')
-    if (request.getVersion() == "HTTP/1.0" && connection_header != "keep-alive") {
-        return true;
-    }
-
-    // Regra 3: O servidor decidiu fechar?
+    // Regra 2: O servidor decidiu fechar?
     const std::map<std::string, std::string>& respHeaders = response.getHeaders();
     std::map<std::string, std::string>::const_iterator resp_it = respHeaders.find("Connection");
 

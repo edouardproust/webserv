@@ -1,0 +1,1 @@
+This is a demo file for PUT testing. Use: curl -X PUT http://localhost:8080/put-demo.txt -d 'new content'
