@@ -8,6 +8,7 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 # ------- CONFIG --------
 
 CONFIG_FILE = ./tests/webserv.config
+CONFIG_FILE_42 = ./tests/ubuntu_tester.config
 
 LOG_DIR = log
 LOG_ACCESS = $(LOG_DIR)/access.log
@@ -68,7 +69,7 @@ DEPS_FLAGS = -MMD -MP
 
 # ------- Rules -------
 
-.PHONY: all clean fclean re dev test test_dev
+.PHONY: all clean fclean re dev test_prod test_dev test_42
 
 all: $(NAME)
 
@@ -106,4 +107,8 @@ test_prod: all
 
 test_dev: dev
 	@clear
-	valgrind ./$(NAME_DEV) ./tests/webserv.config
+	valgrind ./$(NAME_DEV) $(CONFIG_FILE)
+
+test_42: dev
+	@clear
+	./$(NAME_DEV) $(CONFIG_FILE_42)
