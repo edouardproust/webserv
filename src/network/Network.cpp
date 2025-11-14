@@ -301,9 +301,6 @@ bool Network::_isRequestComplete(const std::string& total_request)
     }
     return true;
 }
-/* ... (includes, construtor, destrutor, recv, _isRequestComplete, etc.) ... */
-/* ... (tudo igual até aqui) ... */
-
 void Network::send(int client_fd, struct epoll_event &events_setup)
 {
     std::cout
@@ -347,14 +344,10 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
 }
 
 
-// --- NOVAS FUNÇÕES HELPER ---
-
 bool Network::_shouldCloseConnection(const Request& request, const Response& response)
 {
-    // --- LÓGICA KEEP-ALIVE ---
     std::string connection_header;
 
-    // Regra 1: O cliente pediu para fechar?
     const std::map<std::string, std::string>& reqHeaders = request.getHeaders();
     std::map<std::string, std::string>::const_iterator it = reqHeaders.find("Connection");
     
@@ -409,8 +402,6 @@ void Network::_manageConnection(int client_fd, bool should_close, struct epoll_e
     }
 }
 
-
-/* ... (Resto do ficheiro, como a sobrecarga do operador << e as exceções) ... */
 int Network::getEpollFd() const {
 	return _epoll;
 }
