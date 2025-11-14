@@ -67,7 +67,7 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, Stati
 			Log::prod("warning", "CGI invalid raw output: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("bad_gateway"));
 		} catch (CgiHandler::TimeoutException& e) {
-			Log::prod("warning", "CGI timeout :" + scriptName + ": " + e.what());
+			Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("timeout"));
 		}
 	}
