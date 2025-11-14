@@ -383,7 +383,7 @@ bool Network::_shouldCloseConnection(const Request& request, const Response& res
     }
 
     if (resp_it != respHeaders.end() && resp_it->second == "close") {
-        return true; // Servidor (Response) decidiu fechar
+        return true; 
     }
     
     return false; // Default: keep-alive
@@ -391,7 +391,7 @@ bool Network::_shouldCloseConnection(const Request& request, const Response& res
 
 void Network::_manageConnection(int client_fd, bool should_close, struct epoll_event &events_setup)
 {
-    _request_list.erase(client_fd); // Limpa o pedido em qualquer caso
+    _request_list.erase(client_fd); 
 
     if (should_close)
     {
@@ -403,8 +403,6 @@ void Network::_manageConnection(int client_fd, bool should_close, struct epoll_e
     else
     {
         std::cout << FT_EVENT << "Connection: keep-alive. Resetting fd " << client_fd << " to Recv." << std::endl;
-        // Não apaga do _client_server_map, o cliente continua ligado
-        
         events_setup.data.fd = client_fd;
         events_setup.events = EPOLLIN;
         epoll_ctl(_epoll, EPOLL_CTL_MOD, client_fd, &events_setup);

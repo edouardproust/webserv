@@ -12,7 +12,7 @@ class LocationBlock {
 	ServerBlock const*			_server;				// Pointer to parent server block, set during validation
 	std::string					_path;					// URI prefix (e.g. "/cgi-bin/")
 	std::string					_autoindex;				// optional
-	std::set<std::string>		_allowedMethods;			// optional (if empty, all methods are allowed)
+	std::set<std::string>		_allowedMethods;		// optional (if empty, all methods are allowed)
 	std::pair<int, std::string>	_return;				// optional (e.g. {"301", "/newpath/"})
 	size_t						_clientMaxBodySize; 	// optional, overrides server limit.
 	bool 						_isSetClientMaxBodySize;	// true if clientMaxBodySize is set in this location.

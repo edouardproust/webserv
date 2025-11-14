@@ -184,15 +184,15 @@ std::string Response::_buildHeaders() const
 std::ostream& operator<<(std::ostream& os, const Response& response)
 {
 	os << "Response:\n";
-	os << "- Status: " << response.getStatus().getCode() << " " << response.getStatus().getReason() << "\n";
+	os << "- Status: " << PrintableString(response.getStatus().toString()) << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	const std::map<std::string, std::string>& headers = response.getHeaders();
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
-			os << "  - " << it->first << ": " << it->second << "\n";
+			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n[" << utils::excerpt(EXCERPT_LENGTH, response.stringify()) << "]\n";
+	os << "- Raw HTTP Response Preview:\n" << PrintableString(utils::excerpt(EXCERPT_LENGTH, response.stringify())) << "\n";
 	return os;
 }
 
@@ -217,12 +217,15 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 
 	// Split headers and body
 	size_t headerEnd = rawResponse.find("\r\n\r\n");
-	if (headerEnd == std::string::npos)
+	size_t skip = 4;
+	if (headerEnd == std::string::npos) {
 		headerEnd = rawResponse.find("\n\n");
+		skip = 2;
+	}
 	if (headerEnd == std::string::npos)
 		throw RawException("malformed raw response: missing header/body separator");
 	std::string headersPart = rawResponse.substr(0, headerEnd);
-	std::string bodyPart = rawResponse.substr(headerEnd + 4);
+	std::string bodyPart = rawResponse.substr(headerEnd + skip);
 
 	// Set Response attributes
 	int statusCode = _setHeaders(headersPart);
@@ -235,7 +238,7 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 int	Response::_setHeaders(const std::string& headersPart) {
 	std::istringstream headersStream(headersPart);
 	std::string line;
-	int statusCode = 200; // default if no Status header found
+	int statusCode = HttpStatus("ok").getCode(); // default if no Status header found
 
 	while (std::getline(headersStream, line)) {
 		if (!line.empty() && line[line.size() - 1] == '\r')

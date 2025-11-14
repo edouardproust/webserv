@@ -100,6 +100,7 @@ HttpStatus	RequestParser::_parseUri(Request& request, const std::string& uri)
 		std::string query = uri.substr(queryPos + 1);
 		if (!_isValidPath(path))
 			return HttpStatus(400);
+		_extractScriptAndPathInfo(request, path);
 		std::string decodedPath, decodedQuery;
 		if (_parseUrl(decodedPath, path).getCode() != 200)
 			return HttpStatus(400);
@@ -112,6 +113,7 @@ HttpStatus	RequestParser::_parseUri(Request& request, const std::string& uri)
 	{
 		if (!_isValidPath(uri))
 			return HttpStatus(400);
+		_extractScriptAndPathInfo(request, uri);
 		std::string decodedPath;
 		if (_parseUrl(decodedPath, uri).getCode() != 200)
 			return HttpStatus(400);
@@ -313,6 +315,38 @@ bool	RequestParser::_isValidPath(const std::string& _path) const
 	if (_path[0] != '/' || _path.find(' ') != std::string::npos)
 		return false;
 	return true;
+}
+
+void	RequestParser::_extractScriptAndPathInfo(Request& request, const std::string& path)
+{
+	std::vector<std::string> segments = utils::split(path, '/');
+	std::string current_path = "";
+	for (size_t i = 0; i < segments.size(); i++)
+	{
+		if (current_path.empty())
+			current_path = segments[i];
+		else
+			current_path += "/" + segments[i];
+		if (segments[i].find('.') != std::string::npos)
+		{
+			std::string script_name = "/" + current_path;
+			std::string path_info = "";
+			for (size_t j = i + 1; j < segments.size(); j++)
+				path_info += "/" + segments[j];
+			std::string decoded_script_name, decoded_path_info;
+			if (_parseUrl(decoded_script_name, script_name).getCode() == 200)
+				request.setScriptName(decoded_script_name);
+			else
+				request.setScriptName("");
+			if (_parseUrl(decoded_path_info, path_info).getCode() == 200)
+				 request.setPathInfo(decoded_path_info);
+			else
+				request.setPathInfo("");
+			return;
+		}
+	}
+	request.setScriptName("");
+	request.setPathInfo("");
 }
 
 bool	RequestParser::_isValidVersion(const std::string& versionStr) const
