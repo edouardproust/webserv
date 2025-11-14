@@ -47,7 +47,7 @@ void	RoutingDecision::_makeDecision() {
 	else if (_location->isRedirection())
 		_decision = REDIRECTION;
 	else if (_location->isCgi(utils::getFileExtension(_request.getScriptName())) && 
-             _request.getMethod() == "POST") //tmp fix!!!
+             _request.getMethod() == "POST") //tmp fix to get past test #6!!!
 		_decision = CGI;
 	else
 		_decision = STATIC;

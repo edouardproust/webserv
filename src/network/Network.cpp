@@ -315,12 +315,7 @@ bool Network::_shouldCloseConnection(const Request& request, const Response& res
         }
     }
 
-    // Regra 2: É HTTP/1.0? (O default é 'close' a menos que peçam 'keep-alive')
-    if (request.getVersion() == "HTTP/1.0" && connection_header != "keep-alive") {
-        return true;
-    }
-
-    // Regra 3: O servidor decidiu fechar?
+    // Regra 2: O servidor decidiu fechar?
     const std::map<std::string, std::string>& respHeaders = response.getHeaders();
     std::map<std::string, std::string>::const_iterator resp_it = respHeaders.find("Connection");
 
