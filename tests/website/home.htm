@@ -51,12 +51,18 @@
 					<small>Test PUT: <code>curl -X PUT http://localhost:8080/put-demo.txt -d "new content"</code></small>
 				</td>
 			</tr><tr>
-				<td><code>PUT http://localhost:8080/your-new-file.txt</code></td>
+				<td><code>http://localhost:8080/your-new-file.txt</code></td>
 				<td class="status-ok">201</td>
 				<td class="notes">Create any new file<br>
 					<small>Test: <code>curl -X PUT http://localhost:8080/your-new-file.txt -d "your content"</code></small>
 				</td>
 			</tr>
+			</tr><tr>
+				<td><a href="http://localhost:8080/put-demo.txt" class="test-link">http://localhost:8080/put-demo.txt</a></td>
+				<td class="status-ok">200</td>
+				<td class="notes">HEAD request (headers only, no body)<br>
+					<small>Test: <code>curl -I http://localhost:8080/put-demo.txt</code></small>
+				</td>
 
 			<!-- Autoindex Tests -->
 			<tr class="category">
