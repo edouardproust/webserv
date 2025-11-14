@@ -28,16 +28,8 @@ class CgiHandler {
 	void		_buildArgv();
 	pid_t		_forkAndExec() const;
 	void		_prepareIo(std::string const&, std::string const&);
-	//void		_readPipes(int, pid_t);
-	//void		_readPipesLeftovers();
 	Response	_handleStatus(int) const;
 	void		_redirectIoInChild() const;
-
-	// TODO
-	void		_setNonBlocking(int fd);
-	void		_readPipes();
-	bool		_waitWithTimeout(pid_t pid, int& status, size_t timeout_ms);
-	void		_cleanupPipes();
 
 
 	// static utils
