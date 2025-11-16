@@ -5,6 +5,9 @@
 #include <string>
 #include <netdb.h>
 
+/**
+ * Value type class
+ */
 class HostPortPair {
 
 	std::string	_host;

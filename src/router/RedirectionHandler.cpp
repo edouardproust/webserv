@@ -3,10 +3,16 @@
 #include "constants.hpp"
 
 RedirectionHandler::RedirectionHandler(RoutingDecision const& rd, int code, std::string const& path)
-	: _routingDecision(rd), _code(code), _path(path) {}
+: _routingDecision(rd)
+, _code(code)
+, _path(path)
+{}
 
 RedirectionHandler::RedirectionHandler(RedirectionHandler const& other)
-	: _routingDecision(other._routingDecision), _code(other._code), _path(other._path) {}
+: _routingDecision(other._routingDecision)
+, _code(other._code)
+, _path(other._path)
+{}
 
 RedirectionHandler&	RedirectionHandler::operator=(RedirectionHandler const& other)
 {
@@ -19,14 +25,15 @@ RedirectionHandler&	RedirectionHandler::operator=(RedirectionHandler const& othe
 	return *this;
 }
 
-RedirectionHandler::~RedirectionHandler() {}
+RedirectionHandler::~RedirectionHandler()
+{}
 
 int	RedirectionHandler::getCode() const
 {
 	return _code;
 }
 
-std::string const& RedirectionHandler::getPath() const 
+std::string const& RedirectionHandler::getPath() const
 {
 	return _path;
 }
@@ -43,11 +50,11 @@ void RedirectionHandler::setPath(std::string const& path)
 
 /**
  * Executes the redirection by building an appropriate HTTP response.
- * 
+ *
  * For 3xx redirects, sets the Location header and applies cache control for best pratice:
  * - 301 (Permanent): Cached for 1 year (max-age=31536000) since browsers cache these
  * - 302 (Temporary): Uses no-cache to ensure fresh redirects on subsequent requests
- * 
+ *
  * Also generates a user-friendly HTML body with redirect information and links.
  * (This HTML will only be visible inside the browser if the client doesn't follow the redirect automatically)
  * Returns an internal server error if the redirect path is empty.
@@ -75,7 +82,7 @@ Response	RedirectionHandler::execute()
 std::string	RedirectionHandler::_generateRedirectionHtml() const
 {
 	std::stringstream html;
-	
+
 	html << "<!DOCTYPE html>"
 		 << "<html>"
 		 << "<head>"

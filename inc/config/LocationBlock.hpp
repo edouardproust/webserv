@@ -7,6 +7,9 @@ class ServerBlock;
 #include "utils/Log.hpp"
 #include "typedefs.hpp"
 
+/**
+ * Value type class
+ */
 class LocationBlock {
 
 	ServerBlock const*			_server;				// Pointer to parent server block, set during validation
@@ -21,8 +24,6 @@ class LocationBlock {
 	ErrorPages					_errorPages;			// optional. Has priority over _server->getErrorPages()
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
 	bool						_isDefaultLocation;		// true if this location is the default one (path = "/")
-
-	LocationBlock(); // not used
 
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string&, std::vector<std::string>&, bool);
@@ -39,6 +40,7 @@ class LocationBlock {
 
 	public:
 
+		LocationBlock();
 		LocationBlock(ServerBlock const*); // Default location block (path = "/")
 		LocationBlock(ServerBlock*, std::string&, std::string const&);
 		LocationBlock(LocationBlock const&);

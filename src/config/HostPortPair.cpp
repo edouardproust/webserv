@@ -1,6 +1,9 @@
 #include "config/HostPortPair.hpp"
 
-HostPortPair::HostPortPair(): _host("0.0.0.0"), _port(80) {}
+HostPortPair::HostPortPair()
+: _host("0.0.0.0")
+, _port(80)
+{}
 
 /**
  * May throw an exception
@@ -9,21 +12,26 @@ HostPortPair::HostPortPair(std::string const& hostPortStr) {
 	_parseHostPort(hostPortStr); // throw
 }
 
-HostPortPair::HostPortPair(HostPortPair const& other) : _host(other._host), _port(other._port)
+HostPortPair::HostPortPair(HostPortPair const& other)
+: _host(other._host)
+, _port(other._port)
 {}
 
-HostPortPair& HostPortPair::operator=(HostPortPair const& other) {
+HostPortPair& HostPortPair::operator=(HostPortPair const& other)
+{
 	_host = other._host;
 	_port = other._port;
 	return *this;
 }
 
-HostPortPair::~HostPortPair() {}
+HostPortPair::~HostPortPair()
+{}
 
 /**
  * May throw an exception
  */
-void	HostPortPair::_parseHostPort(std::string const& hostPortStr) {
+void	HostPortPair::_parseHostPort(std::string const& hostPortStr)
+{
 	std::string::size_type colonPos = hostPortStr.rfind(':');
 	if (colonPos != std::string::npos) {
 		// Case: "host:port"
@@ -44,7 +52,8 @@ void	HostPortPair::_parseHostPort(std::string const& hostPortStr) {
 /**
  * May throw an exception
  */
-void	HostPortPair::_setHost(std::string const& hostStr) {
+void	HostPortPair::_setHost(std::string const& hostStr)
+{
 	if (hostStr.empty())
 		throw std::runtime_error("A host is empty");
 	std::string host = hostStr;
@@ -61,18 +70,21 @@ void	HostPortPair::_setHost(std::string const& hostStr) {
 /**
  * May throw an exception
  */
-void	HostPortPair::_setPort(std::string const& portStr) {
+void	HostPortPair::_setPort(std::string const& portStr)
+{
 	_port = utils::toSizeT(portStr); // throw if empty, invalid number or int overflow
 	if (_port < 1 || _port > 65535) {
 		throw std::out_of_range("Port out of range: " + portStr);
 	}
 }
 
-std::string const&	HostPortPair::getHost() const {
+std::string const&	HostPortPair::getHost() const
+{
 	return _host;
 }
 
-size_t	HostPortPair::getPort() const {
+size_t	HostPortPair::getPort() const
+{
 	return _port;
 }
 
@@ -80,7 +92,8 @@ size_t	HostPortPair::getPort() const {
  * Check IPv4 only
  * "localhost" is the only non numeric value accepted for the IP address and is changed into "127.0.0.1"
  */
-bool	HostPortPair::_isValidIP(std::string const& ip) {
+bool	HostPortPair::_isValidIP(std::string const& ip)
+{
     struct addrinfo hints = {};
     hints.ai_family = AF_INET; // IPv4 only (would be AF_UNSPEC to also support IPv6)
     hints.ai_flags = AI_NUMERICHOST; // enforce numeric resolution
@@ -90,20 +103,24 @@ bool	HostPortPair::_isValidIP(std::string const& ip) {
     return ret == 0;
 }
 
-bool HostPortPair::isWildcardFor(HostPortPair const& other) const {
+bool HostPortPair::isWildcardFor(HostPortPair const& other) const
+{
 	return _host == "0.0.0.0" && _port == other._port;
 }
 
-bool	HostPortPair::operator==(HostPortPair const& other) const {
+bool	HostPortPair::operator==(HostPortPair const& other) const
+{
 	return _host == other._host && _port == other._port;
 }
 
-bool	HostPortPair::operator<(HostPortPair const& other) const {
+bool	HostPortPair::operator<(HostPortPair const& other) const
+{
 	if (_host != other._host) return _host < other._host;
 	return _port < other._port;
 }
 
-std::ostream&	operator<<(std::ostream& os, HostPortPair const& rhs) {
+std::ostream&	operator<<(std::ostream& os, HostPortPair const& rhs)
+{
 	os << rhs.getHost() << ":" << rhs.getPort();
 	return os;
 }

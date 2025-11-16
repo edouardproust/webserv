@@ -8,12 +8,13 @@
 #include <iomanip>
 
 StaticHandler::StaticHandler(RoutingDecision const& rd)
-: _routingDecision(rd),
-  _location(rd.getLocation()),
-  _finalPath(rd.getFinalPath())
+: _routingDecision(rd)
+, _location(rd.getLocation())
+, _finalPath(rd.getFinalPath())
 {}
 
-StaticHandler::~StaticHandler() {}
+StaticHandler::~StaticHandler()
+{}
 
 Response	StaticHandler::handleGet()
 {
@@ -70,7 +71,7 @@ Response	StaticHandler::handleDelete()
 	_finalPath = _finalPath.substr(0, _finalPath.find_last_of('/')); //!\ final path updated
 	if (access(_finalPath.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"));
-	if (std::remove(_finalPath.c_str()) == 0) // TODO Method std::remove is allowed ?
+	if (std::remove(_finalPath.c_str()) == 0)
 	{
 		Response response;
 		response.setStatus(HttpStatus("no_content"));
@@ -80,15 +81,12 @@ Response	StaticHandler::handleDelete()
 		return handleError(HttpStatus("internal_server_error"));
 }
 
-/* For testing, just return 200 OK
+/**
+ * Simply return an error (POST method not allowed on a static file).
+ */
 Response StaticHandler::handlePost() {
-	Response response;
-	response.setStatus(HttpStatus("ok"));
-	response.setBody("random content");
-	//response.setBody("return all the actual 100 MB characters");
-	response.setHeader("Content-Length", "100000000");
-    return response;
-}*/
+	return handleError(HttpStatus("method_not_allowed"));
+}
 
 Response	StaticHandler::handleHead()
 {
@@ -100,7 +98,7 @@ Response	StaticHandler::handleHead()
 Response	StaticHandler::handlePut()
 {
 	Response response;
-	const Request& request = _routingDecision.getRequest();
+	Request const& request = _routingDecision.getRequest();
 
 	std::string directory = _finalPath;
 	if (utils::isAccessibleDirectory(_finalPath))
@@ -115,7 +113,7 @@ Response	StaticHandler::handlePut()
 		directory = "/";
 	if (!utils::isWritableDirectory(directory))
 		return handleError(HttpStatus("forbidden"));
-	const std::string& body = request.getBody();
+	std::string const& body = request.getBody();
 	bool fileExists = utils::fileExists(_finalPath);
 	std::ofstream file(_finalPath.c_str(), std::ios::binary);
 	if (!file.is_open())
@@ -186,13 +184,13 @@ std::string StaticHandler::_welcomePageHtml() const
 
 /**
  * Generates an automatic directory listing HTML page.
- * 
+ *
  * Creates a user-friendly file browser showing all files and subdirectories in the current directory.
  * For each entry, displays:
  * - Clickable filename/link (with "/" suffix for directories)
  * - Last modification date
  * - File size (or "-" for directories)
- * 
+ *
  * The layout uses fixed-width spacing (50 characters for names) for aligned columns,
  * though exact alignment may vary depending on font and browser rendering.
  * Entries are sorted alphabetically for consistent browsing.
@@ -227,7 +225,7 @@ std::string	StaticHandler::_autoindexHtml() const
 		struct stat fileStat;
 		std::string dateStr = "?";
 		if (stat(fullPath.c_str(), &fileStat) == 0)
-			dateStr = _getCurrentDateLocal(fileStat.st_mtime);
+			dateStr = utils::formatDate(fileStat.st_mtime, "%d-%b-%Y %H:%M");
 		std::string displayName = files[i] + (isDir ? "/" : "");
 		html << "<a href=\"" << currentPath << files[i] << (isDir ? "/" : "") << "\">"
 			 << displayName << "</a>"

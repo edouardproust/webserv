@@ -5,35 +5,36 @@ std::set<std::string> Request::_supportedMethods;
 std::set<std::string> Request::_existingMethods;
 
 Request::Request()
-: _status(HttpStatus("ok")),
-  _method(""),
-  _uri(""),
-  _path(""),
-  _scriptName(""),
-  _pathInfo(""),
-  _queryString(""),
-  _version(""),
-  _contentType(""),
-  _body("")
+: _status(HttpStatus("ok"))
+, _method("")
+, _uri("")
+, _path("")
+, _scriptName("")
+, _pathInfo("")
+, _queryString("")
+, _version("")
+, _contentType("")
+, _body("")
 {}
 
 Request::Request(std::string const& rawRequest)
-: _status(HttpStatus("ok")),
-  _method(""),
-  _uri(""),
-  _path(""),
-  _scriptName(""),
-  _pathInfo(""),
-  _queryString(""),
-  _version(""),
-  _contentType(""),
-  _body("")
+: _status(HttpStatus("ok"))
+, _method("")
+, _uri("")
+, _path("")
+, _scriptName("")
+, _pathInfo("")
+, _queryString("")
+, _version("")
+, _contentType("")
+, _body("")
 {
 	static RequestParser parser;
 	parser.parseRequest(*this, rawRequest);
 }
 
-Request::Request(const Request& other): _status(other._status) {
+Request::Request(const Request& other): _status(other._status)
+{
 	*this = other;
 }
 
@@ -56,9 +57,11 @@ Request& Request::operator=(const Request& other)
 	return (*this);
 }
 
-Request::~Request() {}
+Request::~Request()
+{}
 
-std::set<std::string> const&	Request::getSupportedMethods() {
+std::set<std::string> const&	Request::getSupportedMethods()
+{
 	if (_supportedMethods.empty()) {
 		_supportedMethods.insert("GET");
 		_supportedMethods.insert("POST");
@@ -70,12 +73,14 @@ std::set<std::string> const&	Request::getSupportedMethods() {
 	return _supportedMethods;
 }
 
-bool Request::isSupportedMethod(const std::string& method) {
+bool Request::isSupportedMethod(const std::string& method)
+{
     getSupportedMethods();
     return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-bool	Request::isExistingMethod(std::string const& method) {
+bool	Request::isExistingMethod(std::string const& method)
+{
 	if (_existingMethods.empty()) {
 		_existingMethods.insert("OPTIONS");
 		_existingMethods.insert("PATCH");

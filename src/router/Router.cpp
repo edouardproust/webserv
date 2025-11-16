@@ -1,8 +1,10 @@
 #include "router/Router.hpp"
 
-Router::Router() {}
+Router::Router()
+{}
 
-Router::~Router() {}
+Router::~Router()
+{}
 
 /**
  * Dispatch the request to the corresponding handler by crossing data between Config and Request.
@@ -17,7 +19,8 @@ Router::~Router() {}
  *   listing page if needed.
  * - It is the role of CgiHandler to check if the script exists and is executable.
  */
-Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen) {
+Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen)
+{
 	RoutingDecision rd(config, req, listen);
 	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
 
@@ -44,13 +47,15 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	return resp;
 }
 
-void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& rd) {
+void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& rd)
+{
 	std::pair<int, std::string> const& ret = rd.getLocation()->getReturn();
 	RedirectionHandler redirect(rd, ret.first, ret.second);
 	resp = redirect.execute();
 }
 
-void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, StaticHandler& statiq) {
+void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, StaticHandler& statiq)
+{
 	std::string const& scriptName = rd.getFinalPath();
 	if (!utils::fileExists(scriptName)) {
 		resp = statiq.handleError(HttpStatus("not_found"));
@@ -74,7 +79,8 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, Stati
 	}
 }
 
-void	Router::_handleStaticDecision(Response& resp, std::string const& method, StaticHandler& statiq) {
+void	Router::_handleStaticDecision(Response& resp, std::string const& method, StaticHandler& statiq)
+{
 	if (method == "GET")
 		resp = statiq.handleGet();
 	else if (method == "DELETE")
@@ -83,8 +89,8 @@ void	Router::_handleStaticDecision(Response& resp, std::string const& method, St
 		resp = statiq.handleHead();
 	else if (method == "PUT")
 		resp = statiq.handlePut();
-	//else if (method == "POST") //TMP only to check test #14 since it fails with broken pipe from CGI
-	//	resp = statiq.handlePost();
+	else if (method == "POST")
+		resp = statiq.handlePost();
 	// -- additional supported methods can be added here --
 	else
 		resp = statiq.handleError(HttpStatus("method_not_allowed"));

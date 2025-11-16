@@ -10,6 +10,9 @@
 #include "fcntl.h"
 #include <sys/wait.h>
 
+/**
+ * Entity type class
+ */
 class CgiHandler {
 
 	std::string					_scriptName;
@@ -39,7 +42,7 @@ class CgiHandler {
 	static std::string			_headerToEnvVar(std::string const&);
 	static std::vector<char*>	_toCharPtrArray(const std::vector<std::string>&);
 
-	// Not used // TODO canonical
+	// Copy disabled - would duplicate pipes and cause double-close
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 

@@ -4,6 +4,9 @@
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
 
+/**
+ * Value type class
+ */
 class ServerBlock {
 
 	std::string					_root;

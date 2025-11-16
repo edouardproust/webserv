@@ -1,6 +1,7 @@
 #include "network/Socket.hpp"
 
-Socket::Socket(const HostPortPair &listen_pair) : _listenOn(listen_pair)
+Socket::Socket(HostPortPair const& listen_pair)
+: _listenOn(listen_pair)
 {
 	Log::dev("setup", "Setting up socket on " + Log::hl(_listenOn) + ".");
 
@@ -35,7 +36,7 @@ void Socket::loadAddressInfo()
 
 	// Get host. If it's "0.0.0.0" or "*", we use NULL for getaddrinfo
 	std::string hostStr = _listenOn.getHost();
-	const char* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
+	char const* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
 
 	// Use the values from _listenOn
 	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
@@ -126,47 +127,47 @@ int Socket::accept()
 	return (new_socket);
 }
 
-const HostPortPair& Socket::getHostPortPair() const
+HostPortPair const&	Socket::getHostPortPair() const
 {
     return (_listenOn);
 }
 
-const char *Socket::GetAddrInfoException::what() const throw()
+char const*	Socket::GetAddrInfoException::what() const throw()
 {
 	return ("Can't get Address's info.");
 }
 
-const char *Socket::SocketException::what() const throw()
+char const*	Socket::SocketException::what() const throw()
 {
 	return ("Can't create Socket.");
 }
 
-const char *Socket::SetSockOptException::what() const throw()
+char const*	Socket::SetSockOptException::what() const throw()
 {
 	return ("Can't configure Socket.");
 }
 
-const char *Socket::FcntlException::what() const throw()
+char const*	Socket::FcntlException::what() const throw()
 {
 	return ("Can't set Socket to non blocking mode.");
 }
 
-const char *Socket::BindException::what() const throw()
+char const*	Socket::BindException::what() const throw()
 {
 	return ("Can't bind socket with IP and port.");
 }
 
-const char *Socket::ListenException::what() const throw()
+char const*	Socket::ListenException::what() const throw()
 {
 	return ("Can't put Socket in Listen Mode.");
 }
 
-const char *Socket::AcceptException::what() const throw()
+char const*	Socket::AcceptException::what() const throw()
 {
 	return ("Accept rejected.");
 }
 
-const char *Socket::ConnectException::what() const throw()
+char const*	Socket::ConnectException::what() const throw()
 {
 	return ("Connect rejected.");
 }

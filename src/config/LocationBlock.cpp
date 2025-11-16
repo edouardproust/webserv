@@ -1,6 +1,16 @@
 #include "config/LocationBlock.hpp"
 #include "config/Config.hpp"
 
+LocationBlock::LocationBlock()
+: _server(NULL)
+, _path("")
+, _autoindex("off")
+, _clientMaxBodySize(0)
+, _isSetClientMaxBodySize(false)
+, _uploadStore("")
+, _isDefaultLocation(false)
+{}
+
 /**
  * Default location block (path = "/"). Used if not location matches the request URI.
  */
@@ -18,7 +28,11 @@ LocationBlock::LocationBlock(ServerBlock const* server)
  * May throw an exception.
  */
 LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string const& blockContent)
-: _server(server), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(false) {
+: _server(server)
+, _return(std::make_pair(-1, ""))
+, _isSetClientMaxBodySize(false)
+, _isDefaultLocation(false)
+{
 	_setPath(path);
 	_parse(blockContent);
 	// Extra checks
@@ -27,21 +41,22 @@ LocationBlock::LocationBlock(ServerBlock* server, std::string& path, std::string
 }
 
 LocationBlock::LocationBlock(const LocationBlock &other)
-: _server(other._server),
-  _path(other._path),
-  _autoindex(other._autoindex),
-  _allowedMethods(other._allowedMethods),
-  _return(other._return),
-  _clientMaxBodySize(other._clientMaxBodySize),
-  _isSetClientMaxBodySize(other._isSetClientMaxBodySize),
-  _uploadStore(other._uploadStore),
-  _indexFiles(other._indexFiles),
-  _errorPages(other._errorPages),
-  _cgi(other._cgi),
-  _isDefaultLocation(other._isDefaultLocation)
+: _server(other._server)
+, _path(other._path)
+, _autoindex(other._autoindex)
+, _allowedMethods(other._allowedMethods)
+, _return(other._return)
+, _clientMaxBodySize(other._clientMaxBodySize)
+, _isSetClientMaxBodySize(other._isSetClientMaxBodySize)
+, _uploadStore(other._uploadStore)
+, _indexFiles(other._indexFiles)
+, _errorPages(other._errorPages)
+, _cgi(other._cgi)
+, _isDefaultLocation(other._isDefaultLocation)
 {}
 
-LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
+LocationBlock&	LocationBlock::operator=(LocationBlock const& other)
+{
 	if (this != &other) {
 		_server = other._server;
 		_path = other._path;
@@ -58,7 +73,8 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other) {
 	return *this;
 }
 
-LocationBlock::~LocationBlock() {}
+LocationBlock::~LocationBlock()
+{}
 
 /**
  * Parses the content of a location block.
@@ -70,7 +86,8 @@ LocationBlock::~LocationBlock() {}
  * - unclosed quoted string
  * - directive not terminated with ';'
  */
-void	LocationBlock::_parse(std::string const& content) {
+void	LocationBlock::_parse(std::string const& content)
+{
 	std::string token = "";
 	Tokens tokens;
 	bool inQuotes = false;
@@ -106,7 +123,8 @@ void	LocationBlock::_parse(std::string const& content) {
  * - unclosed quoted string
  * - directive is unsupported or has invalid arguments
  */
-void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>& tokens, bool inQuotes) {
+void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>& tokens, bool inQuotes)
+{
 	Config::addTokenIf(token, tokens);
 	if (tokens.empty())
 		throw std::runtime_error("Unexpected ';'");
@@ -144,11 +162,13 @@ void	LocationBlock::_parseDirective(std::string& token, std::vector<std::string>
 	tokens.clear();
 }
 
-void	LocationBlock::setServer(ServerBlock* server) {
+void	LocationBlock::setServer(ServerBlock* server)
+{
 	_server = server;
 }
 
-void	LocationBlock::_setPath(std::string& path) {
+void	LocationBlock::_setPath(std::string& path)
+{
 	if (!utils::isAbsolutePath(path))
 		throw std::runtime_error("Not an absolute path");
 	_path = utils::normalizePath(path);
@@ -165,7 +185,8 @@ void	LocationBlock::_setPath(std::string& path) {
  * - arguments are invalid
  * - value is not "on" or "off"
  */
-void	LocationBlock::_setAutoindex(Tokens const& tokens) {
+void	LocationBlock::_setAutoindex(Tokens const& tokens)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("Should have 1 argument");
 	std::string const& autoindex = tokens[1];
@@ -187,7 +208,8 @@ void	LocationBlock::_setAutoindex(Tokens const& tokens) {
  * - no method is given
  * - a method is an empty string or is not supported
  */
-void LocationBlock::_setAllowedMethods(Tokens const& tokens) {
+void LocationBlock::_setAllowedMethods(Tokens const& tokens)
+{
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have at least 1 method");
 	_allowedMethods.clear(); // renitialise before filling up
@@ -214,7 +236,8 @@ void LocationBlock::_setAllowedMethods(Tokens const& tokens) {
  * - target is missing for redirection codes (300-399)
  * - code conflicts with an error_page defined in the parent server block
  */
-void LocationBlock::_setReturn(Tokens const& tokens) {
+void LocationBlock::_setReturn(Tokens const& tokens)
+{
 	if (_return.first != -1)
 			throw std::runtime_error("Duplicate directive");
 	if (tokens.size() < 2 || tokens.size() > 3)
@@ -249,7 +272,8 @@ void LocationBlock::_setReturn(Tokens const& tokens) {
  * - arguments are invalid
  * - size is 0, has a wrong syntax or overflows size_t
  */
-void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
+void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("Format must be \"client_max_body_size size;\"");
 	size_t result = Config::parseSize(tokens[1]); // throw exception if empty, wrong syntax or overflow
@@ -274,7 +298,8 @@ void	LocationBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * - the path is an empty string
  * - a relative path is given without a server root
  */
-void	LocationBlock::_setUploadStore(Tokens const& tokens) {
+void	LocationBlock::_setUploadStore(Tokens const& tokens)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("Format must be \"upload_store path;\"");
 	std::string path = tokens[1];
@@ -303,7 +328,8 @@ void	LocationBlock::_setUploadStore(Tokens const& tokens) {
  * - the path is an empty string
  * - an HTTP code is out of range (300-599)
  */
-void	LocationBlock::_setErrorPages(Tokens const& tokens) {
+void	LocationBlock::_setErrorPages(Tokens const& tokens)
+{
 	if (tokens.size() < 3)
 		throw std::runtime_error("Format must be \"error_page code1 [code2 ...] path;\"");
 	// Check path (last argument)
@@ -342,7 +368,8 @@ void	LocationBlock::_setErrorPages(Tokens const& tokens) {
  * - an index file is an empty string
  * - duplicate index files
  */
-void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
+void	LocationBlock::_setIndexFiles(Tokens const& tokens)
+{
 	if (tokens.size() < 2)
 		throw std::runtime_error("Format must be \"index file1 [file2 ...];\"");
 	for (size_t j = 1; j < tokens.size(); ++j) {
@@ -367,7 +394,8 @@ void	LocationBlock::_setIndexFiles(Tokens const& tokens) {
  * - the executable path is an empty string or a relative path or not accessible on host
  * - the extension is an empty string, does not start with a dot or is already configured in this location
  */
-void	LocationBlock::_setCgi(Tokens const& tokens) {
+void	LocationBlock::_setCgi(Tokens const& tokens)
+{
 	if (tokens.size() != 3)
 		throw std::runtime_error("Format must be \"cgi extension executable_path;\"");
 	std::string extension = tokens[1], executable = tokens[2];
@@ -389,11 +417,13 @@ void	LocationBlock::_setCgi(Tokens const& tokens) {
 	_cgi[extension] = executable;
 }
 
-ServerBlock const*	LocationBlock::getServer() const {
+ServerBlock const*	LocationBlock::getServer() const
+{
 	return _server;
 }
 
-std::string const&	LocationBlock::getPath() const {
+std::string const&	LocationBlock::getPath() const
+{
 	return _path;
 }
 
@@ -401,14 +431,16 @@ std::string const&	LocationBlock::getPath() const {
  * `root` is not supported inside location block. Location inherits of server's `root`.
  * Setting a root for the server is mandatory because `webserv` is a portable program.
  */
-std::string const	LocationBlock::getRoot() const {
+std::string const	LocationBlock::getRoot() const
+{
 	return _server->getRoot();
 }
 
 /**
  * Defaults to "on" if not set in this location.
  */
-std::string const	LocationBlock::getAutoindex() const {
+std::string const	LocationBlock::getAutoindex() const
+{
 	if (_autoindex.empty())
 		return "on";
 	return _autoindex;
@@ -425,39 +457,46 @@ std::pair<int, std::string>	const&	LocationBlock::getReturn() const {
 /**
  * Defaults to server's `client_max_body_size` if none set in this location.
  */
-size_t	LocationBlock::getClientMaxBodySize() const {
+size_t	LocationBlock::getClientMaxBodySize() const
+{
 	if (!_isSetClientMaxBodySize && _server)
 		return _server->getClientMaxBodySize();
 	return _clientMaxBodySize;
 }
 
-bool	LocationBlock::getClientMaxBodySizeSet() const {
+bool	LocationBlock::getClientMaxBodySizeSet() const
+{
 	return _isSetClientMaxBodySize;
 }
 
-std::string const&	LocationBlock::getUploadStore() const {
+std::string const&	LocationBlock::getUploadStore() const
+{
 	if (!_isSetClientMaxBodySize && _server)
 		return _server->getUploadStore();
 	return _uploadStore;
 }
 
-CgiDirective const&	LocationBlock::getCgi() const {
+CgiDirective const&	LocationBlock::getCgi() const
+{
 	return _cgi;
 }
 
-std::vector<std::string> const&	LocationBlock::getIndexFiles() const {
+std::vector<std::string> const&	LocationBlock::getIndexFiles() const
+{
 	if (_indexFiles.empty() && _server)
 		return _server->getIndexFiles();
 	return _indexFiles;
 }
 
-ErrorPages const&	LocationBlock::getErrorPages() const {
+ErrorPages const&	LocationBlock::getErrorPages() const
+{
 	if (_errorPages.empty() && _server)
 		return _server->getErrorPages();
 	return _errorPages;
 }
 
-std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const {
+std::string const	LocationBlock::getCgiExecutor(std::string const& extension) const
+{
 	if (extension.empty())
 		return "";
 	CgiDirective::const_iterator it = _cgi.find(extension);
@@ -469,7 +508,8 @@ std::string const	LocationBlock::getCgiExecutor(std::string const& extension) co
 /**
  * `server` pointer should not be `NULL` (this may lead to unexpected behaviour).
  */
-LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server) {
+LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server)
+{
 	static LocationBlock defaultLocation(server);
     return defaultLocation;
 }
@@ -477,7 +517,8 @@ LocationBlock const&	LocationBlock::getDefaultLocation(ServerBlock const* server
 /**
  * For a given extension, tells if this location allows dynamic resolution of a request (CGI).
  */
-bool	LocationBlock::isCgi(std::string const& extension) const {
+bool	LocationBlock::isCgi(std::string const& extension) const
+{
 	if (extension.empty())
 		return false;
 	for (CgiDirective::const_iterator it = _cgi.begin(); it != _cgi.end(); ++it) {
@@ -490,18 +531,21 @@ bool	LocationBlock::isCgi(std::string const& extension) const {
 /**
  * Tells if this location corresponds to a redirection.
  */
-bool	LocationBlock::isRedirection() const {
+bool	LocationBlock::isRedirection() const
+{
 	return _return.first != -1 && !_return.second.empty();
 }
 
 /**
  * Tells if this location allows a given method.
  */
-bool	LocationBlock::isAllowedMethod(std::string const& method) const {
+bool	LocationBlock::isAllowedMethod(std::string const& method) const
+{
 	return _allowedMethods.empty() || (_allowedMethods.find(method) != _allowedMethods.end());
 }
 
-bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& method) const {
+bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& method) const
+{
 	static std::string const methodsWithBody[] = {"POST", "PUT", "PATCH"};
     if (utils::isInArray(method, methodsWithBody)) {
         return size <= getClientMaxBodySize();
@@ -512,11 +556,13 @@ bool	LocationBlock::isAllowedClientBodySize(size_t size, std::string const& meth
 /**
  * Tells if this location has been built using the default constructor.
  */
-bool	LocationBlock::isDefaultLocation() const {
+bool	LocationBlock::isDefaultLocation() const
+{
 	return _isDefaultLocation;
 }
 
-std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs) {
+std::ostream&	operator<<(std::ostream& os, LocationBlock const& rhs)
+{
 	std::string const in = "  "; // indentation
 	os << in << "- Default location: " << (rhs.isDefaultLocation() ? "yes" : "no") << "\n";
 	os << in << "- path: " << PrintableString(rhs.getPath()) << "\n";

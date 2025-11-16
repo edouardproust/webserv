@@ -4,6 +4,9 @@
 #include "config/ServerBlock.hpp"
 #include <fstream>
 
+/**
+ * Entity type class
+ */
 class Config {
 
 	std::vector<ServerBlock>	_servers;
@@ -14,7 +17,8 @@ class Config {
 	void		_addServer(Tokens const&, std::string const&, size_t& i, int&);
 	void		_validate() const;
 
-	// Not used
+	// Entity type - represents unique server configuration
+    // Copying would duplicate expensive parsed data unnecessarily
 	Config();
 	Config(Config const&);
 	Config&	operator=(Config const&);

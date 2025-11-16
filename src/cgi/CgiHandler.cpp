@@ -126,7 +126,12 @@ void	CgiHandler::_prepareIo(std::string const& method, std::string const& reqBod
 }
 
 /**
- * // TODO Description
+ * Waits for the CGI child process to exit within a given timeout.
+ *
+ * Reads available stdout/stderr data during the wait loop.
+ *
+ * Returns true if the child exits before the timeout, false otherwise.
+ * Throws ExecException if waitpid() fails.
  */
 bool CgiHandler::_waitWithTimeout(pid_t pid, int& status, size_t timeout_ms) {
 	size_t waited_ms = 0;

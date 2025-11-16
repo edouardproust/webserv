@@ -3,7 +3,8 @@
 #include "constants.hpp"
 #include <iostream>
 
-RequestParser::RequestParser() {}
+RequestParser::RequestParser()
+{}
 
 RequestParser::RequestParser(const RequestParser& other)
 {
@@ -16,7 +17,8 @@ RequestParser& RequestParser::operator=(const RequestParser& other)
 	return (*this);
 }
 
-RequestParser::~RequestParser() {}
+RequestParser::~RequestParser()
+{}
 
 void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
 {
@@ -109,9 +111,7 @@ HttpStatus	RequestParser::_parseUri(Request& request, const std::string& uri)
 			return HttpStatus(400);
 		request.setPath(decodedPath);
 		request.setQueryString(decodedQuery);
-	}
-	else
-	{
+	} else {
 		if (!_isValidPath(uri))
 			return HttpStatus(400);
 		_extractScriptAndPathInfo(request, uri);

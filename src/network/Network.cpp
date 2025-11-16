@@ -1,6 +1,7 @@
 #include "network/Network.hpp"
 
-Network::Network(Config const& config) : _config(config)
+Network::Network(Config const& config)
+: _config(config)
 {
 	// Get all unique host:port pairs directly from config
 	std::vector<HostPortPair> listen_ports = _config.getAllListenPorts();
@@ -59,9 +60,9 @@ void Network::startServers()
 		{
 			if ((new_conn = isServerSideEvent(events[n].data.fd)) != 0)
 			{
-				// Forma correta:
+				// Correct form:
 				::fcntl(new_conn, F_SETFL, O_NONBLOCK);  // Define as non-blocking
-				::fcntl(new_conn, F_SETFD, FD_CLOEXEC); // Define para fechar no exec()
+				::fcntl(new_conn, F_SETFD, FD_CLOEXEC); // Marks to be closed on exec()
 				//::fcntl(new_conn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 				events_setup.data.fd = new_conn;
 				events_setup.events = EPOLLIN;
@@ -104,7 +105,7 @@ void Network::epollAddServers()
 	}
 }
 
-int Network::epoll_wait(struct epoll_event *events)
+int Network::epoll_wait(struct epoll_event* events)
 {
 	int nfds;
 
@@ -137,7 +138,7 @@ int Network::isServerSideEvent(int epoll_fd)
     return (0);
 }
 
-void Network::_handleClientDisconnect(int client_fd, struct epoll_event &events_setup)
+void Network::_handleClientDisconnect(int client_fd, struct epoll_event& events_setup)
 {
 	Log::prod("event", "Client " + Log::hl(client_fd) + " disconnected.");
 	_client_server_map.erase(client_fd);
@@ -156,7 +157,7 @@ void Network::_handleRecvError(int client_fd, struct epoll_event &events_setup)
 	close(client_fd);
 }
 
-void Network::recv(int client_fd, struct epoll_event &events_setup)
+void Network::recv(int client_fd, struct epoll_event& events_setup)
 {
 	Log::dev("event", "recv() on fd " + Log::hl(client_fd) + ".");
 
@@ -205,7 +206,7 @@ void Network::recv(int client_fd, struct epoll_event &events_setup)
 }
 
 
-bool Network::_isRequestComplete(const std::string& total_request)
+bool Network::_isRequestComplete(std::string const& total_request)
 {
     size_t header_end = total_request.find("\r\n\r\n");
 
@@ -249,11 +250,12 @@ bool Network::_isRequestComplete(const std::string& total_request)
     }
     return true;
 }
-void Network::send(int client_fd, struct epoll_event &events_setup)
+
+void Network::send(int client_fd, struct epoll_event& events_setup)
 {
 	Log::dev("event", "send() on fd " + Log::hl(client_fd) + ".");
 
-    bool should_close = true; // Default é fechar em caso de erro
+    bool should_close = true; // Default is to close in case of error
 
     try
     {
@@ -263,7 +265,7 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
         if (_client_server_map.find(client_fd) == _client_server_map.end())
             throw std::runtime_error("Client FD not mapped to any server socket.");
 
-        // 1. Processar
+        // 1. Process
         Request request(_request_list[client_fd]);
 		Socket* serverSocket = _client_server_map.at(client_fd);
 		HostPortPair listenPair = serverSocket->getHostPortPair();
@@ -273,49 +275,49 @@ void Network::send(int client_fd, struct epoll_event &events_setup)
         Response response = Router::dispatchRequest(_config, request, listenPair);
 		Log::dev("debug", "Response:\n" + utils::str(response));
 
-        // 2. Decidir (Lógica de Keep-Alive movida)
+        // 2. Decide (Keep-Alive logic moved here)
         should_close = _shouldCloseConnection(request, response);
 
-        // 3. Enviar
+        // 3. Send
         std::string msg = response.stringify();
         ssize_t ret = ::send(client_fd, msg.data(), msg.length(), 0);
         if (ret == -1)
             throw std::runtime_error(std::string("Send failed: ") + strerror(errno));
 
-        // 4. Gerir a conexão (Lógica de fechar/manter movida)
+        // 4. Manage the connection (Close/keep logic moved here)
         _manageConnection(client_fd, should_close, events_setup);
 
 		Log::prod("event", "response \"" + response.getStatus().toStr() + "\" sent on " + Log::hl(listenPair) + ".");
     }
     catch (std::exception& e)
     {
-        // O 'catch' agora só precisa de fechar
+        // The 'catch' block now only needs to close the connection
 		Log::prod("error", "Problem during send/dispatch: " + utils::str(e.what()));
         _manageConnection(client_fd, true, events_setup); // Força o fecho
     }
 }
 
 
-bool Network::_shouldCloseConnection(const Request& request, const Response& response)
+bool Network::_shouldCloseConnection(Request const& request, Response const& response)
 {
     std::string connection_header;
 
-    const std::map<std::string, std::string>& reqHeaders = request.getHeaders();
+    std::map<std::string, std::string> const& reqHeaders = request.getHeaders();
     std::map<std::string, std::string>::const_iterator it = reqHeaders.find("Connection");
 
     if (it == reqHeaders.end()) {
-        it = reqHeaders.find("connection"); // Tenta minúsculo
+        it = reqHeaders.find("connection"); // Try lowercase
     }
 
     if (it != reqHeaders.end()) {
-        connection_header = it->second; // Encontrou o header
+        connection_header = it->second; // Header found
         if (connection_header == "close") {
-            return true; // Cliente pediu para fechar
+            return true; // Client requested to close
         }
     }
 
-    // Regra 2: O servidor decidiu fechar?
-    const std::map<std::string, std::string>& respHeaders = response.getHeaders();
+    // Rule 2: Did the server decide to close?
+    std::map<std::string, std::string> const& respHeaders = response.getHeaders();
     std::map<std::string, std::string>::const_iterator resp_it = respHeaders.find("Connection");
 
     if (resp_it == respHeaders.end()) {
@@ -329,7 +331,7 @@ bool Network::_shouldCloseConnection(const Request& request, const Response& res
     return false; // Default: keep-alive
 }
 
-void Network::_manageConnection(int client_fd, bool should_close, struct epoll_event &events_setup)
+void Network::_manageConnection(int client_fd, bool should_close, struct epoll_event& events_setup)
 {
     _request_list.erase(client_fd);
 
@@ -349,23 +351,27 @@ void Network::_manageConnection(int client_fd, bool should_close, struct epoll_e
     }
 }
 
-int Network::getEpollFd() const {
+int Network::getEpollFd() const
+{
 	return _epoll;
 }
 
-const std::vector<Socket*>& Network::getConnections() const {
+std::vector<Socket*> const& Network::getConnections() const
+{
 	return _connections;
 }
 
-const std::map<int, std::string>& Network::getRequestList() const {
+std::map<int, std::string> const& Network::getRequestList() const
+{
 	return _request_list;
 }
 
-const std::map<int, Socket*>& Network::getClientServerMap() const {
+std::map<int, Socket*> const& Network::getClientServerMap() const
+{
 	return _client_server_map;
 }
 
-std::ostream& operator<<(std::ostream& os, const Network& rhs)
+std::ostream& operator<<(std::ostream& os, Network const& rhs)
 {
 	os << "- Epoll fd: " << rhs.getEpollFd() << "\n";
 
@@ -380,17 +386,17 @@ std::ostream& operator<<(std::ostream& os, const Network& rhs)
 	return os;
 }
 
-const char *Network::EpollException::what() const throw()
+char const*	Network::EpollException::what() const throw()
 {
 	return ("Can't create epoll.");
 }
 
-const char *Network::EpollCtlException::what() const throw()
+char const*	Network::EpollCtlException::what() const throw()
 {
 	return ("Can't manage file descriptor.");
 }
 
-const char *Network::EpollWaitException::what() const throw()
+char const*	Network::EpollWaitException::what() const throw()
 {
 	return ("Can't wait events.");
 }

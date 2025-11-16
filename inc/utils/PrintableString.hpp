@@ -7,17 +7,19 @@
 
 #define FT_EMPTY "[empty]"
 
+/**
+ * Orthodox canonical class (Value-type)
+ */
 class PrintableString {
 
-	const std::string& _ref;
-
-	// Not used // TODO Make canonical
-	PrintableString();
-	PrintableString(PrintableString const&);
-	PrintableString& operator=(PrintableString const&);
+	std::string	_str;
 
 	public:
+		PrintableString();
 		PrintableString(std::string const&);
+
+		PrintableString(PrintableString const&);
+		PrintableString& operator=(PrintableString const&);
 		~PrintableString();
 		std::string const& get() const;
 

@@ -16,7 +16,8 @@ const Log::Entry Log::TYPE_TABLE[] = {
 
 const size_t Log::TYPE_TABLE_SIZE = sizeof(Log::TYPE_TABLE) / sizeof(Log::Entry);
 
-Log::Entry const*	Log::_findByType(std::string const& type) {
+Log::Entry const*	Log::_findByType(std::string const& type)
+{
 	for (size_t i = 0; i < TYPE_TABLE_SIZE; ++i)
 		if (TYPE_TABLE[i].type == type)
 			return &TYPE_TABLE[i];
@@ -28,7 +29,8 @@ Log::Entry const*	Log::_findByType(std::string const& type) {
  *
  * Will display `... (x bytes total)` after a truncated text.
  */
-std::string	Log::excerpt(size_t n, std::string const& s) {
+std::string	Log::excerpt(size_t n, std::string const& s)
+{
 	std::string excerpt = s.substr(0, n);
 	if (s.size() > n)
     	excerpt += "... (" + utils::str(s.size()) + " bytes total)";
