@@ -30,6 +30,7 @@ namespace utils {
 	bool	isRelativePath(std::string const&);
 
 	bool	isAccessibleDirectory(std::string const&);
+	bool	isWritableDirectory(const std::string& path);
 	bool	isReadableFile(std::string const&);
 	bool	isExecutableFile(std::string const&);
 	bool	fileExists(std::string const&);

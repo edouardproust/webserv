@@ -40,6 +40,7 @@ class StaticHandler
 	//	Response	handlePost();
 		Response	handleHead();
 		Response	handlePut();
+		Response	handlePost();
 		Response	handleError(HttpStatus const& status);
 
 		std::string const&	getFinalPath() const;

@@ -112,6 +112,24 @@ if get_params:
 else:
     get_section = ""
 
+# PUT section  
+put_section = ""
+if request_method == 'PUT':
+	try:
+		import sys
+		raw_body = sys.stdin.read()
+		put_section = f"""
+		<h2>PUT Data Received:</h2>
+		<pre>{escape(raw_body)}</pre>
+		"""
+	except:
+		put_section = "<p>Error reading PUT data</p>"
+else:
+	put_section = """
+	<h2>Test PUT Method:</h2>
+	<p>Use: <code>curl -X PUT http://localhost:8080/cgi/test.py -d "PUT test data"</code></p>
+    """
+
 # Raw body section (for other methods like PUT)
 raw_body_section = ""
 if request_method not in ['GET', 'POST'] or (request_method == 'POST' and not form.keys()):
