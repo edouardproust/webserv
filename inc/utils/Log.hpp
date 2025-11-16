@@ -28,6 +28,8 @@ class Log {
 	#define CYAN		"\033[36m"
 	#define WHITE		"\033[37m"
 
+	#define EXCERPT_CHARS 500
+
 	struct Entry { std::string const type; std::string const color; std::ostream& stream; };
 
 	static const Entry TYPE_TABLE[];
@@ -55,6 +57,9 @@ class Log {
 
 		template <typename T>
 		static std::string	hl(T const&);
+
+		static std::string	excerpt(size_t n, std::string const& s);
+
 
 };
 

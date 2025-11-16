@@ -219,8 +219,8 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	os << "- Body: " << PrintableString(utils::excerpt(EXCERPT_LENGTH, request.getBody())) << "\n";
+	os << "- Body: " << PrintableString(Log::excerpt(EXCERPT_CHARS, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
-	os << "- raw request: " << PrintableString(request.getRawRequest()) << "\n";
+	os << "- raw request: " << PrintableString(Log::excerpt(EXCERPT_CHARS, request.getRawRequest())) << "\n";
     return os;
 }

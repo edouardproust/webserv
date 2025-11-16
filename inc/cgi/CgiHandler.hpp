@@ -30,7 +30,10 @@ class CgiHandler {
 	void		_prepareIo(std::string const&, std::string const&);
 	Response	_handleStatus(int) const;
 	void		_redirectIoInChild() const;
-
+	void		_setNonBlocking(int fd);
+	bool		_waitWithTimeout(pid_t pid, int& status, size_t timeout_ms);
+	void		_readPipes();
+	void		_cleanupPipes();
 
 	// static utils
 	static std::string			_headerToEnvVar(std::string const&);

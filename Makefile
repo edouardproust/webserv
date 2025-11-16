@@ -7,12 +7,21 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
 # ------- CONFIG --------
 
-CONFIG_FILE = ./tests/webserv.config
-CONFIG_FILE_42 = ./tests/ubuntu_tester.config
+CONFIG_SRC_DIR = tests/config
+CONFIG_DST_DIR = $(CONFIG_SRC_DIR)/replaced
+
+CONFIG_FILE = webserv.config
+CONFIG_FILE_42 = ubuntu_tester.config
+CONFIG_FILE_WELCOME = welcome.config
+
+CONFIG_REPL_SH = $(CONFIG_SRC_DIR)/replace-path.sh
+
+# ------- LOG --------
 
 LOG_DIR = log
 LOG_ACCESS = $(LOG_DIR)/access.log
 LOG_ERROR = $(LOG_DIR)/error.log
+LOG_REDIRECTION = 1>$(LOG_ACCESS) 2>$(LOG_ERROR)
 
 # ------- Sources -------
 
@@ -69,7 +78,7 @@ DEPS_FLAGS = -MMD -MP
 
 # ------- Rules -------
 
-.PHONY: all clean fclean re dev test_prod test_dev test_42
+.PHONY: all clean fclean re dev test_prod test_dev test_42 test_welcome
 
 all: $(NAME)
 
@@ -98,17 +107,27 @@ clean:
 fclean: clean
 	rm -f $(NAME) $(NAME_DEV)
 	rm -rf $(LOG_DIR)
+	rm -rf $(CONFIG_DST_DIR)
 
 re: fclean all
 
+# ------- Tests -------
+
 test_prod: all
 	@mkdir -p $(dir $(LOG_ACCESS)) $(dir $(LOG_ERROR))
-	./$(NAME) $(CONFIG_FILE) 1>$(LOG_ACCESS) 2>$(LOG_ERROR)
+	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE) $(CONFIG_DST_DIR)
+	./$(NAME) $(CONFIG_FILE) $(CONFIG_DST_DIR)/$(LOG_REDIRECTION)
 
 test_dev: dev
 	@clear
-	valgrind ./$(NAME_DEV) $(CONFIG_FILE)
+	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE) $(CONFIG_DST_DIR)
+	valgrind ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE)
 
 test_42: dev
 	@clear
-	./$(NAME_DEV) $(CONFIG_FILE_42)
+	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE_42) $(CONFIG_DST_DIR)
+	./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
+
+test_welcome: all
+	@clear
+	./$(NAME) $(CONFIG_FILE_WELCOME) $(LOG_REDIRECTION)

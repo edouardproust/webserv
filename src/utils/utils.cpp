@@ -53,6 +53,10 @@ bool	utils::isAccessibleDirectory(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFDIR, R_OK | X_OK);
 }
 
+bool	utils::isWritableDirectory(const std::string& path) {
+	return _checkFileTypeAndAccess(path, S_IFDIR, W_OK | X_OK);
+}
+
 bool	utils::isReadableFile(std::string const& path) {
     return _checkFileTypeAndAccess(path, S_IFREG, R_OK);
 }
@@ -273,18 +277,6 @@ std::string	utils::trim(const std::string& str)
 	while (end > start && (str[end - 1] == ' ' || str[end - 1] == '\t'))
 		end--;
 	return str.substr(start, end - start);
-}
-
-/**
- * Truncate a string as an excerpt, up to`n` chars.
- *
- * Will display `... (x bytes total)` after a truncated text.
- */
-std::string	utils::excerpt(size_t n, std::string const& s) {
-	std::string excerpt = s.substr(0, n);
-	if (s.size() > n)
-    	excerpt += "... (" + str(s.size()) + " bytes total)";
-	return excerpt;
 }
 
 /**

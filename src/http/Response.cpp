@@ -106,6 +106,12 @@ void	Response::setBody(const std::string& body)
 	_manageContentType();
 }
 
+void	Response::clearBody()
+{
+	_body.clear();
+	_manageContentType();
+}
+
 void	Response::setConnectionFromRequest(const Request& request)
 {
 	const std::map<std::string, std::string>& headers = request.getHeaders();
@@ -182,7 +188,7 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
 			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n" << PrintableString(utils::excerpt(EXCERPT_LENGTH, response.stringify())) << "\n";
+	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(EXCERPT_CHARS, response.stringify())) << "\n";
 	return os;
 }
 

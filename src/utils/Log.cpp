@@ -22,3 +22,15 @@ Log::Entry const*	Log::_findByType(std::string const& type) {
 			return &TYPE_TABLE[i];
 	return NULL;
 }
+
+/**
+ * Truncate a string as an excerpt, up to`n` chars.
+ *
+ * Will display `... (x bytes total)` after a truncated text.
+ */
+std::string	Log::excerpt(size_t n, std::string const& s) {
+	std::string excerpt = s.substr(0, n);
+	if (s.size() > n)
+    	excerpt += "... (" + utils::str(s.size()) + " bytes total)";
+	return excerpt;
+}

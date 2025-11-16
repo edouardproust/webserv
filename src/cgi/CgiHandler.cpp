@@ -274,7 +274,6 @@ std::string const&	CgiHandler::getCgiError() const {
 }
 
 std::ostream&	operator<<(std::ostream& os, CgiHandler const& rhs) {
-	os << "CgiHandler:\n";
 	os << "- script path: " << PrintableString(rhs.getScriptName()) << "\n";
 	os << "- executor: " << PrintableString(rhs.getExecutor()) << "\n";
 
@@ -289,7 +288,7 @@ std::ostream&	operator<<(std::ostream& os, CgiHandler const& rhs) {
 		os << "  - " << PrintableString(argv[i]) << "\n";
 
 	os << "- CGI error: " << PrintableString(rhs.getCgiError()) << "\n";
-	os << "- CGI raw response:\n[" << utils::excerpt(EXCERPT_LENGTH, rhs.getCgiOutput()) << "]\n";
+	os << "- CGI raw response:\n[" << Log::excerpt(EXCERPT_CHARS, rhs.getCgiOutput()) << "]\n";
 
 	return os;
 }

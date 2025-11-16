@@ -17,7 +17,7 @@ ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(
       	_listen.insert(HostPortPair("0.0.0.0:80"));
 	if (_locations.empty()) {
 		_locations.push_back(LocationBlock(this));
-		Log::prod("warning", "Config: server: No location block defined, a default one was created. PUT method is no allowed in this location.");
+		Log::prod("warning", "Config: server: No location block defined, a default one was created. PUT method is not allowed in this location.");
 	}
 }
 
