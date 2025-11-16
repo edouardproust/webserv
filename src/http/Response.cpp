@@ -43,7 +43,7 @@ Response::RawException::RawException(std::string const& msg)
 void	Response::_initDefaultHeaders()
 {
 	_headers["server"] = SERVER_SOFTWARE;
-	_headers["date"] = utils::getCurrentDate("%a, %d %b %Y %H:%M:%S GMT");
+	_headers["date"] = utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT");
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
 }
