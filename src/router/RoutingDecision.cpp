@@ -32,8 +32,7 @@ void	RoutingDecision::_makeDecision()
 		_setError("content_too_large");
 	else if (_location->isRedirection())
 		_decision = REDIRECTION;
-	else if (_location->isCgi(utils::getFileExtension(_request.getScriptName())) && 
-			_request.getMethod() == "POST") //tmp fix to make test #6 work and redirect GET to Static!!!
+	else if (_location->isCgi(utils::getFileExtension(_request.getScriptName())))
 		_decision = CGI;
 	else
 		_decision = STATIC;
