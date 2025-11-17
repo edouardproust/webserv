@@ -15,6 +15,7 @@ Socket::~Socket()
 {
 	close(_sock);
 
+	Log::dev("setup", "Freeing Address Info memory...");
 	if (_servinfo) {
 		freeaddrinfo(_servinfo);
 		_servinfo = NULL;
@@ -59,14 +60,12 @@ void	Socket::_createSocket()
 
 	Log::dev("setup", "Creating Socket...");
 	if (_sock < 0) {
-		freeaddrinfo(_servinfo);
 		throw SocketException();
 	}
 
 	Log::dev("setup", "Configuring Socket...");
 	int yes = 1;
 	if (setsockopt(_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-		freeaddrinfo(_servinfo);
 		throw SetSockOptException();
 	}
 
@@ -76,7 +75,6 @@ void	Socket::_createSocket()
     if (flags == -1 || fdflags == -1
 		|| fcntl(_sock, F_SETFL, flags | O_NONBLOCK) == -1
 		|| fcntl(_sock, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
-		freeaddrinfo(_servinfo);
 		throw FcntlException();
     }
 }
@@ -95,13 +93,9 @@ void	Socket::bind()
 	status = ::bind(_sock, _servinfo->ai_addr, _servinfo->ai_addrlen);
 
 	if (status < 0) {
-		freeaddrinfo(_servinfo);
 		Log::prod("status",  "Bind status: " + utils::str(strerror(errno)));
 		throw BindException();
 	}
-
-	Log::dev("setup", "Freeing Address Info memory...");
-	freeaddrinfo(_servinfo);
 }
 
 void	Socket::listen()

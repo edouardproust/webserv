@@ -127,7 +127,7 @@ test_dev: dev
 test_42: dev
 	@clear
 	bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE_42) $(CONFIG_DST_DIR)
-	./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
+	valgrind ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
 
 test_welcome: all
 	@clear
