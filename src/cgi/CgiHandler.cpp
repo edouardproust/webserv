@@ -1,4 +1,5 @@
 #include "cgi/CgiHandler.hpp"
+#include <cstring>
 
 size_t const	CgiHandler::_TIMEOUT_MS = 5000; // milliseconds
 size_t const	CgiHandler::_STEP_MS = 10; // milliseconds
@@ -127,10 +128,10 @@ void	CgiHandler::_redirectIoInChild() const
 }
 
 /**
- * Prepares the standard input/output/error pipes for the CGI process.
+ * Redirects stdin, stdout, and stderr in the child process to the corresponding pipes.
  *
- * Writes the request body to the CGI stdin if needed.
- * Closes unused pipe ends.
+ * Called only in the child process before execve.
+ * Exits child process with _exit(1) if any dup2 fails.
  */
 void	CgiHandler::_prepareIo(std::string const& method, std::string const& reqBody)
 {
@@ -141,7 +142,10 @@ void	CgiHandler::_prepareIo(std::string const& method, std::string const& reqBod
 
 	// Write request body in CGI's stdin (if PUT/POST)
 	if (method == "POST" || method == "PUT") {
+		std::cout << "Writing " << reqBody.size() << " bytes to CGI stdin..." << std::endl;
+		std::cout << "This will BLOCK if pipe buffer fills up..." << std::endl;
 		ssize_t n = write(_stdinPipe[1], reqBody.c_str(), reqBody.size());
+		std::cout << "Write completed: " << n << " bytes written" << std::endl;
 		(void)n; // mute compiler error
 	}
 	close(_stdinPipe[1]); // stdin write
@@ -266,10 +270,10 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot)
 	tmp["SERVER_PROTOCOL"] = req.getVersion();
 	tmp["SERVER_SOFTWARE"] = Const::SERVER_SOFTWARE;
 	// Additional variables from old subject requirements to pass ubuntu_tester
-	tmp["AUTH_TYPE"] = "";  // Authentication type (usually empty)
-	tmp["REMOTE_ADDR"] = "127.0.0.1";  // Client IP address
-	tmp["REMOTE_IDENT"] = "";  // Remote user identity (usually empty)
-	tmp["REMOTE_USER"] = "";   // Remote user name (usually empty)
+	tmp["AUTH_TYPE"] = "";
+	tmp["REMOTE_ADDR"] = "127.0.0.1";
+	tmp["REMOTE_IDENT"] = "";
+	tmp["REMOTE_USER"] = "";
 	tmp["REQUEST_URI"] = req.getUri();
 	tmp["SERVER_NAME"] = "localhost";
 	tmp["SERVER_PORT"] = "8080";

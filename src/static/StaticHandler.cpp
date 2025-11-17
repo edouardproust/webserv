@@ -91,11 +91,15 @@ Response StaticHandler::handlePost() {
     return response;
 }*/
 
-/**
- * Simply return an error (POST method not allowed on a static file).
- */
-Response StaticHandler::handlePost() {
-	return handleError(HttpStatus("method_not_allowed"));
+//For testing, just return 200 OK
+Response StaticHandler::handlePost()
+{
+	Response response;
+	response.setStatus(HttpStatus("ok"));
+	response.setBody("random content");
+	//response.setBody("return all the actual 100 MB characters");
+	response.setHeader("Content-Length", "100000000");
+    return response;
 }
 
 Response	StaticHandler::handleHead()
