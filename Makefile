@@ -117,7 +117,7 @@ re: fclean all
 test_prod: all
 	@mkdir -p $(dir $(LOG_ACCESS)) $(dir $(LOG_ERROR))
 	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE) $(CONFIG_DST_DIR)
-	./$(NAME) $(CONFIG_FILE) $(CONFIG_DST_DIR)/$(LOG_REDIRECTION)
+	./$(NAME) $(CONFIG_DST_DIR)/$(CONFIG_FILE) $(LOG_REDIRECTION)
 
 test_dev: dev
 	@clear
