@@ -1,7 +1,7 @@
 #include "http/Response.hpp"
 
 Response::Response()
-: _status(HttpStatus("ok"))
+: _status(HttpStatus())
 {
 	_initDefaultHeaders();
 }
@@ -10,7 +10,7 @@ Response::Response()
  * May throw a RawException.
  */
 Response::Response(std::string const& rawResponse)
-: _status(HttpStatus("ok"))
+: _status(HttpStatus())
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -42,7 +42,7 @@ Response::RawException::RawException(std::string const& msg)
 
 void	Response::_initDefaultHeaders()
 {
-	_headers["server"] = SERVER_SOFTWARE;
+	_headers["server"] = Const::SERVER_SOFTWARE;
 	_headers["date"] = utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT");
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
@@ -265,6 +265,6 @@ std::ostream& operator<<(std::ostream& os, Response const& response)
 			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(EXCERPT_CHARS, response.stringify())) << "\n";
+	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, response.stringify())) << "\n";
 	return os;
 }

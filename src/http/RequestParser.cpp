@@ -1,26 +1,12 @@
 #include "http/RequestParser.hpp"
 #include "utils/utils.hpp"
-#include "constants.hpp"
+#include "utils/Const.hpp"
 #include <iostream>
 
-RequestParser::RequestParser()
-{}
+size_t const	RequestParser::_PATH_MAX_LEN = 4096;
+size_t const	RequestParser::_HEADER_MAX_LEN = 8192;
 
-RequestParser::RequestParser(const RequestParser& other)
-{
-	(void)other;
-}
-
-RequestParser& RequestParser::operator=(const RequestParser& other)
-{
-	(void)other;
-	return (*this);
-}
-
-RequestParser::~RequestParser()
-{}
-
-void	RequestParser::parseRequest(Request& request, const std::string& rawRequest)
+void	RequestParser::parseRequest(Request& request, std::string const& rawRequest)
 {
 	request.setRawRequest(rawRequest);
 
@@ -58,7 +44,7 @@ void	RequestParser::parseRequest(Request& request, const std::string& rawRequest
 	request.setStatus(HttpStatus("ok"));
 }
 
-HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseRequestLine(Request& request, std::string const& line)
 {
 	for (size_t i = 0; i < line.length(); i++)
 	{
@@ -75,7 +61,7 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 		if (c != ' ')
 			return HttpStatus("bad_request");
 	}
-	if (uri.length() > PATH_MAX)
+	if (uri.length() > _PATH_MAX_LEN)
 		return HttpStatus("uri_too_long");
 	HttpStatus result = _parseUri(request, uri);
 	if (result.getSlug() != "ok")
@@ -93,7 +79,7 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, const std::string&
 	return HttpStatus("ok");
 }
 
-HttpStatus	RequestParser::_parseUri(Request& request, const std::string& uri)
+HttpStatus	RequestParser::_parseUri(Request& request, std::string const& uri)
 {
 	request.setUri(uri);
 	size_t queryPos = uri.find('?');
@@ -124,7 +110,7 @@ HttpStatus	RequestParser::_parseUri(Request& request, const std::string& uri)
 	return HttpStatus(200);
 }
 
-HttpStatus RequestParser::_parseUrl(std::string& result, const std::string& encoded)
+HttpStatus RequestParser::_parseUrl(std::string& result, std::string const& encoded)
 {
 	result.clear();
 	for (size_t i = 0; i < encoded.length(); i++)
@@ -149,13 +135,13 @@ HttpStatus RequestParser::_parseUrl(std::string& result, const std::string& enco
 	return HttpStatus("ok");
 }
 
-HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& headersPart, bool hasBody)
+HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& headersPart, bool hasBody)
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
 	while (std::getline(headersStream, line))
 	{
-		if (line.length() > HEADER_MAX_SIZE)
+		if (line.length() > _HEADER_MAX_LEN)
 			return HttpStatus("request_header_fields_too_large");
 		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length()-1);
@@ -182,7 +168,7 @@ HttpStatus RequestParser::_parseHeaders(Request& request, const std::string& hea
 	return HttpStatus("ok");
 }
 
-HttpStatus	RequestParser::_parseHeaderLine(Request& request, const std::string& line)
+HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& line)
 {
 	size_t	colonPos = line.find(":");
 	if (colonPos == std::string::npos)
@@ -283,7 +269,7 @@ HttpStatus	RequestParser::_validateBody(Request& request)
 	return HttpStatus("ok");
 }
 
-bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& requestStart) const
+bool	RequestParser::_isValidStart(std::string const& rawRequest, size_t& requestStart)
 {
 	for (size_t i = 0; i < rawRequest.length(); i++)
 	{
@@ -297,7 +283,7 @@ bool	RequestParser::_isValidStart(const std::string& rawRequest, size_t& request
 	return false;
 }
 
-bool	RequestParser::_isValidMethod(const std::string& methodStr) const
+bool	RequestParser::_isValidMethod(std::string const& methodStr)
 {
 	if (methodStr.empty())
 		return false;
@@ -309,7 +295,7 @@ bool	RequestParser::_isValidMethod(const std::string& methodStr) const
 	return (Request::isSupportedMethod(methodStr) || Request::isExistingMethod(methodStr));
 }
 
-bool	RequestParser::_isValidPath(const std::string& _path) const
+bool	RequestParser::_isValidPath(std::string const& _path)
 {
 	if (_path.empty())
 		return false;
@@ -318,7 +304,7 @@ bool	RequestParser::_isValidPath(const std::string& _path) const
 	return true;
 }
 
-void	RequestParser::_extractScriptAndPathInfo(Request& request, const std::string& path)
+void	RequestParser::_extractScriptAndPathInfo(Request& request, std::string const& path)
 {
 	std::vector<std::string> segments = utils::split(path, '/');
 	std::string current_path = "";
@@ -350,7 +336,7 @@ void	RequestParser::_extractScriptAndPathInfo(Request& request, const std::strin
 	request.setPathInfo("");
 }
 
-bool	RequestParser::_isValidVersion(const std::string& versionStr) const
+bool	RequestParser::_isValidVersion(std::string const& versionStr)
 {
 	if (versionStr.empty())
 		return false;
@@ -383,7 +369,7 @@ bool	RequestParser::_isValidVersion(const std::string& versionStr) const
 	return true;
 }
 
-bool	RequestParser::_isValidVersionNumber(const std::string& numStr) const
+bool	RequestParser::_isValidVersionNumber(std::string const& numStr)
 {
 	if (numStr.empty())
 		return false;
@@ -397,7 +383,7 @@ bool	RequestParser::_isValidVersionNumber(const std::string& numStr) const
 	return true;
 }
 
-bool	RequestParser::_isValidHeaderName(const std::string& name) const
+bool	RequestParser::_isValidHeaderName(std::string const& name)
 {
 	const std::string validChars = "!#$%&'*+-.^_`|~";
 
@@ -409,14 +395,14 @@ bool	RequestParser::_isValidHeaderName(const std::string& name) const
 	return true;
 }
 
-bool	RequestParser::_headersIndicateBody(const Request& request) const
+bool	RequestParser::_headersIndicateBody(Request const& request)
 {
 	const std::map<std::string, std::string>& headers = request.getHeaders();
 	return (headers.find("content-length") != headers.end() ||
 			headers.find("transfer-encoding") != headers.end());
 }
 
-bool	RequestParser::_isValidHeaderValue(const std::string& value) const
+bool	RequestParser::_isValidHeaderValue(std::string const& value)
 {
 	for (size_t i = 0; i < value.length(); i++)
 	{
@@ -428,7 +414,7 @@ bool	RequestParser::_isValidHeaderValue(const std::string& value) const
 	return true;
 }
 
-bool	RequestParser::_isValidContentType(const std::string& contentType) const
+bool	RequestParser::_isValidContentType(std::string const& contentType)
 {
 	if (contentType.empty())
 		return false;
@@ -440,7 +426,7 @@ bool	RequestParser::_isValidContentType(const std::string& contentType) const
 	return true;
 }
 
-bool	RequestParser::_isValidContentLength(const std::string& contentLength) const
+bool	RequestParser::_isValidContentLength(std::string const& contentLength)
 {
 	if (contentLength.empty())
 		return false;
@@ -452,12 +438,12 @@ bool	RequestParser::_isValidContentLength(const std::string& contentLength) cons
 	return true;
 }
 
-bool RequestParser::_hasBody(const std::string& rawRequest, size_t headersEnd) const
+bool RequestParser::_hasBody(std::string const& rawRequest, size_t headersEnd)
 {
 	return headersEnd + 4 < rawRequest.length();
 }
 
-std::string RequestParser::_normalizeHeaderName(const std::string& name) const
+std::string RequestParser::_normalizeHeaderName(std::string const& name)
 {
 	return utils::toLowerCase(name);
 }

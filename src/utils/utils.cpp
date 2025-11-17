@@ -7,7 +7,7 @@ bool	utils::isInt(std::string const& str)
 	char* endptr = NULL;
 	errno = 0;
 	long value = std::strtol(str.c_str(), &endptr, 10);
-	if (*endptr != '\0' || errno == ERANGE || value > static_cast<long>(MAX_SIZE_T) || value < 0)
+	if (*endptr != '\0' || errno == ERANGE || value > static_cast<long>(Const::MAX_SIZE_T) || value < 0)
 		return false;
 	return true;
 }
@@ -96,7 +96,7 @@ size_t	utils::toSizeT(std::string const& str)
 	long value = std::strtol(str.c_str(), &endptr, 10);
 	if (*endptr != '\0')
 		throw std::runtime_error("Invalid numeric value: " + str);
-	if (errno == ERANGE || value > static_cast<long>(MAX_SIZE_T) || value < 0)
+	if (errno == ERANGE || value > static_cast<long>(Const::MAX_SIZE_T) || value < 0)
 		throw std::runtime_error("Numeric value out of range: " + str);
 	return static_cast<size_t>(value);
 }

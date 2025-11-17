@@ -5,15 +5,21 @@
 #include "http/Response.hpp"
 #include "config/LocationBlock.hpp"
 #include "utils/utils.hpp"
-#include "typedefs.hpp"
+#include "utils/typedefs.hpp"
 #include "utils/Log.hpp"
 #include "fcntl.h"
 #include <sys/wait.h>
 
 /**
- * Entity type class
+ * Handles execution of CGI scripts.
+ *
+ * Resource-type RAII class: manages pipes and child processes, non-copyable.
  */
-class CgiHandler {
+class CgiHandler
+{
+	static size_t const			_TIMEOUT_MS;
+	static size_t const			_STEP_MS;
+	static size_t const			_READ_BUFFER;
 
 	std::string					_scriptName;
 	std::string					_extension;
@@ -31,18 +37,17 @@ class CgiHandler {
 	void		_buildArgv();
 	pid_t		_forkAndExec() const;
 	void		_prepareIo(std::string const&, std::string const&);
-	Response	_handleStatus(int) const;
+	Response	_handleStatus(int);
 	void		_redirectIoInChild() const;
 	void		_setNonBlocking(int fd);
 	bool		_waitWithTimeout(pid_t pid, int& status, size_t timeout_ms);
 	void		_readPipes();
 	void		_cleanupPipes();
 
-	// static utils
 	static std::string			_headerToEnvVar(std::string const&);
-	static std::vector<char*>	_toCharPtrArray(const std::vector<std::string>&);
+	static std::vector<char*>	_toCharPtrArrayInChild(const std::vector<std::string>&);
 
-	// Copy disabled - would duplicate pipes and cause double-close
+	// Copy constructor and assignation are forbidden
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 
@@ -69,7 +74,6 @@ class CgiHandler {
 			public:
 				TimeoutException(std::string const& msg);
 		};
-
 };
 
 std::ostream&	operator<<(std::ostream&, CgiHandler const&);

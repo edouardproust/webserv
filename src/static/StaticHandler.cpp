@@ -1,11 +1,13 @@
 #include "static/StaticHandler.hpp"
 #include "http/HttpStatus.hpp"
-#include "constants.hpp"
+#include "utils/Const.hpp"
 #include "utils/utils.hpp"
 #include <dirent.h>
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
+
+size_t const	StaticHandler::_FILE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 StaticHandler::StaticHandler(RoutingDecision const& rd)
 : _routingDecision(rd)
@@ -166,17 +168,17 @@ std::string StaticHandler::_welcomePageHtml() const
 		"<!DOCTYPE html>"
 		"<html>"
 		"<head>"
-		" <title>Welcome to " + SERVER_NAME + "!</title>"
+		" <title>Welcome to " + Const::SERVER_NAME + "!</title>"
 		" <style>"
 		"  html { color-scheme: light dark; }"
 		"  body { width: 35em; margin: 0 auto; font-family: Tahoma, Verdana, Arial, sans-serif; }"
 		" </style>"
 		"</head>"
 		"<body>"
-		" <h1>Welcome to " + SERVER_NAME + "!</h1>"
+		" <h1>Welcome to " + Const::SERVER_NAME + "!</h1>"
 		" <p>If you see this page, the web server is successfully working. Further configuration is required.</p>"
-		" <p>For online documentation and support please refer to <a href=\"" + SERVER_REPO + "\">Github repository</a>.</p>"
-		" <p><em>Thank you for using " + SERVER_NAME + ".</em></p>"
+		" <p>For online documentation and support please refer to <a href=\"" + Const::SERVER_REPO + "\">Github repository</a>.</p>"
+		" <p><em>Thank you for using " + Const::SERVER_NAME + ".</em></p>"
 		"</body>"
 		"</html>"
 	);
@@ -310,11 +312,13 @@ std::string	StaticHandler::_getMimeFromPath(const std::string& filePath)
 
 // UTILS
 
-// TODO (optionnal?): If is CGI file, call CGIHandler instead
+/**
+ * TODO (optionnal): If is CGI file, call CGIHandler instead
+ */
 Response	StaticHandler::_serveFile()
 {
 	size_t fileSize = utils::getFileSize(_finalPath);
-	if (fileSize > MAX_FILE_SIZE)
+	if (fileSize > _FILE_MAX_SIZE)
 		return handleError(HttpStatus("content_too_large"));
 	std::string content = utils::readFile(_finalPath);
 	if (content.empty() && fileSize > 0)

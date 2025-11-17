@@ -217,7 +217,8 @@ void	ServerBlock::_setDefaultIndexFiles()
 	if (!_root.empty()) { // only set default index files if server root is set (it will always be an absolute path)
 		_indexFiles.push_back("index.html");
 		_indexFiles.push_back("index.htm");
-		//_indexFiles.push_back("index.php"); // TODO if uncommented, needs to be checked in StaticHandler::_serveFile
+		// -- add more default index files here --
+		//_indexFiles.push_back("index.php"); // if uncommented, needs to be checked in StaticHandler
 	}
 }
 
@@ -422,14 +423,14 @@ std::set<HostPortPair> const&	ServerBlock::getListen() const
 }
 
 /**
- * Defaults to `DEFAULT_MAX_CLIENT_BODY_SIZE` with a limit of `MAX_SIZE_T`.
+ * Defaults to `MAX_CLIENT_BODY_SIZE` with a limit of `MAX_SIZE_T`.
  */
 size_t	ServerBlock::getClientMaxBodySize() const
 {
 	if (!_isSetClientBodySize) {
-		if (DEFAULT_MAX_CLIENT_BODY_SIZE > MAX_SIZE_T)
-			return MAX_SIZE_T;
-		return DEFAULT_MAX_CLIENT_BODY_SIZE;
+		if (Config::_MAX_CLIENT_BODY_SIZE > Const::MAX_SIZE_T)
+			return Const::MAX_SIZE_T;
+		return Config::_MAX_CLIENT_BODY_SIZE;
 	}
 	return _clientMaxBodySize;
 }

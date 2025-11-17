@@ -5,9 +5,12 @@
 #include <fstream>
 
 /**
- * Entity type class
+ * Represents the server configuration.
+ *
+ * Entity-type class: holds data, non-copyable.
  */
-class Config {
+class Config
+{
 
 	std::vector<ServerBlock>	_servers;
 
@@ -17,13 +20,14 @@ class Config {
 	void		_addServer(Tokens const&, std::string const&, size_t& i, int&);
 	void		_validate() const;
 
-	// Entity type - represents unique server configuration
-    // Copying would duplicate expensive parsed data unnecessarily
+	// Default and copy constructors, assignation are forbidden
 	Config();
 	Config(Config const&);
 	Config&	operator=(Config const&);
 
 	public:
+
+		static size_t const	_MAX_CLIENT_BODY_SIZE;
 
 		Config(std::string const&);
 		~Config();
@@ -36,7 +40,6 @@ class Config {
 		static size_t		parseSize(std::string const&);
 
 		std::vector<ServerBlock> const&	getServers() const;
-
 };
 
 std::ostream&	operator<<(std::ostream&, Config const&);

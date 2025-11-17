@@ -1,17 +1,35 @@
 #include "utils/Log.hpp"
 
+std::ostream&		Log::_DEBUG_STREAM	= std::cerr;
+std::ostream&		Log::_ACCESS_STREAM	= std::cout;
+std::ostream&		Log::_ERROR_STREAM	= std::cerr;
+
+std::string const	Log::_RESET			= "\033[0m";
+std::string const	Log::_BOLD			= "\033[1m";
+std::string const	Log::_NORMAL		= "\033[0m";
+
+std::string const	Log::_RED			= "\033[31m";
+std::string const	Log::_BRIGHT_RED	= "\033[91m";
+std::string const	Log::_GREEN			= "\033[32m";
+std::string const	Log::_YELLOW		= "\033[33m";
+std::string const	Log::_BLUE			= "\033[34m";
+std::string const	Log::_MAGENTA		= "\033[35m";
+std::string const	Log::_CYAN			= "\033[36m";
+
+size_t const		Log::EXCERPT_CHARS	= 500;
+
 const Log::Entry Log::TYPE_TABLE[] = {
-	{"ok", BOLD GREEN, ACCESS_STREAM}, // Succeeded requests
-	{"event", BLUE, ACCESS_STREAM}, // Request event
-	{"status", CYAN, ACCESS_STREAM}, // Status, metrics
-	{"info", BOLD YELLOW, ACCESS_STREAM}, // General acitivity informations
+	{"ok", _BOLD + _GREEN, _ACCESS_STREAM}, // Succeeded requests
+	{"event", _BLUE, _ACCESS_STREAM}, // Request event
+	{"status", _CYAN, _ACCESS_STREAM}, // Status, metrics
+	{"info", _BOLD + _YELLOW, _ACCESS_STREAM}, // General acitivity informations
 
-	{"error", BOLD RED, ERROR_STREAM}, // Critical errors
-	{"warning", BOLD BRIGHT_RED, ERROR_STREAM},	// Warnings
-	{"close", RED, ERROR_STREAM}, // Uncommon exits
+	{"error", _BOLD + _RED, _ERROR_STREAM}, // Critical errors
+	{"warning", _BOLD + _BRIGHT_RED, _ERROR_STREAM},	// Warnings
+	{"close", _RED, _ERROR_STREAM}, // Uncommon exits
 
-	{"setup", MAGENTA, DEBUG_STREAM},
-	{"debug", BLUE, DEBUG_STREAM},
+	{"setup", _MAGENTA, _DEBUG_STREAM},
+	{"debug", _BLUE, _DEBUG_STREAM},
 };
 
 const size_t Log::TYPE_TABLE_SIZE = sizeof(Log::TYPE_TABLE) / sizeof(Log::Entry);

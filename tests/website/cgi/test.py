@@ -122,44 +122,6 @@ else:
 		</form>
 	"""
 
-<<<<<<< HEAD
-=======
-# GET section
-get_params = os.environ.get('QUERY_STRING', '')
-if get_params:
-	get_data = []
-	for param in get_params.split('&'):
-		if '=' in param:
-			key, value = param.split('=', 1)
-			get_data.append(f"{escape(key)} = {escape(value)}")
-		else:
-			get_data.append(f"{escape(param)} = ")
-	get_section = f"""
-		<h2>GET Parameters:</h2>
-		<pre>{"\n".join(get_data)}</pre>
-	"""
-else:
-    get_section = ""
-
-# PUT section  
-put_section = ""
-if request_method == 'PUT':
-	try:
-		import sys
-		raw_body = sys.stdin.read()
-		put_section = f"""
-		<h2>PUT Data Received:</h2>
-		<pre>{escape(raw_body)}</pre>
-		"""
-	except:
-		put_section = "<p>Error reading PUT data</p>"
-else:
-	put_section = """
-	<h2>Test PUT Method:</h2>
-	<p>Use: <code>curl -X PUT http://localhost:8080/cgi/test.py -d "PUT test data"</code></p>
-    """
-
->>>>>>> main
 # Raw body section (for other methods like PUT)
 raw_body_section = ""
 if request_method not in ['GET', 'POST'] or (request_method == 'POST' and not form.keys()):

@@ -1,12 +1,12 @@
 #include "network/Socket.hpp"
 
-Socket::Socket(HostPortPair const& listen_pair)
-: _listenOn(listen_pair)
+Socket::Socket(HostPortPair const& listenPair)
+: _listenOn(listenPair)
 {
 	Log::dev("setup", "Setting up socket on " + Log::hl(_listenOn) + ".");
 
-	loadAddressInfo();
-	createSocket();
+	_loadAddressInfo();
+	_createSocket();
 
 	Log::dev("setup", "Socket created on " + Log::hl(_listenOn) + ".");
 }
@@ -14,10 +14,16 @@ Socket::Socket(HostPortPair const& listen_pair)
 Socket::~Socket()
 {
 	close(_sock);
+
+	if (_servinfo) {
+		freeaddrinfo(_servinfo);
+		_servinfo = NULL;
+	}
+
 	Log::prod("ok", "Socket " + Log::hl(_listenOn) + " closed.");
 }
 
-void Socket::setAddrStruct(void)
+void	Socket::_setAddrStruct()
 {
 	std::memset(&_hints, 0, sizeof(_hints));
 	_hints.ai_family = AF_UNSPEC;	  // IPv4 only
@@ -25,11 +31,11 @@ void Socket::setAddrStruct(void)
 	_hints.ai_flags = AI_PASSIVE;	  // allows bind
 }
 
-void Socket::loadAddressInfo()
+void	Socket::_loadAddressInfo()
 {
 	Log::dev("setup", "Loading address info...");
 	int status;
-	setAddrStruct();
+	_setAddrStruct();
 
 	// Convert size_t (port) to C-string
 	std::string portStr = utils::str(_listenOn.getPort());
@@ -47,38 +53,40 @@ void Socket::loadAddressInfo()
 	}
 }
 
-void Socket::createSocket()
+void	Socket::_createSocket()
 {
-	_sock = ::socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
+	_sock = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 
 	Log::dev("setup", "Creating Socket...");
 	if (_sock < 0) {
-		::freeaddrinfo(_servinfo);
+		freeaddrinfo(_servinfo);
 		throw SocketException();
 	}
 
-	int yes = 1;
-
 	Log::dev("setup", "Configuring Socket...");
-	if (::setsockopt(_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-		::freeaddrinfo(_servinfo);
+	int yes = 1;
+	if (setsockopt(_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+		freeaddrinfo(_servinfo);
 		throw SetSockOptException();
 	}
 
 	Log::dev("setup", "Setting Socket to non-blocking mode...");
-	int status = ::fcntl(_sock, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-	if (status < 0) {
-		::freeaddrinfo(_servinfo);
+	int flags = fcntl(_sock, F_GETFL);
+    int fdflags = fcntl(_sock, F_GETFD);
+    if (flags == -1 || fdflags == -1
+		|| fcntl(_sock, F_SETFL, flags | O_NONBLOCK) == -1
+		|| fcntl(_sock, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
+		freeaddrinfo(_servinfo);
 		throw FcntlException();
-	}
+    }
 }
 
-int Socket::getSock()
+int	Socket::getSock()
 {
 	return (_sock);
 }
 
-void Socket::bind()
+void	Socket::bind()
 {
 	int status;
 
@@ -96,7 +104,7 @@ void Socket::bind()
 	freeaddrinfo(_servinfo);
 }
 
-void Socket::listen()
+void	Socket::listen()
 {
 	int status;
 
@@ -110,21 +118,21 @@ void Socket::listen()
 	Log::prod("ok", "Now listening on " + Log::hl(_listenOn) + ".");
 }
 
-int Socket::accept()
+int	Socket::accept()
 {
-	struct sockaddr_storage their_addr;
-	socklen_t addr_size;
-	int new_socket;
+	struct sockaddr_storage theirAddr;
+	socklen_t addrSize;
+	int newSocket;
 
 	Log::dev("event", "accept() requested.");
-	addr_size = sizeof their_addr;
-	new_socket = ::accept(_sock, (struct sockaddr *)&their_addr, &addr_size);
-	if (new_socket < 0) {
+	addrSize = sizeof theirAddr;
+	newSocket = ::accept(_sock, (struct sockaddr *)&theirAddr, &addrSize);
+	if (newSocket < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
 		throw AcceptException();
 	}
 	Log::dev("ok", "accept() successfull");
-	return (new_socket);
+	return (newSocket);
 }
 
 HostPortPair const&	Socket::getHostPortPair() const

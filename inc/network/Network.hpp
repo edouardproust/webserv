@@ -6,58 +6,70 @@
 #include "utils/signal.hpp"
 #include <sys/epoll.h>
 
-class Network {
+/**
+ * RAII wrapper managing server sockets, epoll, and client connections.
+ *
+ * Ensures proper acquisition and release of system resources.
+ * Entity-type class: default and copy constructors are forbidden.
+ */
+class Network
+{
+	static size_t const			_CLIENT_BUFFER;
+	static size_t const			_EVENT_MAX_SIZE;
 
-	private:
-		Config const& _config;
-		std::vector<Socket *> _connections;
-		std::map<int, std::string> _request_list;
-		std::map<int, Socket*> _client_server_map;
+	Config const&				_config;
+	std::vector<Socket*>		_connections;
+	std::map<int, std::string>	_requestList;
+	std::map<int, Socket*>		_clientServerMap;
+	int							_epoll;
 
-		int _epoll;
+	void	_epollCreate();
+	void	_epollAddServers();
+	int		_epoll_wait(struct epoll_event*);
 
-		void epoll();
-		void epollAddServers();
-		int epoll_wait(struct epoll_event *events);
+	int		_isServerSideEvent(int);
+	void	_recv(int, struct epoll_event&);
+	void	_send(int, struct epoll_event&);
 
-		int isServerSideEvent(int epoll_fd);
-		void recv(int client_fd, struct epoll_event &events_setup);
-		void send(int client_fd, struct epoll_event &events_setup);
+	void	_handleClientDisconnect(int, struct epoll_event&);
+	void	_handleRecvError(int, struct epoll_event&);
+	bool	_isRequestComplete(const std::string&);
+	bool	_shouldCloseConnection(const Request&, const Response&);
+	void	_manageConnection(int, bool, struct epoll_event&);
 
-		void _handleClientDisconnect(int client_fd, struct epoll_event &events_setup);
-		void _handleRecvError(int client_fd, struct epoll_event &events_setup);
-bool _isRequestComplete(const std::string& total_request);
-    bool _shouldCloseConnection(const Request& request, const Response& response);
-    void _manageConnection(int client_fd, bool should_close, struct epoll_event &events_setup);
-		int			getRequestTotalLength(std::string request);
-		std::string getBoundry(std::string request);
+	// Default and copy constructors, assignation are forbidden
+	Network();
+	Network(Network const&);
+	Network&	operator=(Network const&);
 
 	public:
-		Network();
-		Network(Config const& _config_file);
+
+		Network(Config const&);
 		~Network();
-		void startServers();
-		int getEpollFd() const;
-		const std::vector<Socket*>& getConnections() const;
-		const std::map<int, std::string>& getRequestList() const;
-		const std::map<int, Socket*>& getClientServerMap() const;
+
+		void	startServers();
+
+		int									getEpollFd() const;
+		std::vector<Socket*> const&			getConnections() const;
+		std::map<int, std::string> const&	getRequestList() const;
+		std::map<int, Socket*> const&		getClientServerMap() const;
 
 		class EpollException : public std::exception {
 			public:
-				const char *what() const throw();
+				char const*	what() const throw();
 		};
 
 		class EpollCtlException : public std::exception {
 			public:
-				const char *what() const throw();
+				char const*	what() const throw();
 		};
 
 		class EpollWaitException : public std::exception {
 			public:
-				const char *what() const throw();
+				char const*	what() const throw();
 		};
 };
 
-std::ostream& operator<<(std::ostream& os, const Network& rhs);
+std::ostream&	operator<<(std::ostream&, Network const&);
 
-#endif // WEBSERVER_HPP
+#endif

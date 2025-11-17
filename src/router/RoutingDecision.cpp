@@ -15,29 +15,6 @@ RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair
 	_makeDecision();
 }
 
-RoutingDecision::RoutingDecision(RoutingDecision const& other)
-: _config(other._config)
-, _request(other._request)
-, _listen(other._listen)
-, _server(other._server)
-, _location(other._location)
-, _finalPath(other._finalPath)
-, _decision(other._decision)
-, _errorSlug(other._errorSlug)
-{}
-
-RoutingDecision&	RoutingDecision::operator=(RoutingDecision const& other)
-{
-	if (this != &other) {
-        _server = other._server;
-        _location = other._location;
-        _finalPath = other._finalPath;
-        _decision = other._decision;
-        _errorSlug = other._errorSlug;
-    }
-    return *this;
-}
-
 RoutingDecision::~RoutingDecision()
 {}
 

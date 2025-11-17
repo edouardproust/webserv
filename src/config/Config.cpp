@@ -1,5 +1,7 @@
 #include "config/Config.hpp"
 
+size_t const	Config::_MAX_CLIENT_BODY_SIZE = 200 * 1024 * 1024; // 200 MB (required by ubuntu_tester)
+
 Config::Config(std::string const& filePath)
 {
 	try {
@@ -161,9 +163,9 @@ size_t	Config::parseSize(std::string const& sizeStr)
 	}
 
 	size_t number = utils::toSizeT(numberStr); // throw exception if empty, invalid number or overflow
-	if (number > (MAX_SIZE_T / multiplier)) // this calculation is overflow-safe
+	if (number > (Const::MAX_SIZE_T / multiplier)) // this calculation is overflow-safe
 		throw std::runtime_error("Too large number: "
-			+ sizeStr + " (max is " + utils::str(MAX_SIZE_T) + " bytes)");
+			+ sizeStr + " (max is " + utils::str(Const::MAX_SIZE_T) + " bytes)");
 	return number * multiplier;
 }
 

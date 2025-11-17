@@ -5,10 +5,12 @@
 #include "config/HostPortPair.hpp"
 
 /**
- * Value type class
+ * Represents a server configuration block (e.g., root, listen ports, max body size, locations).
+ *
+ * Value-type class: copyable and assignable; owns its configuration data.
  */
-class ServerBlock {
-
+class ServerBlock
+{
 	std::string					_root;
 	std::set<HostPortPair>		_listen;
 	size_t						_clientMaxBodySize;
@@ -34,6 +36,7 @@ class ServerBlock {
 
 	public:
 
+ 		// Othodox canonical form
 		ServerBlock();
 		ServerBlock(std::string const&);
 		ServerBlock(ServerBlock const&);
@@ -47,7 +50,6 @@ class ServerBlock {
 		ErrorPages const&					getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		std::vector<LocationBlock> const&	getLocations() const;
-
 };
 
 std::ostream&	operator<<(std::ostream&, ServerBlock const&);

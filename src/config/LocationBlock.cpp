@@ -3,11 +3,10 @@
 
 LocationBlock::LocationBlock()
 : _server(NULL)
-, _path("")
 , _autoindex("off")
+, _return(std::make_pair(-1, ""))
 , _clientMaxBodySize(0)
 , _isSetClientMaxBodySize(false)
-, _uploadStore("")
 , _isDefaultLocation(false)
 {}
 
@@ -15,7 +14,11 @@ LocationBlock::LocationBlock()
  * Default location block (path = "/"). Used if not location matches the request URI.
  */
 LocationBlock::LocationBlock(ServerBlock const* server)
-: _server(server), _path("/"), _return(std::make_pair(-1, "")), _isSetClientMaxBodySize(false), _isDefaultLocation(true)
+: _server(server)
+, _path("/")
+, _return(std::make_pair(-1, ""))
+, _isSetClientMaxBodySize(false)
+, _isDefaultLocation(true)
 {
 	// PUT method is disabled by default because it requires a upload_store value
 	_allowedMethods = Request::getSupportedMethods();
@@ -65,6 +68,7 @@ LocationBlock&	LocationBlock::operator=(LocationBlock const& other)
 		_return = other._return;
 		_clientMaxBodySize = other._clientMaxBodySize;
 		_isSetClientMaxBodySize = other._isSetClientMaxBodySize;
+		_uploadStore = other._uploadStore;
 		_indexFiles = other._indexFiles;
 		_errorPages = other._errorPages;
 		_cgi = other._cgi;
@@ -441,9 +445,7 @@ std::string const	LocationBlock::getRoot() const
  */
 std::string const	LocationBlock::getAutoindex() const
 {
-	if (_autoindex.empty())
-		return "on";
-	return _autoindex;
+	return !_autoindex.empty() ? _autoindex : "on";
 }
 
 std::set<std::string> const&	LocationBlock::getAllowedMethods() const {

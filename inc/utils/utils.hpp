@@ -1,7 +1,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include "constants.hpp"
+#include "utils/Const.hpp"
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>

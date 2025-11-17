@@ -6,9 +6,19 @@
 #include <string>
 #include <sstream>
 
-class HttpStatus {
-
-	struct Entry { int code; std::string const reason; std::string const slug; };
+/**
+ * Represents an HTTP status code.
+ *
+ * Encapsulates code, reason phrase, and slug.
+ * Value-type class: copyable and assignable; follows othodox canonical form.
+ */
+class HttpStatus
+{
+	struct Entry {
+		int code;
+		std::string const reason;
+		std::string const slug;
+	};
 
 	int			_code;		// eg. 404
 	std::string _reason;	// eg. "Not Found"
@@ -21,11 +31,10 @@ class HttpStatus {
 	static Entry const*	_findBySlug(std::string const&);
 	void				_initFromEntry(const Entry* entry);
 
-
-	HttpStatus(); // Not used
-
 	public:
 
+ 		// Othodox canonical form (Value-type class)
+		HttpStatus(); // Default: 200 OK
 		HttpStatus(int);
 		HttpStatus(std::string const&);
 		HttpStatus(HttpStatus const&);
@@ -39,7 +48,6 @@ class HttpStatus {
 
 		std::string			toStr() const;
 		static bool			isError(int);
-
 };
 
 std::ostream&	operator<<(std::ostream&, const HttpStatus&);

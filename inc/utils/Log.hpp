@@ -1,39 +1,45 @@
 #ifndef LOG_HPP
 #define LOG_HPP
 
-#include "constants.hpp"
+#include "utils/Const.hpp"
 #include "utils/utils.hpp"
 #include "utils/PrintableString.hpp"
 #include <map>
 #include <iomanip>
 #include <ctime>
 
-class Log {
+/**
+ * Utility class for logging and formatting messages.
+ *
+ * Provides dev/prod logging streams, colored output, and string utilities.
+ * Static service-type class: not instantiable or copyable.
+ */
+class Log
+{
+    static std::ostream&		_DEBUG_STREAM;
+    static std::ostream&		_ACCESS_STREAM;
+    static std::ostream&		_ERROR_STREAM;
 
-	#define DEBUG_STREAM	std::cerr
-	#define ACCESS_STREAM	std::cout
-	#define ERROR_STREAM	std::cerr
+    static std::string const	_RESET;
+    static std::string const	_BOLD;
+    static std::string const	_NORMAL;
 
-	#define RESET     	"\033[0m"
-	#define BOLD		"\033[1m"
-	#define NORMAL		"\033[0m"
+    static std::string const	_RED;
+    static std::string const	_BRIGHT_RED;
+    static std::string const	_GREEN;
+    static std::string const	_YELLOW;
+    static std::string const	_BLUE;
+    static std::string const	_MAGENTA;
+    static std::string const	_CYAN;
 
-	#define BLACK		"\033[30m"
-	#define RED			"\033[31m"
-	#define BRIGHT_RED	"\033[91m"
-	#define GREEN		"\033[32m"
-	#define YELLOW		"\033[33m"
-	#define BLUE		"\033[34m"
-	#define MAGENTA		"\033[35m"
-	#define CYAN		"\033[36m"
-	#define WHITE		"\033[37m"
+	struct Entry {
+		std::string const	type;
+		std::string const	color;
+		std::ostream&		stream;
+	};
 
-	#define EXCERPT_CHARS 500
-
-	struct Entry { std::string const type; std::string const color; std::ostream& stream; };
-
-	static const Entry TYPE_TABLE[];
-	static const size_t TYPE_TABLE_SIZE;
+	static const Entry	TYPE_TABLE[];
+	static const size_t	TYPE_TABLE_SIZE;
 
 	static Entry const*	_findByType(std::string const&);
 
@@ -41,13 +47,15 @@ class Log {
 	static void	_print(const std::string&, const T&);
 
 
-	// TODO make canonical
+	// Not instantiable
 	Log();
 	Log(Log const&);
 	Log&	operator=(Log const&);
 	~Log();
 
 	public:
+
+		static size_t const	EXCERPT_CHARS;
 
 		template <typename T>
 		static void	dev(std::string const&, T const&);
@@ -59,8 +67,6 @@ class Log {
 		static std::string	hl(T const&);
 
 		static std::string	excerpt(size_t n, std::string const& s);
-
-
 };
 
 #include "../src/utils/Log.tpp"

@@ -24,6 +24,14 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 // constructors
 
 /**
+ * Build a `HttpStatus` of 200 OK (default).
+ */
+HttpStatus::HttpStatus()
+{
+	_initFromEntry(_findBySlug("ok"));
+}
+
+/**
  * Build a `HttpStatus` from a HTTP status code.
  *
  * - Supported codes: `200`, `201`, `204`, `301`, `302`, `400`, `403`,

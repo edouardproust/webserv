@@ -23,7 +23,7 @@ std::string	Log::hl(T const& value)
 	std::string const& s = utils::str(value);
 	std::string ret = s;
 	if (DEVMODE)
-		ret = CYAN + s + RESET;
+		ret = _CYAN + s + _RESET;
 	return ret;
 }
 
@@ -38,7 +38,7 @@ void Log::_print(std::string const& type, T const& value)
 
 	if (res != NULL) {
 		if (DEVMODE)
-			logLine += res->color + "[" + utils::toUpper(type) + "]" + RESET + " " + oss.str();
+			logLine += res->color + "[" + utils::toUpper(type) + "]" + _RESET + " " + oss.str();
 		else
 			logLine += "[" + utils::toUpper(type) + "]" + " " + oss.str();
 	} else { // not found

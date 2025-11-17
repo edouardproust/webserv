@@ -1,11 +1,5 @@
 #include "router/Router.hpp"
 
-Router::Router()
-{}
-
-Router::~Router()
-{}
-
 /**
  * Dispatch the request to the corresponding handler by crossing data between Config and Request.
  *
@@ -51,7 +45,7 @@ void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& r
 {
 	std::pair<int, std::string> const& ret = rd.getLocation()->getReturn();
 	RedirectionHandler redirect(rd, ret.first, ret.second);
-	resp = redirect.execute();
+	resp = redirect.run();
 }
 
 void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, StaticHandler& statiq)
