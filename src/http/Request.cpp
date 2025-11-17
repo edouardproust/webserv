@@ -1,64 +1,59 @@
 #include "http/Request.hpp"
 #include "http/RequestParser.hpp"
 
-std::set<std::string> Request::_supportedMethods;
-std::set<std::string> Request::_existingMethods;
+std::set<std::string>	Request::_supportedMethods;
+std::set<std::string>	Request::_existingMethods;
 
 Request::Request()
-: _status(HttpStatus("ok")),
-  _method(""),
-  _uri(""),
-  _path(""),
-  _scriptName(""),
-  _pathInfo(""),
-  _queryString(""),
-  _version(""),
-  _contentType(""),
-  _body("")
+: _status(HttpStatus())
 {}
 
 Request::Request(std::string const& rawRequest)
-: _status(HttpStatus("ok")),
-  _method(""),
-  _uri(""),
-  _path(""),
-  _scriptName(""),
-  _pathInfo(""),
-  _queryString(""),
-  _version(""),
-  _contentType(""),
-  _body("")
+: _status(HttpStatus())
 {
-	static RequestParser parser;
-	parser.parseRequest(*this, rawRequest);
+	RequestParser::parseRequest(*this, rawRequest);
 }
 
-Request::Request(const Request& other): _status(other._status) {
-	*this = other;
-}
+Request::Request(const Request& other)
+: _status(other._status)
+, _method(other._method)
+, _uri(other._uri)
+, _path(other._path)
+, _scriptName(other._scriptName)
+, _pathInfo(other._pathInfo)
+, _queryString(other._queryString)
+, _version(other._version)
+, _headers(other._headers)
+, _contentType(other._contentType)
+, _body(other._body)
+, _rawRequest(other._rawRequest)
+{}
 
 Request& Request::operator=(const Request& other)
 {
 	if (this != &other)
 	{
-		this->_status = other._status;
-		this->_method = other._method;
-		this->_uri = other._uri;
-		this->_path = other._path;
-		this->_scriptName = other._scriptName;
-		this->_pathInfo = other._pathInfo;
-		this->_queryString = other._queryString;
-		this->_version = other._version;
-		this->_headers = other._headers;
-		this->_contentType = other._contentType;
-		this->_body = other._body;
+		_status = other._status;
+		_method = other._method;
+		_uri = other._uri;
+		_path = other._path;
+		_scriptName = other._scriptName;
+		_pathInfo = other._pathInfo;
+		_queryString = other._queryString;
+		_version = other._version;
+		_headers = other._headers;
+		_contentType = other._contentType;
+		_body = other._body;
+		_rawRequest = other._rawRequest;
 	}
 	return (*this);
 }
 
-Request::~Request() {}
+Request::~Request()
+{}
 
-std::set<std::string> const&	Request::getSupportedMethods() {
+std::set<std::string> const&	Request::getSupportedMethods()
+{
 	if (_supportedMethods.empty()) {
 		_supportedMethods.insert("GET");
 		_supportedMethods.insert("POST");
@@ -70,12 +65,14 @@ std::set<std::string> const&	Request::getSupportedMethods() {
 	return _supportedMethods;
 }
 
-bool Request::isSupportedMethod(const std::string& method) {
+bool Request::isSupportedMethod(const std::string& method)
+{
     getSupportedMethods();
     return _supportedMethods.find(method) != _supportedMethods.end();
 }
 
-bool	Request::isExistingMethod(std::string const& method) {
+bool	Request::isExistingMethod(std::string const& method)
+{
 	if (_existingMethods.empty()) {
 		_existingMethods.insert("OPTIONS");
 		_existingMethods.insert("PATCH");
@@ -141,6 +138,10 @@ const std::string& Request::getBody() const
 	return this->_body;
 }
 
+std::string const&	Request::getRawRequest() const {
+	return _rawRequest;
+}
+
 void	Request::setStatus(HttpStatus const& status)
 {
 	this->_status = status;
@@ -196,9 +197,12 @@ void	Request::setBody(const std::string& body)
 	this->_body = body;
 }
 
+void	Request::setRawRequest(const std::string& rawRequest) {
+	this->_rawRequest = rawRequest;
+}
+
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
-	os << "Request:\n";
 	os << "- Status: " << request.getStatus() << "\n";
 	os << "- Method: " << PrintableString(request.getMethod()) << "\n";
 	os << "- URI: " << PrintableString(request.getUri()) << "\n";
@@ -212,7 +216,8 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	os << "- Body: " << PrintableString(utils::excerpt(EXCERPT_LENGTH, request.getBody())) << "\n";
+	os << "- Body: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
+	os << "- raw request: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getRawRequest())) << "\n";
     return os;
 }

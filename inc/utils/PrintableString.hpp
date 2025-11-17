@@ -7,24 +7,30 @@
 
 #define FT_EMPTY "[empty]"
 
-class PrintableString {
-
-	const std::string& _ref;
-
-	// Not used // TODO Make canonical
-	PrintableString();
-	PrintableString(PrintableString const&);
-	PrintableString& operator=(PrintableString const&);
+/**
+ * Wrapper around std::string for safe logging/printing.
+ *
+ * Encapsulates a string value and provides consistent output formatting.
+ * Value-type class: copyable and assignable; follows orthodox canonical form.
+ */
+class PrintableString
+{
+	std::string	_str;
 
 	public:
-		PrintableString(std::string const&);
-		~PrintableString();
-		std::string const& get() const;
 
+		// Orthodox canonical form
+		PrintableString();
+		PrintableString(std::string const&);
+		PrintableString(PrintableString const&);
+		PrintableString& operator=(PrintableString const&);
+		~PrintableString();
+
+		std::string const& get() const;
 };
 
-std::ostream&	operator<<(std::ostream& os, const PrintableString& p);
-std::string operator+(const std::string& lhs, const PrintableString& rhs);
-std::string operator+(const PrintableString& lhs, const std::string& rhs);
+std::ostream&	operator<<(std::ostream&, PrintableString const&);
+std::string		operator+(std::string const&, PrintableString const&);
+std::string		operator+(PrintableString const&, std::string const&);
 
 #endif

@@ -11,10 +11,15 @@
 body {
 	background-color: #ffffff;
 	font-family: 'clinton', sans-serif;
+	line-height: 1.4em;;
 }
 
 h1 {
 	font-family: 'clinton-bold', sans-serif;
+}
+
+h2 {
+	margin-top: 1.5em;
 }
 
 code {
@@ -61,6 +66,13 @@ code {
 
 .test-table th {
 	background-color: #87b1fd;
+}
+
+.test-table th:last-child,
+.test-table td:last-child {
+	width: 50%;
+	max-width: 50%;
+	word-wrap: break-word;
 }
 
 .status-ok {

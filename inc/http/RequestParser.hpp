@@ -3,42 +3,49 @@
 
 # include "Request.hpp"
 # include "HttpStatus.hpp"
-# include "constants.hpp"
+# include "utils/Const.hpp"
 
+/**
+ * Parses raw HTTP requests into Request objects.
+ *
+ * Service-type class: not instantiable; all methods are static.
+ */
 class RequestParser
 {
-	private :
+	static size_t const	_PATH_MAX_LEN;
+	static size_t const	_HEADER_MAX_LEN;
 
-	HttpStatus	_parseRequestLine(Request& request, const std::string& line);
-	HttpStatus	_parseUri(Request& request, const std::string& uri);
-	HttpStatus	_parseUrl(std::string& result, const std::string& encoded);
-	HttpStatus	_parseHeaders(Request& request, const std::string& headersPart, bool hasBody);
-	HttpStatus	_parseHeaderLine(Request& request, const std::string& line);
-	HttpStatus	_parseChunkedBody(Request& request);
-	HttpStatus	_validateBody(Request& request);
+	static HttpStatus	_parseRequestLine(Request&, std::string const&);
+	static HttpStatus	_parseUri(Request&, std::string const&);
+	static HttpStatus	_parseUrl(std::string&, std::string const&);
+	static HttpStatus	_parseHeaders(Request&, std::string const&, bool);
+	static HttpStatus	_parseHeaderLine(Request&, std::string const&);
+	static HttpStatus	_parseChunkedBody(Request&);
+	static HttpStatus	_validateBody(Request&);
 
-	bool		_isValidStart(const std::string& rawRequest, size_t& requestStart) const;
-	bool		_isValidMethod(const std::string& _method) const;
-	bool		_isValidPath(const std::string& _path) const;
-	void		_extractScriptAndPathInfo(Request& request, const std::string& path);
-	bool		_isValidVersion(const std::string& _version) const;
-	bool		_isValidVersionNumber(const std::string& numStr) const;
-	bool		_isValidHeaderName(const std::string& name) const;
-	bool		_isValidHeaderValue(const std::string& value) const;
-	bool		_headersIndicateBody(const Request& request) const;
-	bool		_isValidContentType(const std::string& contentType) const;
-	bool		_isValidContentLength(const std::string& contentLength) const;
-	bool		_hasBody(const std::string& rawRequest, size_t headersEnd) const;
-	std::string	_normalizeHeaderName(const std::string& name) const;
+	static bool			_isValidStart(std::string const&, size_t&);
+	static bool			_isValidMethod(std::string const&);
+	static bool			_isValidPath(std::string const&);
+	static void			_extractScriptAndPathInfo(Request&, std::string const&);
+	static bool			_isValidVersion(std::string const&);
+	static bool			_isValidVersionNumber(std::string const&);
+	static bool			_isValidHeaderName(std::string const&);
+	static bool			_isValidHeaderValue(std::string const&);
+	static bool			_headersIndicateBody(Request const&);
+	static bool			_isValidContentType(std::string const&);
+	static bool			_isValidContentLength(std::string const&);
+	static bool			_hasBody(std::string const&, size_t);
+	static std::string	_normalizeHeaderName(std::string const&);
+
+	// Not instantiable
+	RequestParser();
+	RequestParser(RequestParser const&);
+	RequestParser& operator=(RequestParser const&);
+	~RequestParser();
 
 	public :
 
-	RequestParser();
-	RequestParser(const RequestParser& other);
-	RequestParser& operator=(const RequestParser& other);
-	~RequestParser();
-
-	void	parseRequest(Request& request, const std::string& rawRequest);
+		static void	parseRequest(Request&, std::string const&);
 };
 
 #endif

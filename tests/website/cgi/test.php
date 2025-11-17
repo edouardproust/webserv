@@ -10,9 +10,15 @@
 
 		<p><strong>Request Method:</strong> <?= htmlspecialchars($_SERVER['REQUEST_METHOD']); ?></p>
 		<p>Current server time: <?= date("Y-m-d H:i:s"); ?></p>
-		<p>Your user agent: <?= isset($_SERVER['HTTP_USER_AGENT']) ?
-				htmlspecialchars($_SERVER['HTTP_USER_AGENT']) : '(unknown)'; ?>
-		</p>
+
+		<?php if (!empty($_GET)): ?>
+			<h2>GET Parameters:</h2>
+			<pre><?php
+				foreach ($_GET as $key => $value) {
+					echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
+				}
+			?></pre>
+		<?php endif; ?>
 
 		<?php if (!empty($_POST)): ?>
 			<h2>POST Parameters:</h2>
@@ -39,31 +45,21 @@
 				</form>
 		<?php endif; ?>
 
-		<?php if (!empty($_GET)): ?>
-			<h2>GET Parameters:</h2>
-			<pre><?php
-				foreach ($_GET as $key => $value) {
-					echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
-				}
-			?></pre>
-		<?php else:
-			$raw_body = file_get_contents('php://input');
-			if (!empty($raw_body)): ?>
-				<h2>Raw Input (<?php echo $_SERVER['REQUEST_METHOD']; ?>):</h2>
-				<pre><?= htmlspecialchars($raw_body); ?></pre>
-			<?php else: ?>
-				<p>No GET or POST parameters received.</p>
-			<?php endif; ?>
-		<?php endif; ?>
+		<h2>Environment variables</h2>
 
-		<h2>Request Headers:</h2>
-		<pre><?php
-		foreach ($_SERVER as $key => $value) {
+		<h3>Request headers</h3>
+		<pre><?php foreach ($_SERVER as $key => $value) {
 			if (strpos($key, 'HTTP_') === 0) {
 				echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
 			}
-		}
-		?></pre>
+		} ?></pre>
+
+		<h3>Others</h3>
+		<pre><?php foreach ($_SERVER as $key => $value) {
+			if (strpos($key, 'HTTP_') !== 0) {
+				echo htmlspecialchars($key) . " = " . htmlspecialchars($value) . "\n";
+			}
+		} ?></pre>
 
 	</body>
 </html>

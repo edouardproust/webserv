@@ -16,10 +16,21 @@
 	<h2>Testing Instructions</h2>
 	<ul>
 		<li>Open browser Developer Tools (F12) → Network tab → Tick "Preserve log"</li>
-		<li>Click the links in the table below.</li>
+		<li><code>GET</code> and <code>POST</code> tests: Click the links in the table below.</li>
+		<li><code>HEAD</code> tests:
+			<ul>
+				<li><code>curl -I http://localhost:8080/home.htm</code></li>
+			</ul>
+		</li>
+		<li><code>PUT</code> tests:
+			<ul>
+				<li><code>curl -X PUT http://localhost:8080/new_file.txt -d "new content" -v</code> (-v is to show the full response, else it will justs create the file)</li>
+				<li>Or with netcast: <code>printf "PUT /new-file.txt HTTP/1.1\r\nHost: localhost\r\nContent-Length: 7\r\n\r\new content" | nc localhost 8080</code></li>
+			</ul>
+		</li>
 	</ul>
 
-	<h2>Tests list</h2>
+	<h2><code>GET</code> and <code>POST</code> tests list</h2>
 	<table class="test-table">
 		<thead>
 			<tr>
@@ -113,7 +124,7 @@
 			</tr><tr>
 				<td><a href="http://localhost:8080/cgi/info.php" class="test-link">http://localhost:8080/cgi/info.php</a></td>
 				<td class="status-ok">200</td>
-				<td class="notes">phpinfo() output</td>
+				<td class="notes"><code>phpinfo()</code> output</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/cgi/test.php?var1=hello&var2=world" class="test-link">http://localhost:8080/cgi/test.php?var1=hello&var2=world</a></td>
 				<td class="status-ok">200</td>
@@ -138,7 +149,7 @@
 			</tr><tr>
 				<td><a href="http://localhost:8080/cgi/env.py/path/info?var1=hello&var2=world" class="test-link">http://localhost:8080/cgi/env.py/path/info?var1=hello&var2=world</a></td>
 				<td class="status-ok">200</td>
-				<td class="notes">Display env variables as plain text (with <code>PATH_INFO</code> and <code>QUERY_STRING</code>)</td>
+				<td class="notes">Display env variables as plain text, with values for <code>PATH_INFO</code> and <code>QUERY_STRING</code>. <code>CONTENT_TYPE</code> is empty because it is a <code>GET</code> request.</td>
 			</tr><tr>
 				<td><a href="http://localhost:8080/cgi/test.py" class="test-link">http://localhost:8080/cgi/test.py</a></td>
 				<td class="status-ok">200</td>
@@ -162,5 +173,8 @@
 			</tr>
 		</tbody>
 	</table>
+
+	<br>
+
 </body>
 </html>

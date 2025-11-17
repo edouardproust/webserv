@@ -4,36 +4,39 @@
 #include "http/Response.hpp"
 #include "router/RoutingDecision.hpp"
 
+/**
+ * Handles HTTP redirection responses.
+ *
+ * Generates appropriate status code and Location header.
+ * Resource-type class: not copyable or assignable; manages redirection state.
+ */
 class RedirectionHandler
 {
-	private:
-
-	RoutingDecision	_routingDecision;
-	int				_code;
-	std::string		_path;
+	RoutingDecision const&	_routingDecision;
+	int						_code;
+	std::string				_path;
 
 	std::string	_generateRedirectionHtml() const;
 
-	public:
-
+	// Default and copy constructors, assignation are forbidden
 	RedirectionHandler();
-	RedirectionHandler(RoutingDecision const& rd, int code, std::string const& path);
 	RedirectionHandler(RedirectionHandler const&);
 	RedirectionHandler&	operator=(RedirectionHandler const&);
-	~RedirectionHandler();
 
-	Response	execute();
+	public:
 
-	int			getCode() const;
-	std::string	const& getPath() const;
+		RedirectionHandler(RoutingDecision const&, int, std::string const&);
+		~RedirectionHandler();
 
-	void	setCode(int code);
-	void	setPath(std::string const& path);
+		Response	run();
 
-	static Response	run(RoutingDecision const& rd, int code, std::string const& path);
+		void	setCode(int);
+		void	setPath(std::string const&);
 
+		int					getCode() const;
+		std::string	const&	getPath() const;
 };
 
-std::ostream& operator<<(std::ostream& os, RedirectionHandler const& rhs);
+std::ostream&	operator<<(std::ostream&, RedirectionHandler const&);
 
 #endif

@@ -1,43 +1,29 @@
 #include "router/RoutingDecision.hpp"
 
 RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair const& l)
-: _config(c), _request(r), _listen(l), _server(NULL), _location(NULL),
-  _decision(ERROR), _errorSlug("internal_server_error") {
+: _config(c)
+, _request(r)
+, _listen(l)
+, _server(NULL)
+, _location(NULL)
+, _decision(ERROR)
+, _errorSlug("internal_server_error")
+{
 	_setServer();
 	_setLocation();
 	_setFinalPath();
 	_makeDecision();
 }
 
-RoutingDecision::RoutingDecision(RoutingDecision const& other)
-: _config(other._config),
-  _request(other._request),
-  _listen(other._listen),
-  _server(other._server),
-  _location(other._location),
-  _finalPath(other._finalPath),
-  _decision(other._decision),
-  _errorSlug(other._errorSlug)
+RoutingDecision::~RoutingDecision()
 {}
-
-RoutingDecision&	RoutingDecision::operator=(RoutingDecision const& other) {
-	if (this != &other) {
-        _server = other._server;
-        _location = other._location;
-        _finalPath = other._finalPath;
-        _decision = other._decision;
-        _errorSlug = other._errorSlug;
-    }
-    return *this;
-}
-
-RoutingDecision::~RoutingDecision() {}
 
 /**
  * Notes:
  * - HTTP version is checked during request parsing.
  */
-void	RoutingDecision::_makeDecision() {
+void	RoutingDecision::_makeDecision()
+{
 	if (!_location || !_server)
 		_setError("internal_server_error");
 	else if (!_location->isAllowedMethod(_request.getMethod()))
@@ -53,7 +39,8 @@ void	RoutingDecision::_makeDecision() {
 		_decision = STATIC;
 }
 
-void	RoutingDecision::_setServer() {
+void	RoutingDecision::_setServer()
+{
 	_server = NULL;
 	std::vector<ServerBlock> const& servers = _config.getServers();
 	ServerBlock const* wildcardMatch = NULL;
@@ -72,7 +59,8 @@ void	RoutingDecision::_setServer() {
 	else _server = &servers[0]; // fallback for security (priority 3), but should never happen
 }
 
-void	RoutingDecision::_setLocation() {
+void	RoutingDecision::_setLocation()
+{
 	if (!_server)
 		_setServer();
 	std::vector<LocationBlock> const& locations = _server->getLocations();
@@ -98,7 +86,8 @@ void	RoutingDecision::_setLocation() {
 /**
  * May set _finalPath to an empty string in case of root path traversal attempt.
  */
-void	RoutingDecision::_setFinalPath() {
+void	RoutingDecision::_setFinalPath()
+{
 	if (!_server)
 		_setServer();
 	if (!_location)
@@ -109,38 +98,45 @@ void	RoutingDecision::_setFinalPath() {
 	_finalPath = joinedPath;
 }
 
-void	RoutingDecision::_setError(std::string const& errorSlug) {
+void	RoutingDecision::_setError(std::string const& errorSlug)
+{
 	_decision = ERROR;
 	_errorSlug = errorSlug;
 }
 
-RoutingDecision::Decision const&	RoutingDecision::getDecision() const {
+RoutingDecision::Decision const&	RoutingDecision::getDecision() const
+{
 	return _decision;
 }
 
-Request const&	RoutingDecision::getRequest() const {
+Request const&	RoutingDecision::getRequest() const
+{
 	return _request;
 }
 
-ServerBlock const*	RoutingDecision::getServer() const {
+ServerBlock const*	RoutingDecision::getServer() const
+{
 	return _server;
 }
 
-LocationBlock const*	RoutingDecision::getLocation() const {
+LocationBlock const*	RoutingDecision::getLocation() const
+{
 	return _location;
 }
 
-std::string const&	RoutingDecision::getFinalPath() const {
+std::string const&	RoutingDecision::getFinalPath() const
+{
 	return _finalPath;
 }
 
-std::string const&	RoutingDecision::getErrorSlug() const {
+std::string const&	RoutingDecision::getErrorSlug() const
+{
 	return _errorSlug;
 }
 
-std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs) {
+std::ostream&	operator<<(std::ostream& os, RoutingDecision const& rhs)
+{
 	int d = rhs.getDecision();
-	os << "RoutingDecision:\n";
 	os << "- Decision: " << (d == RoutingDecision::ERROR ? "ERROR"
 			: (d == RoutingDecision::REDIRECTION ? "REDIRECTION"
 				: (d == RoutingDecision::STATIC ? "STATIC"

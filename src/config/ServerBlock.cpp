@@ -1,8 +1,14 @@
 #include "config/ServerBlock.hpp"
 #include "config/Config.hpp"
-#include "colors.hpp"
 
-ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
+ServerBlock::ServerBlock()
+: _root("")
+, _clientMaxBodySize(0)
+, _isSetClientBodySize(false)
+, _uploadStore("")
+{
+	_setDefaultIndexFiles();
+}
 
 /**
  * Parse the content of a server block and sets default index files and listening port `0.0.0.0:80`
@@ -11,35 +17,49 @@ ServerBlock::ServerBlock(): _isSetClientBodySize(false) {}
  *
  * Parsing may throw an exception.
  */
-ServerBlock::ServerBlock(std::string const& blockContent): _isSetClientBodySize(false) {
+ServerBlock::ServerBlock(std::string const& blockContent)
+: _isSetClientBodySize(false)
+{
 	_parse(blockContent); // throw
 	_setDefaultIndexFiles();
 	if (_listen.empty())
       	_listen.insert(HostPortPair("0.0.0.0:80"));
 	if (_locations.empty()) {
 		_locations.push_back(LocationBlock(this));
-		std::cout << FT_WARNING << "Config: server: No location block defined, a default one was created. PUT method is no allowed in this location." << RESET_COLOR << std::endl;
+		Log::prod("warning", "Config: server: No location block defined, a default one was created. PUT method is not allowed in this location.");
 	}
 }
 
-ServerBlock::ServerBlock(const ServerBlock &other): _isSetClientBodySize(false) {
-	*this = other;
+ServerBlock::ServerBlock(const ServerBlock &other)
+: _root(other._root)
+, _listen(other._listen)
+, _clientMaxBodySize(other._clientMaxBodySize)
+, _isSetClientBodySize(other._isSetClientBodySize)
+, _uploadStore(other._uploadStore)
+, _errorPages(other._errorPages)
+, _indexFiles(other._indexFiles)
+, _locations(other._locations)
+{
+	// update pointers
+	for (size_t i = 0; i < _locations.size(); ++i) {
+		_locations[i].setServer(this);
+	}
 }
 
-ServerBlock& ServerBlock::operator=(ServerBlock const& other) {
+ServerBlock& ServerBlock::operator=(ServerBlock const& other)
+{
     if (this != &other) {
         _root = other._root;
         _listen = other._listen;
         _clientMaxBodySize = other._clientMaxBodySize;
+		_isSetClientBodySize = other._isSetClientBodySize;
 		_uploadStore = other._uploadStore;
         _errorPages = other._errorPages;
         _indexFiles = other._indexFiles;
-		// locations
-		_locations.clear();
-        _locations.reserve(other._locations.size());
-        for (size_t i = 0; i < other._locations.size(); ++i) {
-            _locations.push_back(other._locations[i]);
-            _locations.back().setServer(this);
+		_locations = other._locations;
+		// update pointers
+        for (size_t i = 0; i < _locations.size(); ++i) {
+            _locations[i].setServer(this);
         }
     }
     return *this;
@@ -56,7 +76,8 @@ ServerBlock::~ServerBlock() {}
  * - unexpected ';' or '{' found
  * - unclosed quoted string or directive not terminated with ';'
  */
-void	ServerBlock::_parse(std::string const& content) {
+void	ServerBlock::_parse(std::string const& content)
+{
 	std::string token = "";
 	Tokens tokens;
 	bool inQuotes = false;
@@ -92,7 +113,8 @@ void	ServerBlock::_parse(std::string const& content) {
  *
  * May throw a std::runtime_error() exception.
  */
-void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t& i, int& braceDepth, bool inQuotes) {
+void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t& i, int& braceDepth, bool inQuotes)
+{
 	if (tokens.empty())
 		throw std::runtime_error("Unexpected '{'");
 	else if (inQuotes)
@@ -124,7 +146,8 @@ void	ServerBlock::_parseBlock(Tokens& tokens, std::string const& content, size_t
  * - unexpected ';' found or unclosed quoted string
  * - directive is unsupported or has invalid arguments
  */
-void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuotes) {
+void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuotes)
+{
 	Config::addTokenIf(token, tokens);
 	if (tokens.empty())
 		throw std::runtime_error("Unexpected ';'");
@@ -168,7 +191,8 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
  * - this location path is already used by another location
  * - the parsing of the location block throws an exception
  */
-void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth) {
+void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content, size_t& i, int& braceDepth)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("Format must be \"location path { [directive1 param; ...] }\"");
 
@@ -186,13 +210,15 @@ void	ServerBlock::_addLocation(Tokens const& tokens, std::string const& content,
 /**
  * Sets default index files if server root is set and no index directive was found yet.
  */
-void	ServerBlock::_setDefaultIndexFiles() {
+void	ServerBlock::_setDefaultIndexFiles()
+{
 	if (!_indexFiles.empty())
 		return; // do not override if index files are already set
 	if (!_root.empty()) { // only set default index files if server root is set (it will always be an absolute path)
 		_indexFiles.push_back("index.html");
 		_indexFiles.push_back("index.htm");
-		//_indexFiles.push_back("index.php"); // TODO if uncommented, needs to be checked in StaticHandler::_serveFile
+		// -- add more default index files here --
+		//_indexFiles.push_back("index.php"); // if uncommented, needs to be checked in StaticHandler
 	}
 }
 
@@ -206,7 +232,8 @@ void	ServerBlock::_setDefaultIndexFiles() {
  * Throws a runtime exception if:
  * - path is missing or is not an absolute path or an emtpy string.
  */
-void	ServerBlock::_setRoot(Tokens const& tokens) {
+void	ServerBlock::_setRoot(Tokens const& tokens)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("Format must be \"root path;\"");
 	std::string root = tokens[1];
@@ -248,7 +275,8 @@ void	ServerBlock::_setRoot(Tokens const& tokens) {
  * - `host:port` pair is empty, has an invalid syntax
  * - there is a port overflow
  */
-void	ServerBlock::_setListen(Tokens const& tokens) {
+void	ServerBlock::_setListen(Tokens const& tokens)
+{
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have at least one address or port");
 	for (size_t i = 1; i < tokens.size(); ++i) {
@@ -270,7 +298,8 @@ void	ServerBlock::_setListen(Tokens const& tokens) {
  * - arguments are invalid
  * - size is 0, has a wrong syntax or overflows size_t
  */
-void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
+void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("size is missing");
 	size_t result = Config::parseSize(tokens[1]);
@@ -294,7 +323,8 @@ void	ServerBlock::_setClientMaxBodySize(Tokens const& tokens) {
  * - the path is an empty string
  * - a relative path is given but no server root is set
  */
-void	ServerBlock::_setUploadStore(Tokens const& tokens) {
+void	ServerBlock::_setUploadStore(Tokens const& tokens)
+{
 	if (tokens.size() != 2)
 		throw std::runtime_error("Format must be \"upload_store path;\"");
 	std::string path = tokens[1];
@@ -322,7 +352,8 @@ void	ServerBlock::_setUploadStore(Tokens const& tokens) {
  * - a relative path is given but no root is set in this server
  * - an HTTP code is out of range (300-599)
  */
-void	ServerBlock::_setErrorPages(Tokens const& tokens) {
+void	ServerBlock::_setErrorPages(Tokens const& tokens)
+{
 	if (tokens.size() < 3)
 		throw std::runtime_error("Should have at least 2 paths");
 	// Check path (last argument)
@@ -359,7 +390,8 @@ void	ServerBlock::_setErrorPages(Tokens const& tokens) {
  * - an index path is a relative path but no root is set
  * - duplicate index files
  */
-void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
+void	ServerBlock::_setIndexFiles(Tokens const& tokens)
+{
 	if (tokens.size() < 2)
 		throw std::runtime_error("Should have 1 or more paths");
 	_indexFiles.clear(); // clear default index files
@@ -375,43 +407,51 @@ void	ServerBlock::_setIndexFiles(Tokens const& tokens) {
 		throw std::runtime_error("Duplicate index file in server");
 }
 
-std::vector<LocationBlock> const&	ServerBlock::getLocations() const {
+std::vector<LocationBlock> const&	ServerBlock::getLocations() const
+{
 	return _locations;
 }
 
-std::string const&	ServerBlock::getRoot() const {
+std::string const&	ServerBlock::getRoot() const
+{
 	return _root;
 }
 
-std::set<HostPortPair> const&	ServerBlock::getListen() const {
+std::set<HostPortPair> const&	ServerBlock::getListen() const
+{
 	return _listen;
 }
 
 /**
- * Defaults to `DEFAULT_MAX_CLIENT_BODY_SIZE` with a limit of `MAX_SIZE_T`.
+ * Defaults to `MAX_CLIENT_BODY_SIZE` with a limit of `MAX_SIZE_T`.
  */
-size_t	ServerBlock::getClientMaxBodySize() const {
+size_t	ServerBlock::getClientMaxBodySize() const
+{
 	if (!_isSetClientBodySize) {
-		if (DEFAULT_MAX_CLIENT_BODY_SIZE > MAX_SIZE_T)
-			return MAX_SIZE_T;
-		return DEFAULT_MAX_CLIENT_BODY_SIZE;
+		if (Config::_MAX_CLIENT_BODY_SIZE > Const::MAX_SIZE_T)
+			return Const::MAX_SIZE_T;
+		return Config::_MAX_CLIENT_BODY_SIZE;
 	}
 	return _clientMaxBodySize;
 }
 
-std::string const&	ServerBlock::getUploadStore() const {
+std::string const&	ServerBlock::getUploadStore() const
+{
 	return _uploadStore;
 }
 
-ErrorPages const&	ServerBlock::getErrorPages() const {
+ErrorPages const&	ServerBlock::getErrorPages() const
+{
 	return _errorPages;
 }
 
-std::vector<std::string> const&	ServerBlock::getIndexFiles() const {
+std::vector<std::string> const&	ServerBlock::getIndexFiles() const
+{
 	return _indexFiles;
 }
 
-std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs) {
+std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs)
+{
 	os << "- root: " << PrintableString(rhs.getRoot()) << "\n";
 
 	std::set<HostPortPair> const& listen = rhs.getListen();

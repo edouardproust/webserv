@@ -24,13 +24,22 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 // constructors
 
 /**
+ * Build a `HttpStatus` of 200 OK (default).
+ */
+HttpStatus::HttpStatus()
+{
+	_initFromEntry(_findBySlug("ok"));
+}
+
+/**
  * Build a `HttpStatus` from a HTTP status code.
  *
  * - Supported codes: `200`, `201`, `204`, `301`, `302`, `400`, `403`,
  * `404`, `405`, `411`, `413`, `500`, `501`, `502`, `505`
  * - Any other code defaults to `500`
  */
-HttpStatus::HttpStatus(int code) {
+HttpStatus::HttpStatus(int code)
+{
 	_initFromEntry(_findByCode(code));
 }
 
@@ -43,14 +52,19 @@ HttpStatus::HttpStatus(int code) {
  * `not_implemented`, `bad_gateway`, `version_not_supported`
  * - Any other slug will default to `internal_server_error`
  */
-HttpStatus::HttpStatus(std::string const& slug) {
+HttpStatus::HttpStatus(std::string const& slug)
+{
 	_initFromEntry(_findBySlug(slug));
 }
 
 HttpStatus::HttpStatus(HttpStatus const& other)
-: _code(other._code), _reason(other._reason), _slug(other._slug) {}
+: _code(other._code)
+, _reason(other._reason)
+, _slug(other._slug)
+{}
 
-HttpStatus& HttpStatus::operator=(HttpStatus const& other) {
+HttpStatus& HttpStatus::operator=(HttpStatus const& other)
+{
 	if (this != &other) {
 		_code = other._code;
 		_reason = other._reason;
@@ -59,40 +73,48 @@ HttpStatus& HttpStatus::operator=(HttpStatus const& other) {
 	return *this;
 }
 
-HttpStatus::~HttpStatus() {}
+HttpStatus::~HttpStatus()
+{}
 
 // public
 
-int	HttpStatus::getCode() const {
+int	HttpStatus::getCode() const
+{
 	return _code;
 }
 
-std::string	HttpStatus::getCodeStr() const {
-	return utils::toString(_code);
+std::string	HttpStatus::getCodeStr() const
+{
+	return utils::str(_code);
 }
 
-std::string const&	HttpStatus::getReason() const {
+std::string const&	HttpStatus::getReason() const
+{
 	return _reason;
 }
 
-std::string const&	HttpStatus::getSlug() const {
+std::string const&	HttpStatus::getSlug() const
+{
 	return _slug;
 }
 
 /**
  * Returns the HttpStatus as a string like "404 Not Found".
  */
-std::string	HttpStatus::toString() const {
+std::string	HttpStatus::toStr() const
+{
 	std::ostringstream oss;
 	oss << _code << " " << _reason;
 	return oss.str();
 }
 
-bool	HttpStatus::isError(int code) {
+bool	HttpStatus::isError(int code)
+{
 	return code >= 400;
 }
 
-std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
+std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs)
+{
 	os << "HttpStatus: {"
 		<< rhs.getCode() << ", "
 		<< PrintableString(rhs.getReason()) << ", "
@@ -105,21 +127,24 @@ std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs) {
 
 const size_t HttpStatus::STATUS_TABLE_SIZE = sizeof(HttpStatus::STATUS_TABLE) / sizeof(HttpStatus::Entry);
 
-HttpStatus::Entry const*	HttpStatus::_findByCode(int code) {
+HttpStatus::Entry const*	HttpStatus::_findByCode(int code)
+{
 	for (size_t i = 0; i < STATUS_TABLE_SIZE; ++i)
 		if (STATUS_TABLE[i].code == code)
 			return &STATUS_TABLE[i];
 	return NULL;
 }
 
-HttpStatus::Entry const* HttpStatus::_findBySlug(std::string const& slug) {
+HttpStatus::Entry const* HttpStatus::_findBySlug(std::string const& slug)
+{
 	for (size_t i = 0; i < STATUS_TABLE_SIZE; ++i)
 		if (STATUS_TABLE[i].slug == slug)
 			return &STATUS_TABLE[i];
 	return NULL;
 }
 
-void	HttpStatus::_initFromEntry(const Entry* entry) {
+void	HttpStatus::_initFromEntry(const Entry* entry)
+{
 	if (!entry)
 		entry = _findByCode(500); // fallback to 500 Internal Server Error
 	_code = entry->code;

@@ -10,8 +10,10 @@
 # Specific folders
 build/
 .vscode/
+tests/config/replaced
 
 # Specific files
 webserv
 webserv_dev
 log*
+tests/website/*.txt
