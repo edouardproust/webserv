@@ -1,6 +1,7 @@
 #include "http/Response.hpp"
 
-Response::Response() : _status(HttpStatus("ok"))
+Response::Response()
+: _status(HttpStatus())
 {
 	_initDefaultHeaders();
 }
@@ -8,17 +9,20 @@ Response::Response() : _status(HttpStatus("ok"))
 /**
  * May throw a RawException.
  */
-Response::Response(std::string const& rawResponse): _status(HttpStatus("ok")) {
+Response::Response(std::string const& rawResponse)
+: _status(HttpStatus())
+{
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
 }
 
-Response::Response(const Response& other)
-	: _status(other._status),
-	  _headers(other._headers),
-	  _body(other._body) {}
+Response::Response(Response const& other)
+: _status(other._status)
+, _headers(other._headers)
+, _body(other._body)
+{}
 
-Response& Response::operator=(const Response& other)
+Response& Response::operator=(Response const& other)
 {
 	if (this != &other)
 	{
@@ -29,14 +33,17 @@ Response& Response::operator=(const Response& other)
 	return *this;
 }
 
-Response::~Response() {}
+Response::~Response()
+{}
 
 Response::RawException::RawException(std::string const& msg)
-: std::runtime_error(msg) {}
+: std::runtime_error(msg)
+{}
 
-void	Response::_initDefaultHeaders() {
-	_headers["server"] = SERVER_SOFTWARE;
-	_headers["date"] = _getCurrentDate();
+void	Response::_initDefaultHeaders()
+{
+	_headers["server"] = Const::SERVER_SOFTWARE;
+	_headers["date"] = utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT");
 	_headers["connection"] = "keep-alive";
 	_headers["content-length"] = "0";
 }
@@ -53,22 +60,22 @@ std::string	Response::stringify() const
 	return response.str();
 }
 
-const HttpStatus&	Response::getStatus() const
+HttpStatus const&	Response::getStatus() const
 {
 	return _status;
 }
 
-const std::map<std::string, std::string>& Response::getHeaders() const
+std::map<std::string, std::string> const& Response::getHeaders() const
 {
 	return _headers;
 }
 
-const std::string& Response::getBody() const
+std::string const& Response::getBody() const
 {
 	return _body;
 }
 
-void	Response::setStatus(const HttpStatus& status)
+void	Response::setStatus(HttpStatus const& status)
 {
 	_status = status;
 	if (status.getCode() == 204)
@@ -79,11 +86,12 @@ void	Response::setStatus(const HttpStatus& status)
  * Set header "Content-Type".
  * It is a wrapper of `setHeader` method that prevents mispelling.
  */
-void	Response::setContentType(const std::string& value) {
+void	Response::setContentType(std::string const& value)
+{
 	setHeader("Content-Type", value);
 }
 
-void	Response::setHeader(const std::string& name, const std::string& value)
+void	Response::setHeader(std::string const& name, std::string const& value)
 {
 	std::string normalizedName = utils::toLowerCase(name);
 
@@ -99,7 +107,7 @@ void	Response::setHeader(const std::string& name, const std::string& value)
 	_headers[normalizedName] = value;
 }
 
-void	Response::setBody(const std::string& body)
+void	Response::setBody(std::string const& body)
 {
 	_body = body;
 	_updateContentLength();
@@ -112,7 +120,7 @@ void	Response::clearBody()
 	_manageContentType();
 }
 
-void	Response::setConnectionFromRequest(const Request& request)
+void	Response::setConnectionFromRequest(Request const& request)
 {
 	const std::map<std::string, std::string>& headers = request.getHeaders();
 	if (headers.find("connection") != headers.end())
@@ -136,16 +144,8 @@ void	Response::_manageContentType()
 		_headers["content-type"] = "text/html";
 }
 
-std::string Response::_getCurrentDate() const
+bool	Response::_hasHeader(std::string const& keyLowcase) const
 {
-	time_t now = time(0);
-	struct tm* timeinfo = gmtime(&now);
-	char buffer[80];
-	strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
-	return buffer;
-}
-
-bool	Response::_hasHeader(const std::string& keyLowcase) const {
 	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
 		if (utils::toLowerCase(it->first) == keyLowcase)
 			return true;
@@ -187,21 +187,6 @@ std::string Response::_buildHeaders() const
 	return headerStream.str();
 }
 
-std::ostream& operator<<(std::ostream& os, const Response& response)
-{
-	os << "Response:\n";
-	os << "- Status: " << PrintableString(response.getStatus().toString()) << "\n";
-	os << "- Headers: " << response.getHeaders().size() << "\n";
-	const std::map<std::string, std::string>& headers = response.getHeaders();
-	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
-		it != headers.end(); ++it)
-			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
-	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
-	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n" << PrintableString(utils::excerpt(EXCERPT_LENGTH, response.stringify())) << "\n";
-	return os;
-}
-
 // static utils
 
 /**
@@ -216,7 +201,7 @@ std::ostream& operator<<(std::ostream& os, const Response& response)
  *
  * Throws Response::RawException if headers are malformed or missing Content-Type.
  */
-void	Response::_parseRawResponse(const std::string& rawResponse)
+void	Response::_parseRawResponse(std::string const& rawResponse)
 {
 	if (rawResponse.empty())
 		throw RawException("raw response is empty");
@@ -241,7 +226,7 @@ void	Response::_parseRawResponse(const std::string& rawResponse)
 	setBody(bodyPart);
 }
 
-int	Response::_setHeaders(const std::string& headersPart) {
+int	Response::_setHeaders(std::string const& headersPart) {
 	std::istringstream headersStream(headersPart);
 	std::string line;
 	int statusCode = HttpStatus("ok").getCode(); // default if no Status header found
@@ -270,3 +255,16 @@ int	Response::_setHeaders(const std::string& headersPart) {
 	return statusCode;
 }
 
+std::ostream& operator<<(std::ostream& os, Response const& response)
+{
+	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
+	os << "- Headers: " << response.getHeaders().size() << "\n";
+	const std::map<std::string, std::string>& headers = response.getHeaders();
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+		it != headers.end(); ++it)
+			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
+	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
+	os << "- Body Length: " << response.getBody().length() << "\n";
+	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, response.stringify())) << "\n";
+	return os;
+}

@@ -1,58 +1,28 @@
 #include "router/RedirectionHandler.hpp"
 #include "static/StaticHandler.hpp"
-#include "constants.hpp"
+#include "utils/Const.hpp"
 
 RedirectionHandler::RedirectionHandler(RoutingDecision const& rd, int code, std::string const& path)
-	: _routingDecision(rd), _code(code), _path(path) {}
+: _routingDecision(rd)
+, _code(code)
+, _path(path)
+{}
 
-RedirectionHandler::RedirectionHandler(RedirectionHandler const& other)
-	: _routingDecision(other._routingDecision), _code(other._code), _path(other._path) {}
-
-RedirectionHandler&	RedirectionHandler::operator=(RedirectionHandler const& other)
-{
-	if (this != &other)
-	{
-		_routingDecision = other._routingDecision;
-		_code = other._code;
-		_path = other._path;
-	}
-	return *this;
-}
-
-RedirectionHandler::~RedirectionHandler() {}
-
-int	RedirectionHandler::getCode() const
-{
-	return _code;
-}
-
-std::string const& RedirectionHandler::getPath() const 
-{
-	return _path;
-}
-
-void RedirectionHandler::setCode(int code)
-{
-	_code = code;
-}
-
-void RedirectionHandler::setPath(std::string const& path)
-{
-	_path = path;
-}
+RedirectionHandler::~RedirectionHandler()
+{}
 
 /**
  * Executes the redirection by building an appropriate HTTP response.
- * 
+ *
  * For 3xx redirects, sets the Location header and applies cache control for best pratice:
  * - 301 (Permanent): Cached for 1 year (max-age=31536000) since browsers cache these
  * - 302 (Temporary): Uses no-cache to ensure fresh redirects on subsequent requests
- * 
+ *
  * Also generates a user-friendly HTML body with redirect information and links.
  * (This HTML will only be visible inside the browser if the client doesn't follow the redirect automatically)
  * Returns an internal server error if the redirect path is empty.
  */
-Response	RedirectionHandler::execute()
+Response	RedirectionHandler::run()
 {
 	if (_path.empty())
 	{
@@ -72,10 +42,30 @@ Response	RedirectionHandler::execute()
 	return response;
 }
 
+void	RedirectionHandler::setCode(int code)
+{
+	_code = code;
+}
+
+void	RedirectionHandler::setPath(std::string const& path)
+{
+	_path = path;
+}
+
+int	RedirectionHandler::getCode() const
+{
+	return _code;
+}
+
+std::string const&	RedirectionHandler::getPath() const
+{
+	return _path;
+}
+
 std::string	RedirectionHandler::_generateRedirectionHtml() const
 {
 	std::stringstream html;
-	
+
 	html << "<!DOCTYPE html>"
 		 << "<html>"
 		 << "<head>"
@@ -88,16 +78,10 @@ std::string	RedirectionHandler::_generateRedirectionHtml() const
 		html << "<p>The document has moved <a href=\"" << _path << "\">here</a>.</p>"
 			 << "<p>If you are not redirected automatically, follow the <a href=\"" << _path << "\">link</a>.</p>";
 	}
-	html << "<hr><center>" << SERVER_SOFTWARE << "</center>"
+	html << "<hr><center>" << Const::SERVER_SOFTWARE << "</center>"
 		 << "</body>"
 		 << "</html>";
 	return html.str();
-}
-
-Response	RedirectionHandler::run(RoutingDecision const& rd, int code, std::string const& path)
-{
-	RedirectionHandler handler(rd, code, path);
-	return handler.execute();
 }
 
 std::ostream& operator<<(std::ostream& os, RedirectionHandler const& rhs)

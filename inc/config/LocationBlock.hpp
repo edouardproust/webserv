@@ -4,11 +4,16 @@
 class ServerBlock;
 #include "http/Request.hpp"
 #include "utils/utils.hpp"
-#include "utils/PrintableString.hpp"
-#include "typedefs.hpp"
+#include "utils/Log.hpp"
+#include "utils/typedefs.hpp"
 
-class LocationBlock {
-
+/**
+ * Represents a server location configuration (e.g., URI prefix, allowed methods, redirection, CGI).
+ *
+ * Value-type class: copyable and assignable; owns its configuration data.
+ */
+class LocationBlock
+{
 	ServerBlock const*			_server;				// Pointer to parent server block, set during validation
 	std::string					_path;					// URI prefix (e.g. "/cgi-bin/")
 	std::string					_autoindex;				// optional
@@ -21,8 +26,6 @@ class LocationBlock {
 	ErrorPages					_errorPages;			// optional. Has priority over _server->getErrorPages()
 	CgiDirective				_cgi;					// optional (e.g. {".php": "/usr/bin/php-cgi", ".py": "/usr/bin/python"})
 	bool						_isDefaultLocation;		// true if this location is the default one (path = "/")
-
-	LocationBlock(); // not used
 
 	void	_parse(std::string const&);
 	void	_parseDirective(std::string&, std::vector<std::string>&, bool);
@@ -39,6 +42,8 @@ class LocationBlock {
 
 	public:
 
+ 		// Othodox canonical form
+		LocationBlock();
 		LocationBlock(ServerBlock const*); // Default location block (path = "/")
 		LocationBlock(ServerBlock*, std::string&, std::string const&);
 		LocationBlock(LocationBlock const&);
@@ -68,7 +73,6 @@ class LocationBlock {
 		bool	isAllowedMethod(std::string const&) const;
 		bool	isAllowedClientBodySize(size_t, std::string const&) const;
 		bool	isDefaultLocation() const;
-
 };
 
 std::ostream&	operator<<(std::ostream&, LocationBlock const&);

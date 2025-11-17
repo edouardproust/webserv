@@ -5,8 +5,13 @@
 #include <string>
 #include <netdb.h>
 
-class HostPortPair {
-
+/**
+ * Represents a host and port combination.
+ *
+ * Value-type class: copyable, assignable, and holds its own data.
+ */
+class HostPortPair
+{
 	std::string	_host;
 	size_t		_port;
 
@@ -19,6 +24,7 @@ class HostPortPair {
 
 	public:
 
+ 		// Othodox canonical form
 		HostPortPair();
 		HostPortPair(std::string const&);
 		HostPortPair(HostPortPair const&);
@@ -32,7 +38,6 @@ class HostPortPair {
 
 		bool	operator==(const HostPortPair&) const;
 		bool	operator<(const HostPortPair&) const;
-
 };
 
 std::ostream&	operator<<(std::ostream&, HostPortPair const&);

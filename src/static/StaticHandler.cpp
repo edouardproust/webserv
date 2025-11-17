@@ -1,19 +1,22 @@
 #include "static/StaticHandler.hpp"
 #include "http/HttpStatus.hpp"
-#include "constants.hpp"
+#include "utils/Const.hpp"
 #include "utils/utils.hpp"
 #include <dirent.h>
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
 
+size_t const	StaticHandler::_FILE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
 StaticHandler::StaticHandler(RoutingDecision const& rd)
-: _routingDecision(rd),
-  _location(rd.getLocation()),
-  _finalPath(rd.getFinalPath())
+: _routingDecision(rd)
+, _location(rd.getLocation())
+, _finalPath(rd.getFinalPath())
 {}
 
-StaticHandler::~StaticHandler() {}
+StaticHandler::~StaticHandler()
+{}
 
 Response	StaticHandler::handleGet()
 {
@@ -70,7 +73,7 @@ Response	StaticHandler::handleDelete()
 	_finalPath = _finalPath.substr(0, _finalPath.find_last_of('/')); //!\ final path updated
 	if (access(_finalPath.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"));
-	if (std::remove(_finalPath.c_str()) == 0) // TODO Method std::remove is allowed ?
+	if (std::remove(_finalPath.c_str()) == 0)
 	{
 		Response response;
 		response.setStatus(HttpStatus("no_content"));
@@ -80,15 +83,12 @@ Response	StaticHandler::handleDelete()
 		return handleError(HttpStatus("internal_server_error"));
 }
 
-/* For testing, just return 200 OK
+/**
+ * Simply return an error (POST method not allowed on a static file).
+ */
 Response StaticHandler::handlePost() {
-	Response response;
-	response.setStatus(HttpStatus("ok"));
-	response.setBody("random content");
-	//response.setBody("return all the actual 100 MB characters");
-	response.setHeader("Content-Length", "100000000");
-    return response;
-}*/
+	return handleError(HttpStatus("method_not_allowed"));
+}
 
 Response	StaticHandler::handleHead()
 {
@@ -100,7 +100,7 @@ Response	StaticHandler::handleHead()
 Response	StaticHandler::handlePut()
 {
 	Response response;
-	const Request& request = _routingDecision.getRequest();
+	Request const& request = _routingDecision.getRequest();
 
 	std::string directory = _finalPath;
 	if (utils::isAccessibleDirectory(_finalPath))
@@ -115,7 +115,7 @@ Response	StaticHandler::handlePut()
 		directory = "/";
 	if (!utils::isWritableDirectory(directory))
 		return handleError(HttpStatus("forbidden"));
-	const std::string& body = request.getBody();
+	std::string const& body = request.getBody();
 	bool fileExists = utils::fileExists(_finalPath);
 	std::ofstream file(_finalPath.c_str(), std::ios::binary);
 	if (!file.is_open())
@@ -168,17 +168,17 @@ std::string StaticHandler::_welcomePageHtml() const
 		"<!DOCTYPE html>"
 		"<html>"
 		"<head>"
-		" <title>Welcome to " + SERVER_NAME + "!</title>"
+		" <title>Welcome to " + Const::SERVER_NAME + "!</title>"
 		" <style>"
 		"  html { color-scheme: light dark; }"
 		"  body { width: 35em; margin: 0 auto; font-family: Tahoma, Verdana, Arial, sans-serif; }"
 		" </style>"
 		"</head>"
 		"<body>"
-		" <h1>Welcome to " + SERVER_NAME + "!</h1>"
+		" <h1>Welcome to " + Const::SERVER_NAME + "!</h1>"
 		" <p>If you see this page, the web server is successfully working. Further configuration is required.</p>"
-		" <p>For online documentation and support please refer to <a href=\"" + SERVER_REPO + "\">Github repository</a>.</p>"
-		" <p><em>Thank you for using " + SERVER_NAME + ".</em></p>"
+		" <p>For online documentation and support please refer to <a href=\"" + Const::SERVER_REPO + "\">Github repository</a>.</p>"
+		" <p><em>Thank you for using " + Const::SERVER_NAME + ".</em></p>"
 		"</body>"
 		"</html>"
 	);
@@ -186,13 +186,13 @@ std::string StaticHandler::_welcomePageHtml() const
 
 /**
  * Generates an automatic directory listing HTML page.
- * 
+ *
  * Creates a user-friendly file browser showing all files and subdirectories in the current directory.
  * For each entry, displays:
  * - Clickable filename/link (with "/" suffix for directories)
  * - Last modification date
  * - File size (or "-" for directories)
- * 
+ *
  * The layout uses fixed-width spacing (50 characters for names) for aligned columns,
  * though exact alignment may vary depending on font and browser rendering.
  * Entries are sorted alphabetically for consistent browsing.
@@ -223,11 +223,11 @@ std::string	StaticHandler::_autoindexHtml() const
 		std::string fullPath = utils::pathsJoin(_finalPath, files[i]);
 		bool isDir = utils::isAccessibleDirectory(fullPath);
 		size_t fileSize = utils::getFileSize(fullPath);
-		std::string sizeStr = isDir ? "-" : utils::toString(fileSize);
+		std::string sizeStr = isDir ? "-" : utils::str(fileSize);
 		struct stat fileStat;
 		std::string dateStr = "?";
 		if (stat(fullPath.c_str(), &fileStat) == 0)
-			dateStr = _getCurrentDateLocal(fileStat.st_mtime);
+			dateStr = utils::formatDate(fileStat.st_mtime, "%d-%b-%Y %H:%M");
 		std::string displayName = files[i] + (isDir ? "/" : "");
 		html << "<a href=\"" << currentPath << files[i] << (isDir ? "/" : "") << "\">"
 			 << displayName << "</a>"
@@ -252,10 +252,10 @@ std::string StaticHandler::_errorPageHtml(HttpStatus const& status) const
 		"<!DOCTYPE html>"
 		"<html>"
 		"<head>"
-		" <title>" + status.toString() + "</title>\n"
+		" <title>" + status.toStr() + "</title>\n"
 		"</head>\n"
 		"<body>\n"
-		" <center><h1>" + status.toString() + "</h1></center>\n"
+		" <center><h1>" + status.toStr() + "</h1></center>\n"
 		" <hr><center>webserv/1.0</center>\n"
 		" </body>\n"
 		"</html>"
@@ -312,11 +312,13 @@ std::string	StaticHandler::_getMimeFromPath(const std::string& filePath)
 
 // UTILS
 
-// TODO (optionnal?): If is CGI file, call CGIHandler instead
+/**
+ * TODO (optionnal): If is CGI file, call CGIHandler instead
+ */
 Response	StaticHandler::_serveFile()
 {
 	size_t fileSize = utils::getFileSize(_finalPath);
-	if (fileSize > MAX_FILE_SIZE)
+	if (fileSize > _FILE_MAX_SIZE)
 		return handleError(HttpStatus("content_too_large"));
 	std::string content = utils::readFile(_finalPath);
 	if (content.empty() && fileSize > 0)

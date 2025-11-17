@@ -7,7 +7,7 @@ bool	utils::isInt(std::string const& str)
 	char* endptr = NULL;
 	errno = 0;
 	long value = std::strtol(str.c_str(), &endptr, 10);
-	if (*endptr != '\0' || errno == ERANGE || value > static_cast<long>(MAX_SIZE_T) || value < 0)
+	if (*endptr != '\0' || errno == ERANGE || value > static_cast<long>(Const::MAX_SIZE_T) || value < 0)
 		return false;
 	return true;
 }
@@ -96,12 +96,12 @@ size_t	utils::toSizeT(std::string const& str)
 	long value = std::strtol(str.c_str(), &endptr, 10);
 	if (*endptr != '\0')
 		throw std::runtime_error("Invalid numeric value: " + str);
-	if (errno == ERANGE || value > static_cast<long>(MAX_SIZE_T) || value < 0)
+	if (errno == ERANGE || value > static_cast<long>(Const::MAX_SIZE_T) || value < 0)
 		throw std::runtime_error("Numeric value out of range: " + str);
 	return static_cast<size_t>(value);
 }
 
-size_t	utils::hexToSizeT(const std::string& hexStr)
+size_t	utils::hexToSizeT(std::string const& hexStr)
 {
 	if (hexStr.empty())
 		return static_cast<size_t>(-1);
@@ -113,7 +113,7 @@ size_t	utils::hexToSizeT(const std::string& hexStr)
 	return result;
 }
 
-char	utils::hexToChar(const std::string& hex)
+char	utils::hexToChar(std::string const& hex)
 {
 	if (hex.length() != 2)
 		return -1;
@@ -133,7 +133,16 @@ char	utils::hexToChar(const std::string& hex)
 	return static_cast<char>(value);
 }
 
-std::string	utils::readFile(const std::string& path)
+std::string	utils::toUpper(std::string const& s)
+{
+	std::string up = s;
+	for (std::string::size_type i = 0; i < s.size(); ++i) {
+		up[i] = std::toupper(static_cast<unsigned char>(s[i]));
+	}
+	return up;
+}
+
+std::string	utils::readFile(std::string const& path)
 {
 	std::ifstream file(path.c_str(), std::ios::binary);
 	if (!file.is_open())
@@ -150,7 +159,8 @@ std::string	utils::readFile(const std::string& path)
  * - path "https://mydomaine/index.py" -> returns ".py"
  * - path "/test" or "/test." -> returns "" (empty string)
  */
-std::string	utils::getFileExtension(std::string const& path) {
+std::string	utils::getFileExtension(std::string const& path)
+{
 	size_t dotPos = path.rfind('.');
 	if (dotPos == std::string::npos || dotPos == path.length() - 1)
 		return "";
@@ -173,7 +183,8 @@ std::string	utils::toLowerCase(const std::string& str)
  *
  * Example: `split("a//b/c/", '/')` -> `{"a", "b", "c"}`
  */
-std::vector<std::string>	utils::split(std::string const& s, char delim) {
+std::vector<std::string>	utils::split(std::string const& s, char delim)
+{
 	std::vector<std::string> elems;
 	std::stringstream ss(s);
 	std::string item;
@@ -195,7 +206,8 @@ std::vector<std::string>	utils::split(std::string const& s, char delim) {
  * Trailing slashes are not trimmed.
  * Usage of normalizePath() resolves any `.` or `..` in the path.
  */
-std::string utils::pathsJoin(std::string const& lhs, std::string const& rhs) {
+std::string utils::pathsJoin(std::string const& lhs, std::string const& rhs)
+{
 	if (lhs.empty()) {
 		if (rhs.empty()) return "/";
 		return (!rhs.empty() && rhs[0] == '/') ? rhs : "/" + rhs;
@@ -210,7 +222,8 @@ std::string utils::pathsJoin(std::string const& lhs, std::string const& rhs) {
 	return normalizePath(joinedPath);
 }
 
-std::string utils::securedPathsJoin(std::string const& rootPath, std::string const& otherPath) {
+std::string utils::securedPathsJoin(std::string const& rootPath, std::string const& otherPath)
+{
 	std::string joinedNormalizedPath = pathsJoin(rootPath, otherPath);
 	// Joined path should be included in `lhs` (path traversal check)
 	std::string normalizedRoot = normalizePath(rootPath);
@@ -237,7 +250,8 @@ std::string utils::securedPathsJoin(std::string const& rootPath, std::string con
  * `_normalizePath("/a/b/../../c/")` -> `/c`
  * `_normalizePath("")` -> (empty string)
  */
-std::string utils::normalizePath(std::string const& path) {
+std::string utils::normalizePath(std::string const& path)
+{
 	std::vector<std::string> parts = utils::split(path, '/');
 	std::vector<std::string> clean;
 	for (size_t i = 0; i < parts.size(); ++i) {
@@ -258,7 +272,7 @@ std::string utils::normalizePath(std::string const& path) {
 /**
  * Delete leading and trailing space and tab chars from a string.
  */
-std::string	utils::trim(const std::string& str)
+std::string	utils::trim(std::string const& str)
 {
 	size_t start = 0;
 
@@ -272,13 +286,15 @@ std::string	utils::trim(const std::string& str)
 }
 
 /**
- * Truncate a string as an excerpt, up to`n` chars.
+ * Format time in a given format (UTC).
  *
- * Will display `... (x bytes total)` after a truncated text.
+ * Takes a `time_t` argument as time. Use `time(0)` for the the current time (now).
  */
-std::string	utils::excerpt(size_t n, std::string const& str) {
-	std::string excerpt = str.substr(0, n);
-	if (str.size() > n)
-    	excerpt += "... (" + toString(str.size()) + " bytes total)";
-	return excerpt;
+std::string utils::formatDate(time_t time, const std::string& format)
+{
+    struct tm* timeinfo = localtime(&time);
+    char buffer[64];
+    strftime(buffer, sizeof(buffer), format.c_str(), timeinfo);
+    return buffer;
 }
+

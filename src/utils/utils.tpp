@@ -2,15 +2,21 @@
 #include <sstream>
 #include <set>
 
-template<typename T>
-std::string	utils::toString(T const& value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
+/**
+ * Turns any printable value into a string.
+ */
+template <typename T>
+std::string	utils::str(T const& value)
+{
+	std::ostringstream oss;
+	oss << value;
+	return oss.str();
 }
 
+
 template<typename T>
-bool	utils::hasVectorUniqEntries(std::vector<T> const& vec) {
+bool	utils::hasVectorUniqEntries(std::vector<T> const& vec)
+{
 	std::set<T> seen;
 	for (typename std::vector<T>::const_iterator it = vec.begin(); it != vec.end(); ++it) {
 		if (seen.find(*it) != seen.end()) {
@@ -22,7 +28,8 @@ bool	utils::hasVectorUniqEntries(std::vector<T> const& vec) {
 }
 
 template<typename T, size_t N>
-bool	utils::isInArray(T const& value, T const (&array)[N]) {
+bool	utils::isInArray(T const& value, T const (&array)[N])
+{
 	for (size_t i = 0; i < N; ++i) {
 		if (array[i] == value)
 			return true;
