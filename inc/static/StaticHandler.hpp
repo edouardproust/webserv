@@ -27,7 +27,7 @@ class StaticHandler
 	std::string	_errorPageHtml(HttpStatus const& status) const;
 	std::string	_welcomePageHtml() const;
 	std::string	_autoindexHtml() const;
-	std::string	_getCurrentDateLocal(time_t time) const;
+
 
 	std::string	_getMime(const std::string& filePath);
 	std::string	_getMimeFromPath(const std::string& filePath);

@@ -238,14 +238,6 @@ std::string	StaticHandler::_autoindexHtml() const
 	return html.str();
 }
 
-std::string StaticHandler::_getCurrentDateLocal(time_t time) const
-{
-	struct tm* timeinfo = localtime(&time);
-	char buffer[20];
-	strftime(buffer, sizeof(buffer), "%d-%b-%Y %H:%M", timeinfo);
-	return buffer;
-}
-
 std::string StaticHandler::_errorPageHtml(HttpStatus const& status) const
 {
 	return std::string(
@@ -327,6 +319,8 @@ Response	StaticHandler::_serveFile()
 	Response resp;
 	resp.setStatus(HttpStatus("ok"));
 	resp.setContentType(_getMimeFromPath(_finalPath));
+	std::string filename = utils::getFileName(_finalPath);
+	resp.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
 	resp.setBody(content);
 	return resp;
 }
