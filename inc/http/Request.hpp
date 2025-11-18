@@ -27,6 +27,7 @@ class Request
 	std::string	_contentType;
 	std::string	_body;
 	std::string	_rawRequest;
+	std::map<std::string, std::string> _cookies;
 
 	static std::set<std::string> _supportedMethods;
 	static std::set<std::string> _existingMethods;
@@ -56,6 +57,8 @@ class Request
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
 		const std::string&	getRawRequest() const;
+		const std::string&	getCookie(const std::string& name) const;
+		const std::map<std::string, std::string>&	getCookies() const;
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);
@@ -69,6 +72,9 @@ class Request
 		void	setContentType(const std::string& value);
 		void	setBody(std::string const& body);
 		void	setRawRequest(std::string const& rawRequest);
+		void	addCookie(const std::string& name, const std::string& value);
+
+		bool	hasCookie(const std::string& name) const;
 };
 
 std::ostream&	operator<<(std::ostream& os, const Request& request);

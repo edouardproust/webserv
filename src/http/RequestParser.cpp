@@ -185,6 +185,8 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 	if (!_isValidHeaderValue(value))
 		return HttpStatus("bad_request");
 	std::string normalizedName = _normalizeHeaderName(name);
+	if (normalizedName == "cookie")
+		return _parseCookies(request, value);
 	if (normalizedName == "content-length")
 	{
 		if (!_isValidContentLength(value))
@@ -206,6 +208,31 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 			return HttpStatus("bad_request");
 	}
 	request.addHeader(normalizedName, value);
+	return HttpStatus("ok");
+}
+
+HttpStatus	RequestParser::_parseCookies(Request& request, std::string const& cookieHeader)
+{
+	std::vector<std::string> cookies = utils::split(cookieHeader, ';');
+
+	for (size_t i = 0; i < cookies.size(); ++i)
+	{
+		std::string cookie = utils::trim(cookies[i]);
+		if (cookie.empty())
+			continue;
+		size_t equalPos = cookie.find('=');
+		if (equalsPos == std::string::npos)
+			request.addCookie(cookie, "");
+		else
+		{
+			std::string name = utils::trim(cookie.substr(0, equalPos));
+			std::string value = utils::trim(cookie.substr(equalsPos + 1));
+			if (value.length() >= 2 && value[0] == '"' && value[value.length() - 1] == '"')
+				value = value.substr(1, value.length() - 2);
+			if (!name.empty())
+				request.addCookie(name, value)
+		}
+	}
 	return HttpStatus("ok");
 }
 

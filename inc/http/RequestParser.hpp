@@ -20,6 +20,7 @@ class RequestParser
 	static HttpStatus	_parseUrl(std::string&, std::string const&);
 	static HttpStatus	_parseHeaders(Request&, std::string const&, bool);
 	static HttpStatus	_parseHeaderLine(Request&, std::string const&);
+	static HttpStatus	_parseCookies(Request& request, std::string const&);
 	static HttpStatus	_parseChunkedBody(Request&);
 	static HttpStatus	_validateBody(Request&);
 
