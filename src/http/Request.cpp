@@ -123,9 +123,30 @@ const std::string& Request::getVersion() const
 	return this->_version;
 }
 
-const std::map<std::string, std::string>& Request::getHeaders() const
+const std::map<std::string, std::string> Request::getHeaders() const
 {
-	return this->_headers;
+	return getCombinedHeaders();
+}
+
+const std::vector<std::pair<std::string, std::string> >& Request::getAllHeaders() const
+{
+	return _headers;
+}
+
+std::map<std::string, std::string> Request::getCombinedHeaders() const
+{
+	std::map<std::string, std::string> combined;
+
+	for (std::vector<std::pair<std::string, std::string> >::const_iterator it = _headers.begin();
+		it != _headers.end(); ++it)
+	{
+		std::string normalizedName = utils::toLowerCase(it->first);
+		if (combined.find(normalizedName) != combined.end())
+			combined[normalizedName] += ", " + it->second;
+		else
+			combined[normalizedName] = it->second;
+	}
+	return combined;
 }
 
 const std::string& Request::getContentType() const
@@ -184,7 +205,7 @@ void	Request::setVersion(const std::string& version)
 
 void	Request::addHeader(const std::string& name, const std::string& value)
 {
-	_headers[name] = value;
+	_headers.push_back(std::make_pair(name, value));
 }
 
 void Request::setContentType(const std::string& value)
@@ -211,10 +232,15 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "  - Path Info: " << PrintableString(request.getPathInfo()) << "\n";
 	os << "  - Query String: " << PrintableString(request.getQueryString()) << "\n";
 	os << "- Version: " << PrintableString(request.getVersion()) << "\n";
-	os << "- Headers: " << request.getHeaders().size() << "\n";
-	const std::map<std::string, std::string>& headers = request.getHeaders();
-	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
-		it != headers.end(); ++it)
+	const std::vector<std::pair<std::string, std::string> >& rawHeaders = request.getAllHeaders();
+	os << "- Raw Headers: " << rawHeaders.size() << "\n";
+	for (std::vector<std::pair<std::string, std::string> >::const_iterator it = rawHeaders.begin();
+		it != rawHeaders.end(); ++it)
+		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
+	const std::map<std::string, std::string>& combinedHeaders = request.getCombinedHeaders();
+	os << "- Combined Headers: " << combinedHeaders.size() << "\n";
+	for (std::map<std::string, std::string>::const_iterator it = combinedHeaders.begin();
+		it != combinedHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
