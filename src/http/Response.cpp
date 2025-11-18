@@ -122,7 +122,7 @@ void	Response::clearBody()
 
 void	Response::setConnectionFromRequest(Request const& request)
 {
-	const std::map<std::string, std::string>& headers = request.getHeaders();
+	std::map<std::string, std::string> headers = request.getCombinedHeaders();
 	if (headers.find("connection") != headers.end())
 		setHeader("Connection", headers.find("connection")->second);
 	else
