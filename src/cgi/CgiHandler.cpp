@@ -255,8 +255,8 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot, Host
 	tmp["REQUEST_METHOD"] = req.getMethod();
 	tmp["SCRIPT_FILENAME"] = _scriptName; // absolute path
 	tmp["SCRIPT_NAME"] = req.getScriptName(); // relative path
-	tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //full path for the tester to work
-	tmp["PATH_TRANSLATED"] = locRoot + tmp["PATH_INFO"]; // TODO
+	tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //!\ full path for the ubuntu_tester to work
+	tmp["PATH_TRANSLATED"] = utils::pathsJoin(locRoot, tmp["PATH_INFO"]);
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();
 	tmp["CONTENT_LENGTH"] = utils::str(req.getBody().length());
@@ -266,10 +266,10 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot, Host
 	tmp["SERVER_PROTOCOL"] = req.getVersion();
 	tmp["SERVER_SOFTWARE"] = Const::SERVER_SOFTWARE;
 	// Additional variables from old subject requirements to pass ubuntu_tester
-	tmp["AUTH_TYPE"] = "";  // TODO Authentication type (usually empty)
-	tmp["REMOTE_ADDR"] = "127.0.0.1";  // TODO Client IP address
-	tmp["REMOTE_IDENT"] = ""; // TODO Remote user identity (usually empty)
-	tmp["REMOTE_USER"] = ""; // TODO Remote user name (usually empty)
+	tmp["REMOTE_ADDR"] = "0.0.0.0";  // Not implemented (optional)
+	tmp["REMOTE_IDENT"] = "";
+	tmp["AUTH_TYPE"] = ""; //!\ Auth not implemented
+	tmp["REMOTE_USER"] = ""; //!\ Auth not implemented
 	tmp["REQUEST_URI"] = req.getUri();
 	tmp["SERVER_NAME"] = listeningOn.getHost();
 	tmp["SERVER_PORT"] = utils::str(listeningOn.getPort());

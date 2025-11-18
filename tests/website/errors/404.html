@@ -1,97 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>404 Not Found - webserv</title>
-    <link rel="stylesheet" href="style/main.css">
-    <style>
-        .error-container {
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 30px;
-            text-align: center;
-            background-color: #ffffff;
-            border: 2px solid #87b1fd;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .error-code {
-            font-size: 4em;
-            color: #0066cc;
-            margin: 20px 0;
-            font-family: 'clinton-bold', sans-serif;
-        }
-        
-        .error-title {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
-        .error-message {
-            color: #666;
-            margin-bottom: 25px;
-            line-height: 1.6;
-        }
-        
-        .error-path {
-            background-color: #f0f8ff;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 5px solid #0066cc;
-            margin: 20px 0;
-            font-family: 'Courier New', monospace;
-            word-break: break-all;
-        }
-        
-        .home-button {
-            display: inline-block;
-            background-color: #0066cc;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 15px;
-            transition: background-color 0.3s;
-        }
-        
-        .home-button:hover {
-            background-color: #0052a3;
-        }
-        
-        .emoji {
-            font-size: 4em;
-            margin-bottom: 10px;
-        }
-    </style>
+	<meta charset="UTF-8">
+	<title>404 Not Found - webserv</title>
+	<link rel="stylesheet" href="style/main.css">
 </head>
 <body>
-    <div class="header">
-        <img src="webserv.png" alt="webserv" width="80">
-        <h1>webserv</h1>
-    </div>
+	<div class="header">
+		<img src="webserv.png" alt="webserv" width="80">
+		<h1>webserv</h1>
+	</div>
 
-    <div class="error-container">
-        <div class="emoji">😞</div>
-        <div class="error-code">404</div>
-        <h1 class="error-title">Page Not Found</h1>
-        
-        <p class="error-message">
-            The page you're looking for doesn't exist or has been moved.
-            Check the URL for typos or go back to the home page.
-        </p>
-        
-        <div class="error-path">
-            Requested path: <strong id="requested-path">/</strong>
-        </div>
-        
-        <a href="/" class="home-button">Go Back Home</a>
-    </div>
+	<div class="error-container">
+		<div class="emoji">😞</div>
+		<div class="error-code">404</div>
+		<h1 class="error-title">Page Not Found</h1>
 
-    <script>
-        const path = window.location.pathname;
-        document.getElementById('requested-path').textContent = path;
-    </script>
+		<p class="error-message">
+			The page you're looking for doesn't exist or has been moved.
+			Check the URL for typos or go back to the home page.
+		</p>
+
+		<div class="error-path">
+			Requested path: <strong id="requested-path">/</strong>
+		</div>
+
+		<a href="/" class="home-button">Go Back Home</a>
+	</div>
+
+	<script>
+		const path = window.location.pathname;
+		document.getElementById('requested-path').textContent = path;
+	</script>
 </body>
 </html>

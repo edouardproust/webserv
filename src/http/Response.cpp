@@ -96,8 +96,10 @@ void	Response::setHeader(std::string const& name, std::string const& value)
 	std::string slug = utils::toLowerCase(name);
 	std::string v = value;
 
+	// keep-alive
 	if (slug == "connection" && utils::toLowerCase(v) != "close")
 		v = "keep-alive";
+
 	_headers[slug] = std::make_pair(name, v);
 }
 
