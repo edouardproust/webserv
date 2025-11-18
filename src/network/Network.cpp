@@ -304,35 +304,7 @@ void Network::_send(int clientFd, struct epoll_event& eventsSetup)
 
 bool Network::_shouldCloseConnection(Request const& request, Response const& response)
 {
-    std::string connectionHeader;
-
-    std::map<std::string, std::string> const& reqHeaders = request.getHeaders();
-    std::map<std::string, std::string>::const_iterator it = reqHeaders.find("Connection");
-
-    if (it == reqHeaders.end()) {
-        it = reqHeaders.find("connection"); // Try lowercase
-    }
-
-    if (it != reqHeaders.end()) {
-        connectionHeader = it->second; // Header found
-        if (connectionHeader == "close") {
-            return true; // Client requested to close
-        }
-    }
-
-    // Rule 2: Did the server decide to close?
-    std::map<std::string, std::string> const& respHeaders = response.getHeaders();
-    std::map<std::string, std::string>::const_iterator resp_it = respHeaders.find("Connection");
-
-    if (resp_it == respHeaders.end()) {
-        resp_it = respHeaders.find("connection");
-    }
-
-    if (resp_it != respHeaders.end() && resp_it->second == "close") {
-        return true;
-    }
-
-    return false; // Default: keep-alive
+    return request.isConnectionClose() || response.isConnectionClose();
 }
 
 void Network::_manageConnection(int clientFd, bool shouldClose, struct epoll_event& eventsSetup)

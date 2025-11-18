@@ -13,9 +13,9 @@
  *   listing page if needed.
  * - It is the role of CgiHandler to check if the script exists and is executable.
  */
-Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listen)
+Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
 {
-	RoutingDecision rd(config, req, listen);
+	RoutingDecision rd(config, req, listeningOn);
 	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
 
 	Response resp;
@@ -29,7 +29,7 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	else if (decision == RoutingDecision::REDIRECTION)
 		_handleRedirectionDecision(resp, rd);
 	else if (decision == RoutingDecision::CGI)
-		_handleCgiDecision(resp, rd, statiq);
+		_handleCgiDecision(resp, rd, listeningOn, statiq);
 	else if (decision == RoutingDecision::STATIC) {
 		_handleStaticDecision(resp, req.getMethod(), statiq);
 	} else // fallback
@@ -48,7 +48,7 @@ void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& r
 	resp = redirect.run();
 }
 
-void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, StaticHandler& statiq)
+void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostPortPair const& listeningOn, StaticHandler& statiq)
 {
 	std::string const& scriptName = rd.getFinalPath();
 	if (!utils::fileExists(scriptName)) {
@@ -58,7 +58,7 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, Stati
 	} else {
 		CgiHandler cgi;
 		try {
-			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptName);
+			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
 		} catch (CgiHandler::ExecException& e) {
 			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("internal_server_error"));

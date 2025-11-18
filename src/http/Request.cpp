@@ -82,6 +82,11 @@ bool	Request::isExistingMethod(std::string const& method)
 	return _existingMethods.find(method) != _existingMethods.end();
 }
 
+bool	Request::isConnectionClose() const {
+	std::map<std::string, std::string>::const_iterator found = _headers.find("connection");
+	return (found != _headers.end() && utils::toLowerCase(found->second) == "close");
+}
+
 const HttpStatus& Request::getStatus() const
 {
 	return (this->_status);

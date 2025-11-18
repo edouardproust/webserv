@@ -42,10 +42,10 @@ Response::RawException::RawException(std::string const& msg)
 
 void	Response::_initDefaultHeaders()
 {
-	_headers["server"] = Const::SERVER_SOFTWARE;
-	_headers["date"] = utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT");
-	_headers["connection"] = "keep-alive";
-	_headers["content-length"] = "0";
+	_headers["server"] = std::make_pair("Server", Const::SERVER_SOFTWARE);
+	_headers["date"] = std::make_pair("Date", utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT"));
+	_headers["connection"] = std::make_pair("Connexion", "keep-alive");
+	_headers["content-length"] = std::make_pair("Content-Length", "0");
 }
 
 std::string	Response::stringify() const
@@ -65,7 +65,7 @@ HttpStatus const&	Response::getStatus() const
 	return _status;
 }
 
-std::map<std::string, std::string> const& Response::getHeaders() const
+std::map<std::string, Response::Header> const& Response::getHeaders() const
 {
 	return _headers;
 }
@@ -93,18 +93,12 @@ void	Response::setContentType(std::string const& value)
 
 void	Response::setHeader(std::string const& name, std::string const& value)
 {
-	std::string normalizedName = utils::toLowerCase(name);
+	std::string slug = utils::toLowerCase(name);
+	std::string v = value;
 
-	if (normalizedName == "connection")
-	{
-		std::string normalizedValue = utils::toLowerCase(value);
-		if (normalizedValue == "keep-alive" || normalizedValue == "close")
-			_headers[normalizedName] = normalizedValue;
-		else
-			_headers[normalizedName] = "keep-alive";
-		return ;
-	}
-	_headers[normalizedName] = value;
+	if (slug == "connection" && utils::toLowerCase(v) != "close")
+		v = "keep-alive";
+	_headers[slug] = std::make_pair(name, v);
 }
 
 void	Response::setBody(std::string const& body)
@@ -133,7 +127,7 @@ void	Response::_updateContentLength()
 {
 	std::stringstream lengthStream;
 	lengthStream << _body.length();
-	_headers["content-length"] = lengthStream.str();
+	_headers["content-length"].second = lengthStream.str();
 }
 
 void	Response::_manageContentType()
@@ -141,12 +135,12 @@ void	Response::_manageContentType()
 	if (_body.empty())
 		_headers.erase("content-type");
 	else if (_headers.find("content-type") == _headers.end() && !_body.empty())
-		_headers["content-type"] = "text/html";
+		_headers["content-type"].second = "text/html";
 }
 
 bool	Response::_hasHeader(std::string const& keyLowcase) const
 {
-	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
+	for (std::map<std::string, Header>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
 		if (utils::toLowerCase(it->first) == keyLowcase)
 			return true;
 	}
@@ -157,34 +151,17 @@ std::string Response::_buildStatusLine() const
 {
 	std::stringstream statusLine;
 
-	statusLine << "HTTP/1.1 " << _status.getCode() << " " << _status.getReason() << "\r\n";
+	statusLine << "HTTP/1.1 " << _status.toStr() << "\r\n";
 	return statusLine.str();
 }
 
 std::string Response::_buildHeaders() const
 {
-	std::stringstream headerStream;
-
-	headerStream << "Server: " << _headers.find("server")->second << "\r\n";
-	headerStream << "Date: " << _headers.find("date")->second << "\r\n";
-	if (_headers.find("content-type") != _headers.end())
-		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
-	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
-	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
-	if (_headers.find("location") != _headers.end())
-		headerStream << "Location: " << _headers.find("location")->second << "\r\n";
-	if (_headers.find("cache-control") != _headers.end())
-		headerStream << "Cache-Control: " << _headers.find("cache-control")->second << "\r\n";
-	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
-		it != _headers.end(); ++it)
-		{
-			const std::string& key = it->first;
-			if (key != "server" && key != "date" && key != "content-type" &&
-				key != "content-length" && key != "connection" &&
-				key != "location" && key != "cache-control")
-					headerStream << key << ": " << it->second << "\r\n";
-		}
-	return headerStream.str();
+	std::string headersStr;
+	for (std::map<std::string, Header>::const_iterator it = _headers.begin();
+     it != _headers.end(); ++it)
+    	headersStr += it->second.first + ": " + it->second.second + "\r\n";
+	return headersStr;
 }
 
 // static utils
@@ -255,14 +232,19 @@ int	Response::_setHeaders(std::string const& headersPart) {
 	return statusCode;
 }
 
+bool	Response::isConnectionClose() const {
+    std::map<std::string, Response::Header>::const_iterator found = _headers.find("connection");
+    return (found != _headers.end() && found->second.second == utils::toLowerCase("close"));
+}
+
 std::ostream& operator<<(std::ostream& os, Response const& response)
 {
 	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
-	const std::map<std::string, std::string>& headers = response.getHeaders();
-	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+	const std::map<std::string, Response::Header>& headers = response.getHeaders();
+	for (std::map<std::string, Response::Header>::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
-			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
+			os << "  - " << PrintableString(it->second.first) << ": " << PrintableString(it->second.second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
 	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, response.stringify())) << "\n";

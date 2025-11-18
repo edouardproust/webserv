@@ -3,7 +3,7 @@
 RoutingDecision::RoutingDecision(Config const& c, Request const& r, HostPortPair const& l)
 : _config(c)
 , _request(r)
-, _listen(l)
+, _listeningOn(l)
 , _server(NULL)
 , _location(NULL)
 , _decision(ERROR)
@@ -46,11 +46,11 @@ void	RoutingDecision::_setServer()
 	for (size_t i = 0; i < servers.size(); ++i) {
 		std::set<HostPortPair> const& serverListens = servers[i].getListen();
 		for (std::set<HostPortPair>::const_iterator it = serverListens.begin(); it != serverListens.end(); ++it) {
-			if (*it == _listen) {
+			if (*it == _listeningOn) {
 				_server = &servers[i]; // exact match (priority 1)
 				return;
 			}
-			if (!wildcardMatch && it->isWildcardFor(_listen))
+			if (!wildcardMatch && it->isWildcardFor(_listeningOn))
                 wildcardMatch = &servers[i];
 		}
 	}

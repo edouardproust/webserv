@@ -34,7 +34,7 @@ CgiHandler::TimeoutException::TimeoutException(std::string const& msg)
  * Notes:
  * - Status code in the Response is set from the CGI raw response.
  */
-Response CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptName)
+Response CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptName, HostPortPair const& listeningOn)
 {
 	try {
 		_scriptName = scriptName;
@@ -48,7 +48,7 @@ Response CgiHandler::run(Request const& req, LocationBlock const* loc, std::stri
 		_setNonBlocking(_stderrPipe[0]);
 
 		// Run executable
-		_buildEnvp(req, loc->getRoot());
+		_buildEnvp(req, loc->getRoot(), listeningOn);
 		_buildArgv();
 		pid_t pid = _forkAndExec(); // Child process
 		_prepareIo(req.getMethod(), req.getBody());
@@ -247,7 +247,7 @@ void	CgiHandler::_cleanupPipes()
 
  * Stores them in _envp.
  */
-void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot)
+void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot, HostPortPair const& listeningOn)
 {
 	_envp.clear(); // security
 	std::map<std::string, std::string> tmp;
@@ -255,7 +255,7 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot)
 	tmp["REQUEST_METHOD"] = req.getMethod();
 	tmp["SCRIPT_FILENAME"] = _scriptName; // absolute path
 	tmp["SCRIPT_NAME"] = req.getScriptName(); // relative path
-    tmp["PATH_INFO"] = req.getPathInfo();
+    tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //full path for the tester to work
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();
 	tmp["CONTENT_LENGTH"] = utils::str(req.getBody().length());
@@ -264,6 +264,14 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot)
 	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
 	tmp["SERVER_PROTOCOL"] = req.getVersion();
 	tmp["SERVER_SOFTWARE"] = Const::SERVER_SOFTWARE;
+	// Additional variables from old subject requirements to pass ubuntu_tester
+	tmp["AUTH_TYPE"] = "";  // TODO Authentication type (usually empty)
+	tmp["REMOTE_ADDR"] = "127.0.0.1";  // TODO Client IP address
+	tmp["REMOTE_IDENT"] = ""; // TODO Remote user identity (usually empty)
+	tmp["REMOTE_USER"] = ""; // TODO Remote user name (usually empty)
+	tmp["REQUEST_URI"] = req.getUri();
+	tmp["SERVER_NAME"] = listeningOn.getHost();
+	tmp["SERVER_PORT"] = utils::str(listeningOn.getPort());
 	// HTTP headers (prefixed with HTTP_)
 	Headers headers = req.getHeaders();
 	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)

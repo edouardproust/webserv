@@ -25,7 +25,7 @@ class RoutingDecision
 		// input
 		Config const&			_config;
 		Request const&			_request;
-		HostPortPair const&		_listen;
+		HostPortPair const&		_listeningOn;
 		// process
 		ServerBlock const*		_server;
 		LocationBlock const*	_location;
