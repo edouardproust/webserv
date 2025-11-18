@@ -60,7 +60,7 @@ class Request
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
 		const std::string&	getRawRequest() const;
-		const std::string&	getCookie(const std::string& name) const;
+		const std::string	getCookie(const std::string& name) const;
 		const std::map<std::string, std::string>&	getCookies() const;
 
 		void	setStatus(HttpStatus const& status);

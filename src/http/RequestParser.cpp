@@ -221,16 +221,16 @@ HttpStatus	RequestParser::_parseCookies(Request& request, std::string const& coo
 		if (cookie.empty())
 			continue;
 		size_t equalPos = cookie.find('=');
-		if (equalsPos == std::string::npos)
+		if (equalPos == std::string::npos)
 			request.addCookie(cookie, "");
 		else
 		{
 			std::string name = utils::trim(cookie.substr(0, equalPos));
-			std::string value = utils::trim(cookie.substr(equalsPos + 1));
+			std::string value = utils::trim(cookie.substr(equalPos + 1));
 			if (value.length() >= 2 && value[0] == '"' && value[value.length() - 1] == '"')
 				value = value.substr(1, value.length() - 2);
 			if (!name.empty())
-				request.addCookie(name, value)
+				request.addCookie(name, value);
 		}
 	}
 	return HttpStatus("ok");
