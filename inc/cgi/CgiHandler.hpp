@@ -5,6 +5,7 @@
 #include "http/Response.hpp"
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
+#include "utils/signal.hpp"
 #include "utils/utils.hpp"
 #include "utils/typedefs.hpp"
 #include "utils/Log.hpp"
@@ -33,6 +34,7 @@ class CgiHandler
 	int							_stdinPipe[2];
 	int							_stdoutPipe[2];
 	int							_stderrPipe[2];
+	std::string					_tmpFile;
 
 	void		_buildEnvp(Request const&, std::string const&, HostPortPair const&);
 	void		_buildArgv();

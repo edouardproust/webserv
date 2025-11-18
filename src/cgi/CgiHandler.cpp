@@ -266,7 +266,7 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot, Host
 	tmp["SERVER_PROTOCOL"] = req.getVersion();
 	tmp["SERVER_SOFTWARE"] = Const::SERVER_SOFTWARE;
 	// Additional variables from old subject requirements to pass ubuntu_tester
-	tmp["REMOTE_ADDR"] = "0.0.0.0";  // Not implemented (optional)
+	tmp["REMOTE_ADDR"] = "0.0.0.0";  //!\ Not implemented (Client IP to be extracted by Network and pass it to Router)
 	tmp["REMOTE_IDENT"] = "";
 	tmp["AUTH_TYPE"] = ""; //!\ Auth not implemented
 	tmp["REMOTE_USER"] = ""; //!\ Auth not implemented
