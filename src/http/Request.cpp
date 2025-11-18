@@ -237,7 +237,7 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	for (std::vector<std::pair<std::string, std::string> >::const_iterator it = rawHeaders.begin();
 		it != rawHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	const std::map<std::string, std::string>& combinedHeaders = request.getCombinedHeaders();
+	const std::map<std::string, std::string>& combinedHeaders = request.getHeaders();
 	os << "- Combined Headers: " << combinedHeaders.size() << "\n";
 	for (std::map<std::string, std::string>::const_iterator it = combinedHeaders.begin();
 		it != combinedHeaders.end(); ++it)

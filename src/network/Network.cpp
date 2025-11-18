@@ -306,7 +306,7 @@ bool Network::_shouldCloseConnection(Request const& request, Response const& res
 {
     std::string connectionHeader;
 
-    std::map<std::string, std::string> const& reqHeaders = request.getCombinedHeaders();
+    std::map<std::string, std::string> const& reqHeaders = request.getHeaders();
     std::map<std::string, std::string>::const_iterator it = reqHeaders.find("Connection");
 
     if (it == reqHeaders.end()) {

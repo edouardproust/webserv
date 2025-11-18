@@ -274,7 +274,7 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot)
 	tmp["SERVER_NAME"] = "localhost";
 	tmp["SERVER_PORT"] = "8080";
 	// HTTP headers (prefixed with HTTP_)
-	Headers headers = req.getCombinedHeaders();
+	Headers headers = req.getHeaders();
 	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)
 		tmp[_headerToEnvVar(it->first)] = it->second;
 	// PHP specific variables
