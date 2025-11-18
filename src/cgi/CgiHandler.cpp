@@ -255,7 +255,8 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot, Host
 	tmp["REQUEST_METHOD"] = req.getMethod();
 	tmp["SCRIPT_FILENAME"] = _scriptName; // absolute path
 	tmp["SCRIPT_NAME"] = req.getScriptName(); // relative path
-    tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //full path for the tester to work
+	tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //full path for the tester to work
+	tmp["PATH_TRANSLATED"] = locRoot + tmp["PATH_INFO"]; // TODO
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();
 	tmp["CONTENT_LENGTH"] = utils::str(req.getBody().length());
