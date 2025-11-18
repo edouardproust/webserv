@@ -43,6 +43,7 @@ namespace utils {
 
 
 	std::string	readFile(std::string const&);
+	std::string	getFileName(const std::string& path);
 	std::string	getFileExtension(std::string const&);
 	std::string	toLowerCase(std::string const&);
 	std::vector<std::string>	split(std::string const&, char);
