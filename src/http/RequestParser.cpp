@@ -397,7 +397,7 @@ bool	RequestParser::_isValidHeaderName(std::string const& name)
 
 bool	RequestParser::_headersIndicateBody(Request const& request)
 {
-	const std::map<std::string, std::string>& headers = request.getHeaders();
+	std::map<std::string, std::string> headers = request.getHeaders();
 	return (headers.find("content-length") != headers.end() ||
 			headers.find("transfer-encoding") != headers.end());
 }
