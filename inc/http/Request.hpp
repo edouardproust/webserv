@@ -5,6 +5,7 @@
 # include "utils/utils.hpp"
 # include "utils/Log.hpp"
 # include <iostream>
+# include <vector>
 # include <map>
 # include <set>
 
@@ -23,7 +24,7 @@ class Request
 	std::string	_pathInfo;
 	std::string	_queryString;
 	std::string	_version;
-	std::map<std::string, std::string> _headers;
+	std::vector<std::pair<std::string, std::string> > _headers;
 	std::string	_contentType;
 	std::string	_body;
 	std::string	_rawRequest;
@@ -52,7 +53,9 @@ class Request
 		const std::string&	getPathInfo() const;
 		const std::string&	getQueryString() const;
 		const std::string&	getVersion() const;
-		const std::map<std::string, std::string>&	getHeaders() const;
+		const std::map<std::string, std::string> getHeaders() const;
+		const std::vector<std::pair<std::string, std::string> >& getAllHeaders() const;
+		std::map<std::string, std::string> getCombinedHeaders() const;
 		const std::string&	getContentType() const;
 		const std::string&	getBody() const;
 		const std::string&	getRawRequest() const;
