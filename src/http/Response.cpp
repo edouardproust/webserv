@@ -235,8 +235,11 @@ int	Response::_setHeaders(std::string const& headersPart) {
 }
 
 bool	Response::isConnectionClose() const {
-    std::map<std::string, Response::Header>::const_iterator found = _headers.find("connection");
-    return (found != _headers.end() && found->second.second == utils::toLowerCase("close"));
+	std::map<std::string, Header>::const_iterator found = _headers.find("connection");
+	if (found == _headers.end())
+		return false;
+	std::string value = utils::toLowerCase(utils::trim(found->second.second));
+	return value == "close";
 }
 
 std::ostream& operator<<(std::ostream& os, Response const& response)

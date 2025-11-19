@@ -105,7 +105,8 @@ code {
 }
 
 .notes {
-	font-size: 0.9em; color: #666;
+	font-size: 0.9em;
+	color: #666;
 }
 
 .error-container {
