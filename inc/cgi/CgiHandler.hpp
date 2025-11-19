@@ -4,6 +4,8 @@
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "config/LocationBlock.hpp"
+#include "config/HostPortPair.hpp"
+#include "utils/signal.hpp"
 #include "utils/utils.hpp"
 #include "utils/typedefs.hpp"
 #include "utils/Log.hpp"
@@ -32,15 +34,16 @@ class CgiHandler
 	int							_stdinPipe[2];
 	int							_stdoutPipe[2];
 	int							_stderrPipe[2];
+	std::string					_tmpFile;
 
-	void		_buildEnvp(Request const&, std::string const&);
+	void		_buildEnvp(Request const&, std::string const&, HostPortPair const&);
 	void		_buildArgv();
 	pid_t		_forkAndExec() const;
 	void		_prepareIo(std::string const&, std::string const&);
 	Response	_handleStatus(int);
 	void		_redirectIoInChild() const;
-	void		_setNonBlocking(int fd);
-	bool		_waitWithTimeout(pid_t pid, int& status, size_t timeout_ms);
+	void		_setNonBlocking(int);
+	bool		_waitWithTimeout(pid_t, int&, size_t);
 	void		_readPipes();
 	void		_cleanupPipes();
 
@@ -56,7 +59,7 @@ class CgiHandler
 		CgiHandler();
 		~CgiHandler();
 
-		Response run(Request const&, LocationBlock const*, std::string const&);
+		Response run(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
 
 		std::string const&				getScriptName() const;
 		std::string const&				getExecutor() const;
@@ -67,12 +70,12 @@ class CgiHandler
 
 		class ExecException: public std::runtime_error {
 			public:
-				ExecException(std::string const& msg);
+				ExecException(std::string const&);
 		};
 
 		class TimeoutException: public std::runtime_error {
 			public:
-				TimeoutException(std::string const& msg);
+				TimeoutException(std::string const&);
 		};
 };
 

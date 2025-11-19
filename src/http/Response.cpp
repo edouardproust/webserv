@@ -129,6 +129,14 @@ void	Response::setConnectionFromRequest(Request const& request)
 		setHeader("Connection", "keep-alive");
 }
 
+bool	Response::isConnectionClose() const {
+	std::map<std::string, std::string>::const_iterator found = _headers.find("connection");
+	if (found == _headers.end())
+		return false;
+	std::string value = utils::toLowerCase(utils::trim(found->second));
+	return value == "close";
+}
+
 void	Response::_updateContentLength()
 {
 	std::stringstream lengthStream;

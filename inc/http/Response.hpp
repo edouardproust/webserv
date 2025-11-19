@@ -44,6 +44,7 @@ class Response
 		void	setBody(std::string const& body);
 		void	clearBody();
 		void	setConnectionFromRequest(Request const& request);
+		bool	isConnectionClose() const;
 
 		HttpStatus const& 							getStatus() const;
 		std::map<std::string, std::string> const&	getHeaders() const;

@@ -44,6 +44,7 @@ class Request
 		static std::set<std::string> const& getSupportedMethods();
 		static bool	isSupportedMethod(std::string const& method);
 		static bool	isExistingMethod(std::string const& method);
+		bool		isConnectionClose() const;
 
 		const HttpStatus&	getStatus() const;
 		const std::string&	getMethod() const;

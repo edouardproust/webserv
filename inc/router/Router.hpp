@@ -15,7 +15,7 @@
 class Router
 {
 	static void	_handleRedirectionDecision(Response&, RoutingDecision const&);
-	static void	_handleCgiDecision(Response&, RoutingDecision const&, StaticHandler&);
+	static void	_handleCgiDecision(Response&, RoutingDecision const&, HostPortPair const&, StaticHandler&);
 	static void	_handleStaticDecision(Response&, std::string const&, StaticHandler&);
 
 	// Not instantiable
