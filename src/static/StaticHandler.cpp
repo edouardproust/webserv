@@ -145,16 +145,19 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 	resp.setContentType(_getMime("html"));
 
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
-	if (search != locErrorPages.end())
+	if (_routingDecision.getRequest().getMethod() != "HEAD")
 	{
-		std::string errorPath = search->second;
-		if (utils::isReadableFile(errorPath)) {
-			_finalPath = errorPath; //!\ final path updated
-			resp.setBody(utils::readFile(_finalPath));
-			return resp;
+		if (search != locErrorPages.end())
+		{
+			std::string errorPath = search->second;
+			if (utils::isReadableFile(errorPath)) {
+				_finalPath = errorPath; //!\ final path updated
+				resp.setBody(utils::readFile(_finalPath));
+				return resp;
+			}
 		}
+		resp.setBody(_errorPageHtml(status));
 	}
-	resp.setBody(_errorPageHtml(status));
 	return resp;
 }
 
