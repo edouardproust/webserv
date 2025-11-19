@@ -45,19 +45,18 @@ class Request
 		static bool	isExistingMethod(std::string const& method);
 		bool		isConnectionClose() const;
 
-		HttpStatus const&	getStatus() const;
-		std::string const&	getMethod() const;
-		std::string const&	getUri() const;
-		std::string const&	getPath() const;
-		std::string const&	getScriptName() const;
-		std::string const&	getPathInfo() const;
-		std::string const&	getQueryString() const;
-		std::string const&	getVersion() const;
-		std::map<std::string, std::string> const&	getHeaders() const;
-		std::string const&	getContentType() const;
-		std::string const&	getBody() const;
-		std::string const&	getRawRequest() const;
-		std::string			getHeaderValue(std::string const&) const;
+		const HttpStatus&	getStatus() const;
+		const std::string&	getMethod() const;
+		const std::string&	getUri() const;
+		const std::string&	getPath() const;
+		const std::string&	getScriptName() const;
+		const std::string&	getPathInfo() const;
+		const std::string&	getQueryString() const;
+		const std::string&	getVersion() const;
+		const std::map<std::string, std::string>&	getHeaders() const;
+		const std::string&	getContentType() const;
+		const std::string&	getBody() const;
+		const std::string&	getRawRequest() const;
 
 		void	setStatus(HttpStatus const& status);
 		void	setMethod(std::string const& method);

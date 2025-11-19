@@ -147,16 +147,6 @@ std::string const&	Request::getRawRequest() const {
 	return _rawRequest;
 }
 
-std::string	Request::getHeaderValue(std::string const& headerName) const {
-{
-    std::string normalizedName = utils::toLowerCase(headerName);
-    std::map<std::string, std::string>::const_iterator it = _headers.find(normalizedName);
-    if (it != _headers.end())
-        return it->second;
-    return ""; // if not found
-}
-}
-
 void	Request::setStatus(HttpStatus const& status)
 {
 	this->_status = status;
