@@ -70,8 +70,8 @@ Response	StaticHandler::handleDelete()
 {
 	if (!utils::fileExists(_finalPath))
 		return handleError(HttpStatus("not_found"));
-	_finalPath = _finalPath.substr(0, _finalPath.find_last_of('/')); //!\ final path updated
-	if (access(_finalPath.c_str(), W_OK) != 0)
+	std::string directoryPath = _finalPath.substr(0, _finalPath.find_last_of('/'));
+	if (access(directoryPath.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"));
 	if (std::remove(_finalPath.c_str()) == 0)
 	{
