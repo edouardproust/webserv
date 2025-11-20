@@ -93,7 +93,7 @@ Response StaticHandler::handlePost() {
 Response	StaticHandler::handleHead()
 {
 	Response response = handleGet();
-	response.clearBody();
+	response.clearBodyForHead();
 	return response;
 }
 
@@ -157,6 +157,11 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 			}
 		}
 		resp.setBody(_errorPageHtml(status));
+	}
+	else
+	{
+		std::string errorBody = _errorPageHtml(status);
+        resp.setHeader("Content-Length", utils::str(errorBody.size()));
 	}
 	return resp;
 }

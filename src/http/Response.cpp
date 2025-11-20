@@ -117,7 +117,13 @@ void	Response::setBody(std::string const& body)
 void	Response::clearBody()
 {
 	_body.clear();
-	_manageContentType();
+	_bodyClearedForHead = false;
+}
+
+void	Response::clearBodyForHead()
+{
+	_body.clear();
+	_bodyClearedForHead = true;
 }
 
 void	Response::setConnectionFromRequest(Request const& request)
@@ -146,10 +152,10 @@ void	Response::_updateContentLength()
 
 void	Response::_manageContentType()
 {
-	if (_body.empty())
-		_headers.erase("content-type");
-	else if (_headers.find("content-type") == _headers.end() && !_body.empty())
+	if (!_body.empty() && _headers.find("content-type") == _headers.end())
 		_headers["content-type"] = "text/html";
+	else if (_body.empty() && !_bodyClearedForHead)
+		_headers.erase("content-type");
 }
 
 bool	Response::_hasHeader(std::string const& keyLowcase) const
