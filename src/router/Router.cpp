@@ -56,17 +56,9 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostP
 	} else if (!utils::isReadableFile(scriptName)) {
 		resp = statiq.handleError(HttpStatus("forbidden"));
 	} else {
+		CgiHandler cgi;
 		try {
-			// Dispatch based on request size
-			if (rd.getRequest().getBody().size() > CgiHandler::_FILES_THRESHOLD) {
-				FileCgiHandler handler;
-				resp = handler.execute(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
-        		Log::dev("debug", "CGI Handler (tmp file):\n" + utils::str(handler));
-    		} else {
-				PipeCgiHandler handler;
-				resp = handler.execute(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
-				Log::dev("debug", "CGI Handler (pipes):\n" + utils::str(handler));
-			}
+			resp = cgi.execute(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
 		} catch (CgiHandler::ExecException& e) {
 			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("internal_server_error"));
@@ -77,6 +69,7 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostP
 			Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("timeout"));
 		}
+        Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
 	}
 }
 

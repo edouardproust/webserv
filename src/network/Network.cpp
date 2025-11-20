@@ -1,7 +1,7 @@
 #include "network/Network.hpp"
 
-size_t const	Network::_CLIENT_BUFFER = 65536; // 64Kb
-size_t const	Network::_EVENT_MAX_SIZE = 100;
+size_t const	Network::_CLIENT_BUFFER = 1024 * 1024; // 1MB
+size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 
 Network::Network(Config const& config)
 : _config(config)
@@ -47,8 +47,7 @@ Network::~Network()
 void Network::startServers()
 {
 	int numberOfEvents;
-	int newConn;
-	struct epoll_event events[_EVENT_MAX_SIZE];
+	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	struct epoll_event eventsSetup;
 
 	Log::prod("ok", Const::SERVER_NAME + " started.");
@@ -62,24 +61,30 @@ void Network::startServers()
 		numberOfEvents = _epoll_wait(events);
 		for (int n = 0; n < numberOfEvents && sig::keepRunning(); n++)
 		{
-			if ((newConn = _isServerSideEvent(events[n].data.fd)) != 0)
-			{
+			int eventFd = events[n].data.fd;
+			int newClientFd = _acceptNewConnection(eventFd);
+			if (newClientFd > 0) { // 1. New client connexion
 				// Correct form:
-				::fcntl(newConn, F_SETFL, O_NONBLOCK);  // Define as non-blocking
-				::fcntl(newConn, F_SETFD, FD_CLOEXEC); // Marks to be closed on exec()
-				//::fcntl(newConn, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-				eventsSetup.data.fd = newConn;
+				::fcntl(newClientFd, F_SETFL, O_NONBLOCK);  // Define as non-blocking
+				::fcntl(newClientFd, F_SETFD, FD_CLOEXEC); // Marks to be closed on exec()
+				eventsSetup.data.fd = newClientFd;
 				eventsSetup.events = EPOLLIN;
-				if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, newConn, &eventsSetup) == -1)
-				{
+				if (::epoll_ctl(_epoll, EPOLL_CTL_ADD, newClientFd, &eventsSetup) == -1) {
 					Log::prod("status", "Epoll Ctl status: " + utils::str(strerror(errno)));
 					throw EpollCtlException();
 				}
+			} else if (newClientFd == 0) { // 2. Existing client connexion
+				if (events[n].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) // error
+					_handleClientDisconnect(eventFd, eventsSetup);
+				else if (_isCgiEvent(eventFd))
+            		_handleCgiOutput(eventFd, eventsSetup);
+        		else if (events[n].events & EPOLLIN) // can recieve from client
+					_recv(eventFd, eventsSetup);
+				else if (events[n].events & EPOLLOUT) // can send to client
+					_send(eventFd, eventsSetup);
+			} else { // 3. Connexion error
+				Log::prod("error", "Accept failed on server socket");
 			}
-			else if (events[n].events & EPOLLIN)
-				_recv(events[n].data.fd, eventsSetup);
-			else if (events[n].events & EPOLLOUT)
-				_send(events[n].data.fd, eventsSetup);
 		}
 	}
 }
@@ -100,8 +105,8 @@ void Network::_epollAddServers()
 
 	eventsSetup.events = EPOLLIN | EPOLLOUT;
 	for (size_t i = 0; i < _connections.size(); ++i) {
-		eventsSetup.data.fd = _connections[i]->getSock();
-		if (epoll_ctl(_epoll, EPOLL_CTL_ADD, _connections[i]->getSock(), &eventsSetup) < 0)
+		eventsSetup.data.fd = _connections[i]->getFd();
+		if (epoll_ctl(_epoll, EPOLL_CTL_ADD, _connections[i]->getFd(), &eventsSetup) < 0)
 		{
 			Log::prod("status", "Epoll Ctl status: " + utils::str(strerror(errno)));
 			throw EpollCtlException();
@@ -113,7 +118,7 @@ int Network::_epoll_wait(struct epoll_event* events)
 {
 	int nfds;
 
-	nfds = epoll_wait(_epoll, events, _EVENT_MAX_SIZE, -1);
+	nfds = epoll_wait(_epoll, events, _MAX_NB_OF_EVENTS, -1);
 	if (nfds == -1 && sig::keepRunning())
 	{
 		Log::prod("status", "Epoll Wait status: " + utils::str(strerror(errno)));
@@ -123,19 +128,22 @@ int Network::_epoll_wait(struct epoll_event* events)
 	return (nfds);
 }
 
-int Network::_isServerSideEvent(int epollFd)
+/**
+ * Returns the new fd if the event is accepted, 0 if not accepted, -1 if accept() failed.
+ */
+int Network::_acceptNewConnection(int serverFd)
 {
     // Iterate through listening sockets (servers)
     for (size_t i = 0; i < _connections.size(); ++i)
     {
         // IF and ONLY IF the event fd equals one of my server sockets
-        if (epollFd == _connections[i]->getSock())
+        if (serverFd == _connections[i]->getFd())
         {
-			Log::dev("event", "Server side event on fd " + Log::hl(epollFd) + ".");
-            int newConn = _connections[i]->accept();
-            if (newConn > 0)
-                _clientServerMap[newConn] = _connections[i];
-            return (newConn);
+			Log::dev("event", "Server side event on fd " + Log::hl(serverFd) + ".");
+            int newClientFd = _connections[i]->accept();
+            if (newClientFd > 0)
+                _clientServerMap[newClientFd] = _connections[i];
+            return (newClientFd);
         }
     }
     // If not a server event, don't print anything and return 0
@@ -145,16 +153,6 @@ int Network::_isServerSideEvent(int epollFd)
 void Network::_handleClientDisconnect(int clientFd, struct epoll_event& eventsSetup)
 {
 	Log::prod("event", "Client " + Log::hl(clientFd) + " disconnected.");
-	_clientServerMap.erase(clientFd);
-	_requestList.erase(clientFd);
-	epoll_ctl(_epoll, EPOLL_CTL_DEL, clientFd, &eventsSetup);
-	close(clientFd);
-}
-
-void Network::_handleRecvError(int clientFd, struct epoll_event &eventsSetup)
-{
-	Log::prod("error", "recv() on client " + Log::hl(clientFd) + ": " + utils::str(strerror(errno)));
-
 	_clientServerMap.erase(clientFd);
 	_requestList.erase(clientFd);
 	epoll_ctl(_epoll, EPOLL_CTL_DEL, clientFd, &eventsSetup);
@@ -173,25 +171,20 @@ void Network::_recv(int clientFd, struct epoll_event& eventsSetup)
     {
         bytes = recv(clientFd, client_buffer, _CLIENT_BUFFER, 0);
 
-        if (bytes > 0)
-        {
+        if (bytes > 0) {
 			//Log::dev("event", "Received " + utils::str(bytes) + " bytes.");
             totalRequest.append(client_buffer, bytes);
         }
-        else if (bytes == 0)
-        {
+        else if (bytes == 0) {
             _handleClientDisconnect(clientFd, eventsSetup);
             return;
         }
-        else // bytes == -1
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
+        else { // bytes == -1
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 break; // all bytes read from this event
             }
-            else
-            {
-                _handleRecvError(clientFd, eventsSetup);
+            else {
+                _handleClientDisconnect(clientFd, eventsSetup);
                 return;
             }
         }
@@ -354,7 +347,7 @@ std::ostream& operator<<(std::ostream& os, Network const& rhs)
 	os << "- Listening Sockets: " << rhs.getConnections().size() << "\n";
 	const std::vector<Socket*>& sockets = rhs.getConnections();
 	for (size_t i = 0; i < sockets.size(); ++i)
-		os << "  - Socket " << i << " (fd" << sockets[i]->getSock() << ") -> " << sockets[i]->getHostPortPair() << "\n";
+		os << "  - Socket " << i << " (fd" << sockets[i]->getFd() << ") -> " << sockets[i]->getHostPortPair() << "\n";
 
 	os << "- Pending Requests (waiting send): " << rhs.getRequestList().size() << "\n";
 	os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";

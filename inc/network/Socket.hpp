@@ -15,7 +15,7 @@ class Socket
 {
 	struct addrinfo		_hints;
 	struct addrinfo*	_servinfo;
-	int					_sock;
+	int					_fd;
 	HostPortPair		_listenOn;
 
 	void	_setAddrStruct();
@@ -37,7 +37,7 @@ class Socket
 		int		accept();
 
 		HostPortPair const&	getHostPortPair() const;
-		int					getSock();
+		int					getFd();
 
 		class GetAddrInfoException : public std::exception {
 			public:

@@ -13,7 +13,7 @@ Socket::Socket(HostPortPair const& listenPair)
 
 Socket::~Socket()
 {
-	close(_sock);
+	close(_fd);
 
 	Log::dev("setup", "Freeing Address Info memory...");
 	if (_servinfo) {
@@ -56,32 +56,32 @@ void	Socket::_loadAddressInfo()
 
 void	Socket::_createSocket()
 {
-	_sock = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
+	_fd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 
 	Log::dev("setup", "Creating Socket...");
-	if (_sock < 0) {
+	if (_fd < 0) {
 		throw SocketException();
 	}
 
 	Log::dev("setup", "Configuring Socket...");
 	int yes = 1;
-	if (setsockopt(_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
 		throw SetSockOptException();
 	}
 
 	Log::dev("setup", "Setting Socket to non-blocking mode...");
-	int flags = fcntl(_sock, F_GETFL);
-    int fdflags = fcntl(_sock, F_GETFD);
+	int flags = fcntl(_fd, F_GETFL);
+    int fdflags = fcntl(_fd, F_GETFD);
     if (flags == -1 || fdflags == -1
-		|| fcntl(_sock, F_SETFL, flags | O_NONBLOCK) == -1
-		|| fcntl(_sock, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
+		|| fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1
+		|| fcntl(_fd, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
 		throw FcntlException();
     }
 }
 
-int	Socket::getSock()
+int	Socket::getFd()
 {
-	return (_sock);
+	return (_fd);
 }
 
 void	Socket::bind()
@@ -90,7 +90,7 @@ void	Socket::bind()
 
 	Log::dev("setup", "Binding socket on " + Log::hl(_listenOn) + "...");
 
-	status = ::bind(_sock, _servinfo->ai_addr, _servinfo->ai_addrlen);
+	status = ::bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
 
 	if (status < 0) {
 		Log::prod("status",  "Bind status: " + utils::str(strerror(errno)));
@@ -104,7 +104,7 @@ void	Socket::listen()
 
 	Log::dev("setup", "Putting Socket " + Log::hl(_listenOn) + " in Listen Mode...");
 
-	status = ::listen(_sock, 10);
+	status = ::listen(_fd, 10);
 	if (status < 0) {
 		Log::prod("status", "Listen status: " + utils::str(strerror(errno)));
 		throw ListenException();
@@ -120,7 +120,7 @@ int	Socket::accept()
 
 	Log::dev("event", "accept() requested.");
 	addrSize = sizeof theirAddr;
-	newSocket = ::accept(_sock, (struct sockaddr *)&theirAddr, &addrSize);
+	newSocket = ::accept(_fd, (struct sockaddr *)&theirAddr, &addrSize);
 	if (newSocket < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
 		throw AcceptException();

@@ -23,10 +23,6 @@ LOG_ACCESS = $(LOG_DIR)/access.log
 LOG_ERROR = $(LOG_DIR)/error.log
 LOG_REDIRECTION = 1>$(LOG_ACCESS) 2>$(LOG_ERROR)
 
-# ------- TEMPORARY FILES --------
-
-TMP_FILES_DIR = tmp
-
 # ------- Sources -------
 
 BASE_SRC_FILES = \
@@ -46,8 +42,6 @@ BASE_SRC_FILES = \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp \
-	cgi/FileCgiHandler.cpp \
-	cgi/PipeCgiHandler.cpp \
 	utils/Const.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \
@@ -90,11 +84,9 @@ DEPS_FLAGS = -MMD -MP
 all: $(NAME)
 
 $(NAME): $(PROD_OBJS)
-	@mkdir -p $(TMP_FILES_DIR)
 	$(CXX) $(PROD_OBJS) -o $@
 
 $(NAME_DEV): $(DEV_OBJS)
-	@mkdir -p $(TMP_FILES_DIR)
 	$(CXX) $(DEV_OBJS) -o $@ $(DEV_CXXFLAGS)
 
 $(PROD_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile

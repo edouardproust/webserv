@@ -15,7 +15,7 @@
 class Network
 {
 	static size_t const			_CLIENT_BUFFER;
-	static size_t const			_EVENT_MAX_SIZE;
+	static size_t const			_MAX_NB_OF_EVENTS;
 
 	Config const&				_config;
 	std::vector<Socket*>		_connections;
@@ -27,7 +27,7 @@ class Network
 	void	_epollAddServers();
 	int		_epoll_wait(struct epoll_event*);
 
-	int		_isServerSideEvent(int);
+	int		_acceptNewConnection(int);
 	void	_recv(int, struct epoll_event&);
 	void	_send(int, struct epoll_event&);
 
