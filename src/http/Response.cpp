@@ -2,6 +2,7 @@
 
 Response::Response()
 : _status(HttpStatus())
+, _bodyClearedForHead(false)
 {
 	_initDefaultHeaders();
 }
@@ -11,6 +12,7 @@ Response::Response()
  */
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
+, _bodyClearedForHead(false)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -20,6 +22,7 @@ Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
 , _body(other._body)
+, _bodyClearedForHead(other._bodyClearedForHead)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -29,6 +32,7 @@ Response& Response::operator=(Response const& other)
 		_status = other._status;
 		_headers = other._headers;
 		_body = other._body;
+		_bodyClearedForHead = other._bodyClearedForHead;
 	}
 	return *this;
 }
@@ -122,8 +126,9 @@ void	Response::clearBody()
 
 void	Response::clearBodyForHead()
 {
+	bool hadBody = !_body.empty();
 	_body.clear();
-	_bodyClearedForHead = true;
+	_bodyClearedForHead = hadBody;
 }
 
 void	Response::setConnectionFromRequest(Request const& request)
