@@ -4,7 +4,8 @@
 #include "router/RoutingDecision.hpp"
 #include "router/RedirectionHandler.hpp"
 #include "static/StaticHandler.hpp"
-#include "cgi/CgiHandler.hpp"
+#include "cgi/PipeCgiHandler.hpp"
+#include "cgi/FileCgiHandler.hpp"
 
 /**
  * Routes incoming HTTP requests to the appropriate handler.

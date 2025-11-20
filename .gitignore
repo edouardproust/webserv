@@ -13,6 +13,7 @@
 build/
 .vscode/
 tests/config/replaced
+tmp/
 
 # Specific files
 webserv

@@ -1,6 +1,6 @@
 #include "network/Network.hpp"
 
-size_t const	Network::_CLIENT_BUFFER = 1024;
+size_t const	Network::_CLIENT_BUFFER = 65536; // 64Kb
 size_t const	Network::_EVENT_MAX_SIZE = 100;
 
 Network::Network(Config const& config)

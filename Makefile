@@ -23,6 +23,10 @@ LOG_ACCESS = $(LOG_DIR)/access.log
 LOG_ERROR = $(LOG_DIR)/error.log
 LOG_REDIRECTION = 1>$(LOG_ACCESS) 2>$(LOG_ERROR)
 
+# ------- TEMPORARY FILES --------
+
+TMP_FILES_DIR = tmp
+
 # ------- Sources -------
 
 BASE_SRC_FILES = \
@@ -42,6 +46,8 @@ BASE_SRC_FILES = \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp \
+	cgi/FileCgiHandler.cpp \
+	cgi/PipeCgiHandler.cpp \
 	utils/Const.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \
@@ -84,16 +90,16 @@ DEPS_FLAGS = -MMD -MP
 all: $(NAME)
 
 $(NAME): $(PROD_OBJS)
+	@mkdir -p $(TMP_FILES_DIR)
 	$(CXX) $(PROD_OBJS) -o $@
 
-dev: $(NAME_DEV)
+$(NAME_DEV): $(DEV_OBJS)
+	@mkdir -p $(TMP_FILES_DIR)
+	$(CXX) $(DEV_OBJS) -o $@ $(DEV_CXXFLAGS)
 
 $(PROD_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(PROD_CXXFLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
-
-$(NAME_DEV): $(DEV_OBJS)
-	$(CXX) $(DEV_OBJS) -o $@ $(DEV_CXXFLAGS)
 
 $(DEV_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@mkdir -p $(dir $@)
@@ -102,6 +108,8 @@ $(DEV_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 -include $(PROD_DEPS)
 -include $(DEV_DEPS)
 
+dev: $(NAME_DEV)
+
 clean:
 	rm -rf $(OBJ_DIR)
 
@@ -109,6 +117,7 @@ fclean: clean
 	rm -f $(NAME) $(NAME_DEV)
 	rm -rf $(LOG_DIR)
 	rm -rf $(CONFIG_DST_DIR)
+	rm -rf $(TMP_FILES_DIR)
 
 re: fclean all
 

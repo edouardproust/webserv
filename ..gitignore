@@ -16,6 +16,7 @@ tests/
 test_files/
 .vscode/
 YoupiBanane/
+tmp/
 
 # Specific files
 webserv
