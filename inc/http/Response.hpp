@@ -1,8 +1,8 @@
 #ifndef RESPONSE_HPP
-#define RESPONSE_HPP
+# define RESPONSE_HPP
 
-#include "http/RequestParser.hpp"
-#include "http/HttpStatus.hpp"
+# include "http/RequestParser.hpp"
+# include "http/HttpStatus.hpp"
 #include "utils/utils.hpp"
 #include <ctime>
 
@@ -14,9 +14,20 @@
  */
 class Response
 {
-	public:
+	HttpStatus							_status;
+	std::map<std::string, std::string>	_headers;
+	std::string							_body;
 
-		typedef std::pair<std::string, std::string>	Header; // [name, value]
+	void		_updateContentLength();
+	void		_manageContentType();
+	std::string	_buildStatusLine() const;
+	std::string	_buildHeaders() const;
+	void		_initDefaultHeaders();
+	void		_parseRawResponse(std::string const& rawResponse);
+	int			_setHeaders(std::string const& headersPart);
+	bool		_hasHeader(std::string const& keyLowcase) const;
+
+	public:
 
  		// Othodox canonical form
 		Response();
@@ -35,29 +46,14 @@ class Response
 		void	setConnectionFromRequest(Request const& request);
 		bool	isConnectionClose() const;
 
-		HttpStatus const& 						getStatus() const;
-		std::map<std::string, Header> const&	getHeaders() const;
-		std::string const&						getBody() const;
+		HttpStatus const& 							getStatus() const;
+		std::map<std::string, std::string> const&	getHeaders() const;
+		std::string const&							getBody() const;
 
 		class RawException: public std::runtime_error {
 			public:
 				RawException(std::string const& msg);
 		};
-
-	private:
-
-		HttpStatus							_status;
-		std::map<std::string, Header>		_headers;
-		std::string							_body;
-
-		void		_updateContentLength();
-		void		_manageContentType();
-		std::string	_buildStatusLine() const;
-		std::string	_buildHeaders() const;
-		void		_initDefaultHeaders();
-		void		_parseRawResponse(std::string const& rawResponse);
-		int			_setHeaders(std::string const& headersPart);
-		bool		_hasHeader(std::string const& keyLowcase) const;
 };
 
 std::ostream& operator<<(std::ostream& os, Response const& response);
