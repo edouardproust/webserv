@@ -57,21 +57,21 @@ void Network::startServers()
 
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
-		int readyFdsCount = _epollWait(events);
-		for (int n = 0; n < readyFdsCount && sig::keepRunning(); n++) {
+		int readyEventsCount = _epollWait(events);
+		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
-			int newClientFd = _acceptNewConnection(eventFd);
-			if (newClientFd > 0) { // 1. New client connexion
-				_setupNewClient(newClientFd);
-			} else if (newClientFd == 0) { // 2. Existing client connexion
+			int clientFd = _acceptConnection(eventFd);
+			if (clientFd > 0) { // 1. New client connection
+				_addClientToEpoll(clientFd);
+			} else if (clientFd == 0) { // 2. CGI or existing client
 				if (events[n].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) // error
 					_handleClientDisconnect(eventFd);
-				//else if (_isCgiEvent(eventFd)) // TODO
+				//else if (_isCgiEvent(eventFd)) // CGI // TODO
             	//	_handleCgiOutput(eventFd);
         		else if (events[n].events & EPOLLIN) // can recieve from client
 					_recv(eventFd);
 				else if (events[n].events & EPOLLOUT) // can send to client
-					_send(eventFd);
+					_send(eventFd); // also prepare CGI pipes
 			} else { // 3. Connexion error
 				Log::prod("error", "Accept failed on server socket");
 			}
@@ -79,11 +79,11 @@ void Network::startServers()
 	}
 }
 
-void	Network::_setupNewClient(int clientFd)
+void	Network::_addClientToEpoll(int clientFd)
 {
 	// Configuration of client's socket
-	fcntl(clientFd, F_SETFL, O_NONBLOCK);
-	fcntl(clientFd, F_SETFD, FD_CLOEXEC);
+	fcntl(clientFd, F_SETFL, O_NONBLOCK); // TODO check if -1
+	fcntl(clientFd, F_SETFD, FD_CLOEXEC); // TODO check if -1
 	// Add to epoll
 	_epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup");
 	Log::dev("event", "New client fd " + Log::hl(clientFd) + " configured and added to epoll");
@@ -93,21 +93,20 @@ void Network::_recv(int clientFd)
 {
 	Log::dev("event", "recv() on fd " + Log::hl(clientFd) + ".");
 
-	char client_buffer[_CLIENT_BUFFER];
+	char buff[_CLIENT_BUFFER];
 	std::string& totalRequest = _requestList[clientFd];
 	int bytes;
 
 	while (sig::keepRunning()) {
-		bytes = recv(clientFd, client_buffer, _CLIENT_BUFFER, 0);
+		bytes = recv(clientFd, buff, _CLIENT_BUFFER, 0);
 		if (bytes > 0) {
-			totalRequest.append(client_buffer, bytes);
+			totalRequest.append(buff, bytes); // data received, continue reading
 		} else if (bytes == 0) {
-			return _handleClientDisconnect(clientFd);
+			return _handleClientDisconnect(clientFd); // finished reading, disconnect client
 		} else { // bytes == -1
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
-				break; // all bytes read from this event
-			else
-				return _handleClientDisconnect(clientFd);
+			if (errno == EAGAIN || errno == EWOULDBLOCK) // (EWOULDBLOCK is a historical alias of EAGAIN)
+				break; // no more data available for now (non-blocking)
+			return _handleClientDisconnect(clientFd); // network error
 		}
 	}
 	if (_isRequestComplete(totalRequest)) {
@@ -238,19 +237,20 @@ void Network::_epollControl(int fd, int operation, uint32_t events, const std::s
 
 /**
  * Waits for I/O activity on monitored file descriptors.
- * This function pauses execution until events occur, then returns them.
+ * Populates "events" with active I/O events.
+ * Returns number of file descriptors of ready events.
  */
 int Network::_epollWait(struct epoll_event* events)
 {
-	int readyFdsCount = epoll_wait(_epollFd, events, _MAX_NB_OF_EVENTS, -1);
-	if (readyFdsCount == -1) {
+	int readyEventsCount = epoll_wait(_epollFd, events, _MAX_NB_OF_EVENTS, -1);
+	if (readyEventsCount == -1) {
 		if (errno == EINTR) // signal received (not an error)
 			return 0; // main loop in startServers will verify sig::keepRunning() and stop webserv
 		// else: reel error
 		Log::prod("status", "Epoll Wait status: " + utils::str(strerror(errno)));
 		throw EpollWaitException();
 	}
-	return (readyFdsCount);
+	return (readyEventsCount);
 }
 
 std::string	Network::_epollOpToString(int operation)
@@ -269,17 +269,17 @@ std::string	Network::_epollOpToString(int operation)
 /**
  * Returns the new fd if the event is accepted, 0 if not accepted, -1 if accept() failed.
  */
-int Network::_acceptNewConnection(int serverFd)
+int Network::_acceptConnection(int serverFd)
 {
 	// Iterate through listening sockets (servers)
 	for (size_t i = 0; i < _connections.size(); ++i) {
 		// IF and ONLY IF the event fd equals one of my server sockets
 		if (serverFd == _connections[i]->getFd()) {
 			Log::dev("event", "Server side event on fd " + Log::hl(serverFd) + ".");
-			int newClientFd = _connections[i]->accept();
-			if (newClientFd > 0)
-				_clientServerMap[newClientFd] = _connections[i];
-			return (newClientFd);
+			int clientFd = _connections[i]->accept();
+			if (clientFd > 0)
+				_clientServerMap[clientFd] = _connections[i];
+			return (clientFd);
 		}
 	}
 	// If not a server event, don't print anything and return 0

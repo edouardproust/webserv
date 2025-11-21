@@ -23,7 +23,7 @@ class Network
 	std::map<int, Socket*>		_clientServerMap;
 	int							_epollFd;
 
-	void 	_setupNewClient(int);
+	void 	_addClientToEpoll(int);
 	void	_recv(int);
 	void	_send(int);
 	bool	_isRequestComplete(const std::string&);
@@ -34,7 +34,7 @@ class Network
 	int		_epollWait(struct epoll_event*);
 	static std::string	_epollOpToString(int operation);
 
-	int		_acceptNewConnection(int);
+	int		_acceptConnection(int);
 	void	_manageConnection(int, bool);
 	void	_handleClientDisconnect(int);
 
