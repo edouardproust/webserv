@@ -37,47 +37,8 @@ class Socket
 		int		accept();
 
 		HostPortPair const&	getHostPortPair() const;
-		int					getFd();
+		int					getFd() const;
 
-		class GetAddrInfoException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class SocketException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class SetSockOptException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class FcntlException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class BindException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class ListenException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class AcceptException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class ConnectException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
 };
 
 #endif

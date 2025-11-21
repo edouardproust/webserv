@@ -50,7 +50,7 @@ void	Socket::_loadAddressInfo()
 
 	if (status) {
 		Log::prod("status", "Address info status: " + utils::str(gai_strerror(status)));
-		throw GetAddrInfoException();
+		throw std::runtime_error("Can't get Address's info.");
 	}
 }
 
@@ -60,13 +60,13 @@ void	Socket::_createSocket()
 
 	Log::dev("setup", "Creating Socket...");
 	if (_fd < 0) {
-		throw SocketException();
+		throw std::runtime_error("Can't create Socket.");
 	}
 
 	Log::dev("setup", "Configuring Socket...");
 	int yes = 1;
 	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-		throw SetSockOptException();
+		throw std::runtime_error("Can't configure Socket.");
 	}
 
 	Log::dev("setup", "Setting Socket to non-blocking mode...");
@@ -75,11 +75,11 @@ void	Socket::_createSocket()
     if (flags == -1 || fdflags == -1
 		|| fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1
 		|| fcntl(_fd, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
-		throw FcntlException();
+		throw std::runtime_error("Can't set Socket to non blocking mode.");
     }
 }
 
-int	Socket::getFd()
+int	Socket::getFd() const
 {
 	return (_fd);
 }
@@ -94,7 +94,7 @@ void	Socket::bind()
 
 	if (status < 0) {
 		Log::prod("status",  "Bind status: " + utils::str(strerror(errno)));
-		throw BindException();
+		throw std::runtime_error("Can't bind socket with IP and port.");
 	}
 }
 
@@ -107,7 +107,7 @@ void	Socket::listen()
 	status = ::listen(_fd, 10);
 	if (status < 0) {
 		Log::prod("status", "Listen status: " + utils::str(strerror(errno)));
-		throw ListenException();
+		throw std::runtime_error("Can't put Socket in Listen Mode.");
 	}
 	Log::prod("ok", "Now listening on " + Log::hl(_listenOn) + ".");
 }
@@ -123,7 +123,7 @@ int	Socket::accept()
 	newSocket = ::accept(_fd, (struct sockaddr *)&theirAddr, &addrSize);
 	if (newSocket < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
-		throw AcceptException();
+		throw std::runtime_error("Accept rejected.");
 	}
 	Log::dev("ok", "accept() successfull");
 	return (newSocket);
@@ -132,44 +132,4 @@ int	Socket::accept()
 HostPortPair const&	Socket::getHostPortPair() const
 {
     return (_listenOn);
-}
-
-char const*	Socket::GetAddrInfoException::what() const throw()
-{
-	return ("Can't get Address's info.");
-}
-
-char const*	Socket::SocketException::what() const throw()
-{
-	return ("Can't create Socket.");
-}
-
-char const*	Socket::SetSockOptException::what() const throw()
-{
-	return ("Can't configure Socket.");
-}
-
-char const*	Socket::FcntlException::what() const throw()
-{
-	return ("Can't set Socket to non blocking mode.");
-}
-
-char const*	Socket::BindException::what() const throw()
-{
-	return ("Can't bind socket with IP and port.");
-}
-
-char const*	Socket::ListenException::what() const throw()
-{
-	return ("Can't put Socket in Listen Mode.");
-}
-
-char const*	Socket::AcceptException::what() const throw()
-{
-	return ("Accept rejected.");
-}
-
-char const*	Socket::ConnectException::what() const throw()
-{
-	return ("Connect rejected.");
 }

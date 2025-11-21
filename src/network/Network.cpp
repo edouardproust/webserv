@@ -16,16 +16,8 @@ Network::Network(Config const& config)
 
 	//  Bind and listen to each socket created
 	for (size_t i = 0; i < _connections.size(); ++i) {
-		try {
-			_connections[i]->bind();
-			_connections[i]->listen();
-		} catch (Socket::BindException& e) {
-			// Cleanup allocated sockets before throwing
-			for (size_t j = 0; j < _connections.size(); ++j)
-				delete _connections[j];
-			_connections.clear();
-			throw;
-		}
+		_connections[i]->bind();
+		_connections[i]->listen();
 	}
 }
 
@@ -38,7 +30,8 @@ Network::~Network()
 		delete _connections[i];
 
 	Log::dev("close", "Closing epoll...");
-	close(_epollFd);
+	if (_epollFd != -1)
+		close(_epollFd);
 
 	Log::prod("ok", Const::SERVER_NAME + " closed.");
 	std::cout << std::endl;
@@ -69,9 +62,9 @@ void Network::startServers()
 				//else if (_isCgiEvent(eventFd)) // CGI // TODO
             	//	_handleCgiOutput(eventFd);
         		else if (events[n].events & EPOLLIN) // can recieve from client
-					_recv(eventFd);
+					_readClientRequest(eventFd);
 				else if (events[n].events & EPOLLOUT) // can send to client
-					_send(eventFd); // also prepare CGI pipes
+					_dispatchAndSendResponse(eventFd); // also prepare CGI pipes
 			} else { // 3. Connexion error
 				Log::prod("error", "Accept failed on server socket");
 			}
@@ -89,46 +82,38 @@ void	Network::_addClientToEpoll(int clientFd)
 	Log::dev("event", "New client fd " + Log::hl(clientFd) + " configured and added to epoll");
 }
 
-void Network::_recv(int clientFd)
+void Network::_readClientRequest(int clientFd)
 {
-	Log::dev("event", "recv() on fd " + Log::hl(clientFd) + ".");
-
 	char buff[_CLIENT_BUFFER];
-	std::string& totalRequest = _requestList[clientFd];
+	std::string& currentReq = _pendingRequests[clientFd];
 	int bytes;
 
-	while (sig::keepRunning()) {
-		bytes = recv(clientFd, buff, _CLIENT_BUFFER, 0);
-		if (bytes > 0) {
-			totalRequest.append(buff, bytes); // data received, continue reading
-		} else if (bytes == 0) {
-			return _handleClientDisconnect(clientFd); // finished reading, disconnect client
-		} else { // bytes == -1
-			if (errno == EAGAIN || errno == EWOULDBLOCK) // (EWOULDBLOCK is a historical alias of EAGAIN)
-				break; // no more data available for now (non-blocking)
-			return _handleClientDisconnect(clientFd); // network error
+	bytes = _safeRecv(clientFd, buff, _CLIENT_BUFFER);
+	if (bytes > 0) {
+		currentReq.append(buff, bytes); // data received, continue reading
+		Log::dev("event", "Received " + utils::str(bytes) + " bytes from fd " + Log::hl(clientFd));
+		if (RequestParser::isRequestComplete(currentReq)) {
+			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion");
+			Log::prod("ok", "Request complete on fd " + Log::hl(clientFd) + ". Switching to Send.");
 		}
-	}
-	if (_isRequestComplete(totalRequest)) {
-		_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion");
-		Log::prod("ok", "Request complete on fd " + Log::hl(clientFd) + ". Switching to Send.");
-	} else {
-		Log::dev("event", "Request incomplete on fd " + Log::hl(clientFd) + ". Waiting for more data.");
+	} else if (bytes == 0) {
+		_handleClientDisconnect(clientFd); // finished reading, disconnect client
+	} else { // bytes == -1
+		Log::dev("event", "No data available yet for fd " + Log::hl(clientFd) + ", waiting...");
 	}
 }
 
-void Network::_send(int clientFd)
-{
-	Log::dev("event", "send() on fd " + Log::hl(clientFd) + ".");
 
+void Network::_dispatchAndSendResponse(int clientFd)
+{
 	try {
-		if (_requestList.find(clientFd) == _requestList.end())
+		if (_pendingRequests.find(clientFd) == _pendingRequests.end())
 				throw std::runtime_error("No request data for client.");
 		if (_clientServerMap.find(clientFd) == _clientServerMap.end())
 			throw std::runtime_error("Client FD not mapped to any server socket.");
 
 		// 1. Process
-		Request request(_requestList[clientFd]);
+		Request request(_pendingRequests[clientFd]);
 		Socket* serverSocket = _clientServerMap.at(clientFd);
 		HostPortPair listenPair = serverSocket->getHostPortPair();
 		Log::prod("event", request.getMethod() + " request received on " + Log::hl(listenPair) + ".");
@@ -138,7 +123,7 @@ void Network::_send(int clientFd)
 
 		// 2. Send
 		std::string msg = response.stringify();
-		ssize_t ret = send(clientFd, msg.data(), msg.length(), 0);
+		ssize_t ret = _safeSend(clientFd, msg.data(), msg.length());
 		if (ret == -1)
 			throw std::runtime_error(std::string("Send failed: ") + strerror(errno));
 
@@ -154,47 +139,6 @@ void Network::_send(int clientFd)
 	}
 }
 
-bool Network::_isRequestComplete(std::string const& totalRequest)
-{
-	size_t headerEnd = totalRequest.find("\r\n\r\n");
-
-	if (headerEnd == std::string::npos)
-		return false; // incomplete headers
-
-	// If headers completed
-	std::string headersStr = totalRequest.substr(0, headerEnd);
-
-	// 2a. Check for Chunked Encoding
-	if (headersStr.find("Transfer-Encoding: chunked") != std::string::npos
-			|| headersStr.find("transfer-encoding: chunked") != std::string::npos) {
-		if (totalRequest.rfind("0\r\n\r\n") != std::string::npos)
-			return true; // Complete chunked body
-		// else: Incomplete body
-		return false;
-	}
-
-	// 2b. Check for Content-Length
-	size_t clPos = std::string::npos;
-	size_t clLower = headersStr.find("content-length: ");
-	size_t clUpper = headersStr.find("Content-Length: ");
-	if (clLower != std::string::npos) clPos = clLower + 16;
-	else if (clUpper != std::string::npos) clPos = clUpper + 16;
-
-	if (clPos != std::string::npos) {
-		// Content-Length found
-		std::stringstream ss(headersStr.substr(clPos));
-		size_t contentLength = 0;
-		ss >> contentLength;
-		size_t body_length = totalRequest.length() - (headerEnd + 4);
-		if (body_length >= contentLength) {
-			return true; // Complete body received!
-		}
-		// else: incomplete body
-		return false;
-	}
-	return true;
-}
-
 // EPOLL
 
 /**
@@ -206,7 +150,7 @@ void Network::_epollCreate()
 	_epollFd = epoll_create(1);
 	if (_epollFd < 0) {
 		Log::prod("status", "Epoll status: " + utils::str(strerror(errno)));
-		throw EpollException();
+		throw std::runtime_error("Can't create epoll.");
 	}
 }
 
@@ -231,7 +175,7 @@ void Network::_epollControl(int fd, int operation, uint32_t events, const std::s
         Log::prod("error", "epoll_ctl(" + _epollOpToString(operation) + ") failed during "
 			+ context + " for fd " + Log::hl(fd) + ": " + utils::str(strerror(errno)));
 		if (operation != EPOLL_CTL_DEL) // DEL is not critical
-        	throw EpollCtlException();
+        	throw std::runtime_error("Can't manage file descriptor.");
     }
 }
 
@@ -248,10 +192,37 @@ int Network::_epollWait(struct epoll_event* events)
 			return 0; // main loop in startServers will verify sig::keepRunning() and stop webserv
 		// else: reel error
 		Log::prod("status", "Epoll Wait status: " + utils::str(strerror(errno)));
-		throw EpollWaitException();
+		throw std::runtime_error("Can't wait events.");
 	}
 	return (readyEventsCount);
 }
+
+ssize_t	Network::_safeRecv(int fd, void* buf, size_t size)
+{
+	struct pollfd p;
+	p.fd = fd;
+	p.events = POLLIN;
+
+	int r = poll(&p, 1, 0);  // Timeout = 0 → non-blocking
+	if (r <= 0 || !(p.revents & POLLIN))
+		return 0; // No data available, or not ready
+
+	return recv(fd, buf, size, 0);
+}
+
+ssize_t	Network::_safeSend(int fd, const void* buf, size_t size)
+{
+	struct pollfd p;
+	p.fd = fd;
+	p.events = POLLOUT;
+
+	int r = poll(&p, 1, 0); // Timeout = 0 → non-blocking
+	if (r <= 0 || !(p.revents & POLLOUT))
+		return 0; // Not ready for writing
+
+	return send(fd, buf, size, 0);
+}
+
 
 std::string	Network::_epollOpToString(int operation)
 {
@@ -288,7 +259,7 @@ int Network::_acceptConnection(int serverFd)
 
 void Network::_manageConnection(int clientFd, bool shouldClose)
 {
-	_requestList.erase(clientFd);
+	_pendingRequests.erase(clientFd);
 	if (shouldClose) {
 		_handleClientDisconnect(clientFd);
 	} else {
@@ -300,9 +271,9 @@ void Network::_manageConnection(int clientFd, bool shouldClose)
 void Network::_handleClientDisconnect(int clientFd)
 {
 	Log::prod("event", "Client " + Log::hl(clientFd)
-		+ " disconnected."); // log before to ensure clientFd is still valid
+		+ " disconnected gracefully."); // log before to ensure clientFd is still valid
 	_clientServerMap.erase(clientFd);
-	_requestList.erase(clientFd);
+	_pendingRequests.erase(clientFd);
 	_epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect");
 	close(clientFd);
 }
@@ -320,34 +291,15 @@ std::vector<Socket*> const& Network::getConnections() const
 	return _connections;
 }
 
-std::map<int, std::string> const& Network::getRequestList() const
+std::map<int, std::string> const& Network::getPendingRequests() const
 {
-	return _requestList;
+	return _pendingRequests;
 }
 
 std::map<int, Socket*> const& Network::getClientServerMap() const
 {
 	return _clientServerMap;
 }
-
-
-// EXCEPTIONS
-
-char const*	Network::EpollException::what() const throw()
-{
-	return ("Can't create epoll.");
-}
-
-char const*	Network::EpollCtlException::what() const throw()
-{
-	return ("Can't manage file descriptor.");
-}
-
-char const*	Network::EpollWaitException::what() const throw()
-{
-	return ("Can't wait events.");
-}
-
 
 // PRINT
 
@@ -360,7 +312,7 @@ std::ostream& operator<<(std::ostream& os, Network const& rhs)
 	for (size_t i = 0; i < sockets.size(); ++i)
 		os << "  - Socket " << i << " (fd" << sockets[i]->getFd() << ") -> " << sockets[i]->getHostPortPair() << "\n";
 
-	os << "- Pending Requests (waiting send): " << rhs.getRequestList().size() << "\n";
+	os << "- Pending Requests (waiting send): " << rhs.getPendingRequests().size() << "\n";
 	os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
 
 	return os;
