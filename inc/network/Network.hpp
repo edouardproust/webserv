@@ -21,21 +21,22 @@ class Network
 	std::vector<Socket*>		_connections;
 	std::map<int, std::string>	_requestList;
 	std::map<int, Socket*>		_clientServerMap;
-	int							_epoll;
+	int							_epollFd;
+
+	void 	_setupNewClient(int);
+	void	_recv(int);
+	void	_send(int);
+	bool	_isRequestComplete(const std::string&);
 
 	void	_epollCreate();
 	void	_epollAddServers();
-	int		_epoll_wait(struct epoll_event*);
+	void	_epollControl(int, int, uint32_t, const std::string&);
+	int		_epollWait(struct epoll_event*);
+	static std::string	_epollOpToString(int operation);
 
 	int		_acceptNewConnection(int);
-	void	_recv(int, struct epoll_event&);
-	void	_send(int, struct epoll_event&);
-
-	void	_handleClientDisconnect(int, struct epoll_event&);
-	void	_handleRecvError(int, struct epoll_event&);
-	bool	_isRequestComplete(const std::string&);
-	bool	_shouldCloseConnection(const Request&, const Response&);
-	void	_manageConnection(int, bool, struct epoll_event&);
+	void	_manageConnection(int, bool);
+	void	_handleClientDisconnect(int);
 
 	// Default and copy constructors, assignation are forbidden
 	Network();
