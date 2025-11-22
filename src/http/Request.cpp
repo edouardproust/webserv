@@ -1,4 +1,3 @@
-#include "http/Request.hpp"
 #include "http/RequestParser.hpp"
 
 std::set<std::string>	Request::_supportedMethods;

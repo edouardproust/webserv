@@ -5,7 +5,7 @@ LocationBlock::LocationBlock()
 : _server(NULL)
 , _autoindex("off")
 , _return(std::make_pair(-1, ""))
-, _clientMaxBodySize(0)
+, _clientMaxBodySize(Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE)
 , _isSetClientMaxBodySize(false)
 , _isDefaultLocation(false)
 {}
@@ -17,6 +17,7 @@ LocationBlock::LocationBlock(ServerBlock const* server)
 : _server(server)
 , _path("/")
 , _return(std::make_pair(-1, ""))
+, _clientMaxBodySize(Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE)
 , _isSetClientMaxBodySize(false)
 , _isDefaultLocation(true)
 {
@@ -437,6 +438,8 @@ std::string const&	LocationBlock::getPath() const
  */
 std::string const	LocationBlock::getRoot() const
 {
+	if (!_server)
+		return "";
 	return _server->getRoot();
 }
 

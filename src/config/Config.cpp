@@ -1,7 +1,5 @@
 #include "config/Config.hpp"
 
-size_t const	Config::_MAX_CLIENT_BODY_SIZE = 200 * 1024 * 1024; // 200 MB (required by ubuntu_tester)
-
 Config::Config(std::string const& filePath)
 {
 	try {

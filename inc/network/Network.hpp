@@ -3,6 +3,7 @@
 
 #include "router/Router.hpp"
 #include "network/Socket.hpp"
+#include "static/StaticHandler.hpp"
 #include "utils/signal.hpp"
 #include <sys/epoll.h>
 #include <poll.h>
@@ -33,7 +34,7 @@ class Network
 	void	_epollControl(int, int, uint32_t, const std::string&);
 	int		_epollWait(struct epoll_event*);
 	ssize_t	_safeRecv(int fd, void* buf, size_t size);
-	ssize_t	_safeSend(int fd, const void* buf, size_t size);
+	ssize_t	_safeSend(int fd, std::string const&);
 	static std::string	_epollOpToString(int operation);
 
 	int		_acceptConnection(int);

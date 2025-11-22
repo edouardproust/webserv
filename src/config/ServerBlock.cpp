@@ -423,16 +423,11 @@ std::set<HostPortPair> const&	ServerBlock::getListen() const
 }
 
 /**
- * Defaults to `MAX_CLIENT_BODY_SIZE` with a limit of `MAX_SIZE_T`.
+ * Defaults to `ABSOLUTE_MAX_CLIENT_BODY_SIZE`.
  */
 size_t	ServerBlock::getClientMaxBodySize() const
 {
-	if (!_isSetClientBodySize) {
-		if (Config::_MAX_CLIENT_BODY_SIZE > Const::MAX_SIZE_T)
-			return Const::MAX_SIZE_T;
-		return Config::_MAX_CLIENT_BODY_SIZE;
-	}
-	return _clientMaxBodySize;
+	return _isSetClientBodySize ? _clientMaxBodySize : Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE;
 }
 
 std::string const&	ServerBlock::getUploadStore() const

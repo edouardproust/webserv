@@ -94,6 +94,13 @@ void Network::_readClientRequest(int clientFd)
 
 	bytes = _safeRecv(clientFd, buff, _CLIENT_BUFFER);
 	if (bytes > 0) {
+		    if (currentReq.size() + bytes > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
+            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(currentReq.size() + bytes) + " bytes)");
+            Response response = StaticHandler::handleError("content_too_large");
+            _safeSend(clientFd, response.stringify());
+            _handleClientDisconnect(clientFd);
+            return;
+        }
 		currentReq.append(buff, bytes); // data received, continue reading
 		Log::dev("event", "Received " + utils::str(bytes) + " bytes from fd " + Log::hl(clientFd));
 		if (RequestParser::isRequestComplete(currentReq)) {
@@ -106,7 +113,6 @@ void Network::_readClientRequest(int clientFd)
 		Log::dev("event", "No data available yet for fd " + Log::hl(clientFd) + ", waiting...");
 	}
 }
-
 
 void Network::_dispatchAndSendResponse(int clientFd)
 {
@@ -126,8 +132,7 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		Log::dev("debug", "Response:\n" + utils::str(response));
 
 		// 2. Send
-		std::string msg = response.stringify();
-		ssize_t ret = _safeSend(clientFd, msg.data(), msg.length());
+		ssize_t ret = _safeSend(clientFd, response.stringify());
 		if (ret == -1)
 			throw std::runtime_error(std::string("Send failed: ") + strerror(errno));
 
@@ -224,7 +229,7 @@ ssize_t	Network::_safeRecv(int fd, void* buf, size_t size)
 	return recv(fd, buf, size, 0);
 }
 
-ssize_t	Network::_safeSend(int fd, const void* buf, size_t size)
+ssize_t	Network::_safeSend(int fd, std::string const& rawResponse)
 {
 	struct pollfd p;
 	p.fd = fd;
@@ -234,7 +239,7 @@ ssize_t	Network::_safeSend(int fd, const void* buf, size_t size)
 	if (r <= 0 || !(p.revents & POLLOUT))
 		return 0; // Not ready for writing
 
-	return send(fd, buf, size, 0);
+	return send(fd, rawResponse.data(), rawResponse.length(), 0);
 }
 
 

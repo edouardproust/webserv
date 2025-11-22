@@ -41,13 +41,13 @@ class RoutingDecision
 		void	_setFinalPath();
 		void	_setError(std::string const& errorSlug);
 
-		// Default and copy constructors, assignation are forbidden
-		RoutingDecision();
+		// Copy constructors, assignation are forbidden
 		RoutingDecision(RoutingDecision const&);
 		RoutingDecision&	operator=(RoutingDecision const&);
 
 	public:
 
+		RoutingDecision();
 		RoutingDecision(Config const&, Request const&, HostPortPair const&);
 		~RoutingDecision();
 
