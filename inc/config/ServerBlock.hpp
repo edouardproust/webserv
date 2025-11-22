@@ -18,6 +18,7 @@ class ServerBlock
 	std::string					_uploadStore;
 	ErrorPages					_errorPages;
 	std::vector<std::string>	_indexFiles;
+	std::string					_serverName;
 
 	std::vector<LocationBlock>	_locations;
 
@@ -33,6 +34,7 @@ class ServerBlock
 	void	_setUploadStore(Tokens const&);
 	void	_setErrorPages(Tokens const&);
 	void	_setIndexFiles(Tokens const&);
+	void	_setServerName(Tokens const& tokens);
 
 	public:
 
@@ -50,6 +52,7 @@ class ServerBlock
 		ErrorPages const&					getErrorPages() const;
 		std::vector<std::string> const&		getIndexFiles() const;
 		std::vector<LocationBlock> const&	getLocations() const;
+		std::string const&					getServerName() const;
 };
 
 std::ostream&	operator<<(std::ostream&, ServerBlock const&);

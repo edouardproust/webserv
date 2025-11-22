@@ -39,6 +39,7 @@ ServerBlock::ServerBlock(const ServerBlock &other)
 , _errorPages(other._errorPages)
 , _indexFiles(other._indexFiles)
 , _locations(other._locations)
+, _serverName(other._serverName)
 {
 	// update pointers
 	for (size_t i = 0; i < _locations.size(); ++i) {
@@ -57,6 +58,7 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other)
         _errorPages = other._errorPages;
         _indexFiles = other._indexFiles;
 		_locations = other._locations;
+		,_serverName =other._serverName;
 		// update pointers
         for (size_t i = 0; i < _locations.size(); ++i) {
             _locations[i].setServer(this);
@@ -168,6 +170,8 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
 			_setIndexFiles(tokens);
 		else if (directiveName == "upload_store")
 			_setUploadStore(tokens);
+		else if (directiveName == "server_name")
+			_setServerName(tokens);
 		// -- additional directives can be added here --
 		else {
 			throw std::runtime_error(directiveName + ": Unsupported directive.\n"
@@ -283,6 +287,13 @@ void	ServerBlock::_setListen(Tokens const& tokens)
 		HostPortPair listen(tokens[i]); // throw
 		_listen.insert(listen);
 	}
+}
+
+void	ServerBlock::_setServerName(Tokens const& tokens)
+{
+	if (tokens.size() < 2)
+		throw std::runtime_error("Should have at least one server name");
+	_serverName = tokens[1];
 }
 
 /**
@@ -420,6 +431,11 @@ std::string const&	ServerBlock::getRoot() const
 std::set<HostPortPair> const&	ServerBlock::getListen() const
 {
 	return _listen;
+}
+
+std::string const&	ServerBlock::getServerName() const
+{
+	return _serverName;
 }
 
 /**
