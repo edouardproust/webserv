@@ -75,10 +75,14 @@ void Network::startServers()
 void	Network::_addClientToEpoll(int clientFd)
 {
 	// Configuration of client's socket
-	fcntl(clientFd, F_SETFL, O_NONBLOCK); // TODO check if -1
-	fcntl(clientFd, F_SETFD, FD_CLOEXEC); // TODO check if -1
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1
+	|| fcntl(clientFd, F_SETFD, FD_CLOEXEC) == -1) {
+		Log::prod("error", "fcntl failed for on fd " + utils::str(clientFd) + ": " + strerror(errno));
+		close(clientFd);
+		return;
+	}
 	// Add to epoll
-	_epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup");
+	_epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup"); // throw
 	Log::dev("event", "New client fd " + Log::hl(clientFd) + " configured and added to epoll");
 }
 
@@ -93,7 +97,7 @@ void Network::_readClientRequest(int clientFd)
 		currentReq.append(buff, bytes); // data received, continue reading
 		Log::dev("event", "Received " + utils::str(bytes) + " bytes from fd " + Log::hl(clientFd));
 		if (RequestParser::isRequestComplete(currentReq)) {
-			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion");
+			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
 			Log::prod("ok", "Request complete on fd " + Log::hl(clientFd) + ". Switching to Send.");
 		}
 	} else if (bytes == 0) {
@@ -162,21 +166,31 @@ void Network::_epollAddServers()
 {
 	for (size_t i = 0; i < _connections.size(); ++i) {
 		int serverFd = _connections[i]->getFd();
-		_epollControl(serverFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup");
+		_epollControl(serverFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
 	}
 }
 
+/**
+ * Throws exception if epoll_ctl fails when method action is not EPOLL_CTL_DEL.
+ */
 void Network::_epollControl(int fd, int operation, uint32_t events, const std::string& context)
 {
     struct epoll_event event;
     event.data.fd = fd;
     event.events = events;
     if (epoll_ctl(_epollFd, operation, fd, &event) == -1) {
-        Log::prod("error", "epoll_ctl(" + _epollOpToString(operation) + ") failed during "
-			+ context + " for fd " + Log::hl(fd) + ": " + utils::str(strerror(errno)));
-		if (operation != EPOLL_CTL_DEL) // DEL is not critical
-        	throw std::runtime_error("Can't manage file descriptor.");
-    }
+        std::string errorMsg = "epoll_ctl(" + _epollOpToString(operation) + ") failed during " + context + " for fd " + Log::hl(fd) + ": " + utils::str(strerror(errno));
+		if (operation == EPOLL_CTL_DEL) {
+            Log::dev("warning", errorMsg);
+            return; // not critical
+        }
+        if (_clientServerMap.find(fd) != _clientServerMap.end()) { // fd is a client, not a server
+            Log::prod("error", errorMsg);
+            return; // not critical
+		}
+		Log::prod("error", errorMsg);
+		throw std::runtime_error("Critical epoll_ctl failure on server socket");
+	}
 }
 
 /**
@@ -264,7 +278,7 @@ void Network::_manageConnection(int clientFd, bool shouldClose)
 		_handleClientDisconnect(clientFd);
 	} else {
 		Log::dev("event", "Connection: keep-alive -> Resetting fd " + Log::hl(clientFd) + " to 'recv'.");
-		_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset");
+		_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
 	}
 }
 
@@ -274,7 +288,7 @@ void Network::_handleClientDisconnect(int clientFd)
 		+ " disconnected gracefully."); // log before to ensure clientFd is still valid
 	_clientServerMap.erase(clientFd);
 	_pendingRequests.erase(clientFd);
-	_epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect");
+	_epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect"); // throw
 	close(clientFd);
 }
 
