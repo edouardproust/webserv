@@ -19,18 +19,22 @@ class Network
 	static size_t const			_CLIENT_BUFFER_SIZE;
 	static size_t const			_MAX_NB_OF_EVENTS;
 
-	Config const&				_config;
-	int							_epollFd;
+	Config const&				_config; // the parsed config file
+	int							_epollFd; // fd of the epoll instance
 	std::vector<Socket*>		_listeningSockets; // There is one Socket per listen directive in the config file
 	std::map<int, Socket*>		_clientServerMap; // Maps client fd with serverSocket
 	std::map<int, std::string>	_pendingRequests; // Maps client fd with the raw request being built
+	std::map<int, std::string>  _pendingResponses; // Maps client fd with the raw response being built
+	std::map<int, size_t>       _responseSendPos; // Maps client fd with the cursor position in the raw response being built
+	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
 
 	void 	_addClientToEpoll(int);
 	void	_readClientRequest(int);
 	void	_dispatchAndSendResponse(int);
+	void    _continuePendingSend(int clientFd);
 
-	void	_epollCreate();
-	void	_addServersToEpoll();
+	void	_startEpoll();
+	void	_addListeningSocketsToEpoll();
 	void	_epollControl(int, int, uint32_t, const std::string&);
 	int		_waitAndCollectEvents(struct epoll_event*);
 	static std::string	_epollOpToString(int operation);
