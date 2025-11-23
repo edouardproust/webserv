@@ -16,7 +16,7 @@ class Socket
 	struct addrinfo		_hints;
 	struct addrinfo*	_servinfo;
 	int					_fd;
-	HostPortPair		_listenOn;
+	HostPortPair		_listenDirective;
 
 	void	_setAddrStruct();
 	void	_loadAddressInfo();
@@ -34,9 +34,9 @@ class Socket
 
 		void	bind();
 		void	listen();
-		int		accept();
+		int		createNewClientSocket();
 
-		HostPortPair const&	getHostPortPair() const;
+		HostPortPair const&	getListenDirective() const;
 		int					getFd() const;
 
 };

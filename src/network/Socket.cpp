@@ -1,14 +1,14 @@
 #include "network/Socket.hpp"
 
 Socket::Socket(HostPortPair const& listenPair)
-: _listenOn(listenPair)
+: _listenDirective(listenPair)
 {
-	Log::dev("setup", "Setting up socket on " + Log::hl(_listenOn) + ".");
+	Log::dev("setup", "Setting up socket on " + Log::hl(_listenDirective) + ".");
 
 	_loadAddressInfo();
 	_createSocket();
 
-	Log::dev("setup", "Socket created on " + Log::hl(_listenOn) + ".");
+	Log::dev("setup", "Socket created on " + Log::hl(_listenDirective) + ".");
 }
 
 Socket::~Socket()
@@ -21,7 +21,7 @@ Socket::~Socket()
 		_servinfo = NULL;
 	}
 
-	Log::prod("ok", "Socket " + Log::hl(_listenOn) + " closed.");
+	Log::prod("ok", "Socket " + Log::hl(_listenDirective) + " closed.");
 }
 
 void	Socket::_setAddrStruct()
@@ -39,13 +39,13 @@ void	Socket::_loadAddressInfo()
 	_setAddrStruct();
 
 	// Convert size_t (port) to C-string
-	std::string portStr = utils::str(_listenOn.getPort());
+	std::string portStr = utils::str(_listenDirective.getPort());
 
 	// Get host. If it's "0.0.0.0" or "*", we use NULL for getaddrinfo
-	std::string hostStr = _listenOn.getHost();
+	std::string hostStr = _listenDirective.getHost();
 	char const* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
 
-	// Use the values from _listenOn
+	// Use the values from _listenDirective
 	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
 
 	if (status) {
@@ -88,7 +88,7 @@ void	Socket::bind()
 {
 	int status;
 
-	Log::dev("setup", "Binding socket on " + Log::hl(_listenOn) + "...");
+	Log::dev("setup", "Binding socket on " + Log::hl(_listenDirective) + "...");
 
 	status = ::bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
 
@@ -102,34 +102,36 @@ void	Socket::listen()
 {
 	int status;
 
-	Log::dev("setup", "Putting Socket " + Log::hl(_listenOn) + " in Listen Mode...");
+	Log::dev("setup", "Putting Socket " + Log::hl(_listenDirective) + " in Listen Mode...");
 
 	status = ::listen(_fd, 10);
 	if (status < 0) {
 		Log::prod("status", "Listen status: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't put Socket in Listen Mode.");
 	}
-	Log::prod("ok", "Now listening on " + Log::hl(_listenOn) + ".");
+	Log::prod("ok", "Now listening on " + Log::hl(_listenDirective) + ".");
 }
 
-int	Socket::accept()
+/**
+ * Accepts a new client connection on this listening socket.
+ * Returns new client socket's fd (or -1 in case of accept() error).
+ */
+int	Socket::createNewClientSocket()
 {
-	struct sockaddr_storage theirAddr;
-	socklen_t addrSize;
-	int newSocket;
+	struct sockaddr_storage clientInfos;
 
 	Log::dev("event", "accept() requested.");
-	addrSize = sizeof theirAddr;
-	newSocket = ::accept(_fd, (struct sockaddr *)&theirAddr, &addrSize);
-	if (newSocket < 0) {
+	socklen_t clientInfoSize = sizeof(clientInfos);
+	int newClientSocketFd = accept(_fd, (struct sockaddr*)&clientInfos, &clientInfoSize);
+	if (newClientSocketFd < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
-		throw std::runtime_error("Accept rejected.");
+		return -1;
 	}
 	Log::dev("ok", "accept() successfull");
-	return (newSocket);
+	return (newClientSocketFd);
 }
 
-HostPortPair const&	Socket::getHostPortPair() const
+HostPortPair const&	Socket::getListenDirective() const
 {
-    return (_listenOn);
+    return (_listenDirective);
 }

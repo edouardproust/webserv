@@ -16,30 +16,27 @@
  */
 class Network
 {
-	static size_t const			_CLIENT_BUFFER;
+	static size_t const			_CLIENT_BUFFER_SIZE;
 	static size_t const			_MAX_NB_OF_EVENTS;
 
 	Config const&				_config;
 	int							_epollFd;
-	std::vector<Socket*>		_serverSockets;
+	std::vector<Socket*>		_listeningSockets; // There is one Socket per listen directive in the config file
 	std::map<int, Socket*>		_clientServerMap; // Maps client fd with serverSocket
 	std::map<int, std::string>	_pendingRequests; // Maps client fd with the raw request being built
-	std::map<int, std::string>	_pendingResponses; // Maps client fd with the raw response being built
-	std::map<int, bool>			_shouldCloseAfterResponse; // Tells for each client fd if the client should be disconnected after the raw response was sent
 
 	void 	_addClientToEpoll(int);
 	void	_readClientRequest(int);
 	void	_dispatchAndSendResponse(int);
 
 	void	_epollCreate();
-	void	_epollAddServers();
+	void	_addServersToEpoll();
 	void	_epollControl(int, int, uint32_t, const std::string&);
-	int		_epollWait(struct epoll_event*);
-	ssize_t	_safeRecv(int fd, void* buf, size_t size);
-	ssize_t	_safeSend(int fd, std::string const&);
+	int		_waitAndCollectEvents(struct epoll_event*);
 	static std::string	_epollOpToString(int operation);
 
-	int		_connectClientIfIsServerEvent(int);
+	bool	_isListeningSocket(int);
+	int		_acceptNewClient(int);
 	void	_prepareClientForNextRequest(int);
 	void	_disconnectClient(int);
 
@@ -56,7 +53,7 @@ class Network
 		void	startServers();
 
 		int									getEpollFd() const;
-		std::vector<Socket*> const&			getConnections() const;
+		std::vector<Socket*> const&			getListeningSockets() const;
 		std::map<int, std::string> const&	getPendingRequests() const;
 		std::map<int, Socket*> const&		getClientServerMap() const;
 };

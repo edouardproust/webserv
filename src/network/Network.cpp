@@ -1,6 +1,6 @@
 #include "network/Network.hpp"
 
-size_t const	Network::_CLIENT_BUFFER = 1024 * 1024; // 1MB
+size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
 size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 
 Network::Network(Config const& config)
@@ -12,12 +12,12 @@ Network::Network(Config const& config)
 
 	// Create socket for each HostPortPair
 	for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-		_serverSockets.push_back(new Socket(listenPorts[i]));
+		_listeningSockets.push_back(new Socket(listenPorts[i]));
 
 	//  Bind and listen to each socket created
-	for (size_t i = 0; i < _serverSockets.size(); ++i) {
-		_serverSockets[i]->bind();
-		_serverSockets[i]->listen();
+	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+		_listeningSockets[i]->bind();
+		_listeningSockets[i]->listen();
 	}
 }
 
@@ -26,8 +26,8 @@ Network::~Network()
 	Log::dev("close", "Closing Web server...");
 
 	Log::dev("close", "Freeing Socket memory.");
-	for (size_t i = 0; i < _serverSockets.size(); ++i)
-		delete _serverSockets[i];
+	for (size_t i = 0; i < _listeningSockets.size(); ++i)
+		delete _listeningSockets[i];
 
 	Log::dev("close", "Closing epoll...");
 	if (_epollFd != -1)
@@ -40,33 +40,42 @@ Network::~Network()
 
 // MAIN LOGIC
 
+/**
+ * @note `eventFd` can be the file descriptor of:
+ * a listening socket (new client connexion),
+ * an existing client (data to read/write),
+ * or a CGI Pipe (output)
+ */
 void Network::startServers()
 {
 	Log::prod("ok", Const::SERVER_NAME + " started.");
 	Log::prod("info", "Press Ctrl + C to stop the Web server.");
 
-	_epollCreate(); // set _epollFd
-	_epollAddServers(); // add "server" blocks' sockets to the surveillance
+	_epollCreate(); // create the fd for epoll
+	_addServersToEpoll(); // add "server" blocks' sockets to the surveillance
 
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
-		int readyEventsCount = _epollWait(events);
+		int readyEventsCount = _waitAndCollectEvents(events);
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
-			int clientFd = _connectClientIfIsServerEvent(eventFd);
-			if (clientFd > 0) { // 1. New client connection
-				_addClientToEpoll(clientFd);
-			} else if (clientFd == 0) { // 2. CGI or existing client
-				if (events[n].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) // error
+			if (_isListeningSocket(eventFd)) { // 1. Event on listening socket = new client
+				int newClientFd = _acceptNewClient(eventFd);
+				if (newClientFd > 0) {
+					_addClientToEpoll(newClientFd);
+				} else {
+					Log::prod("error", "Accept failed on listening socket.");
+				}
+			} else { // 2. Existing client fd or CGI pipe
+				uint32_t ev = events[n].events;
+				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) // error
 					_disconnectClient(eventFd);
-				//else if (_isCgiEvent(eventFd)) // CGI // TODO
+				//else if (_isCgiEvent(eventFd)) // CGI // TODO // eventFd is a CGI pipe fd
             	//	_handleCgiOutput(eventFd);
-        		else if (events[n].events & EPOLLIN) // can recieve from client
+        		else if (ev & EPOLLIN) // can receive from client (eventFd is an existing client fd)
 					_readClientRequest(eventFd);
-				else if (events[n].events & EPOLLOUT) // can send to client
-					_dispatchAndSendResponse(eventFd); // also prepare CGI pipes
-			} else { // 3. Connexion error
-				Log::prod("error", "Accept failed on server socket");
+				else if (ev & EPOLLOUT) // can send to client (eventFd is an existing client fd)
+					_dispatchAndSendResponse(eventFd); // (also prepares CGI pipes //TODO)
 			}
 		}
 	}
@@ -88,29 +97,28 @@ void	Network::_addClientToEpoll(int clientFd)
 
 void Network::_readClientRequest(int clientFd)
 {
-	char buff[_CLIENT_BUFFER];
+	char buff[_CLIENT_BUFFER_SIZE];
 	std::string& currentReq = _pendingRequests[clientFd];
-	int bytes;
-
-	bytes = _safeRecv(clientFd, buff, _CLIENT_BUFFER);
-	if (bytes > 0) {
-		    if (currentReq.size() + bytes > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
-            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(currentReq.size() + bytes) + " bytes)");
+	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
+	if (bytesReceived > 0) {
+		if (currentReq.size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
+            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(currentReq.size()) + " bytes)");
             Response response = StaticHandler::handleError("content_too_large");
-            _safeSend(clientFd, response.stringify());
-            _disconnectClient(clientFd);
+            std::string rawResponse = response.stringify();
+			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
-		currentReq.append(buff, bytes); // data received, continue reading
-		Log::dev("event", "Received " + utils::str(bytes) + " bytes from fd " + Log::hl(clientFd));
+		currentReq.append(buff, bytesReceived);
+		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from fd " + Log::hl(clientFd));
 		if (RequestParser::isRequestComplete(currentReq)) {
 			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
 			Log::prod("ok", "Request complete on fd " + Log::hl(clientFd) + ". Switching to Send.");
 		}
-	} else if (bytes == 0) {
+	} else if (bytesReceived == 0) {
 		_disconnectClient(clientFd); // finished reading, disconnect client
 	} else { // bytes == -1
-		Log::dev("event", "No data available yet for fd " + Log::hl(clientFd) + ", waiting...");
+		Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
+		// Stay on EPOLLIN
 	}
 }
 
@@ -124,18 +132,22 @@ void Network::_dispatchAndSendResponse(int clientFd)
 
 		// 1. Process
 		Request request(_pendingRequests[clientFd]);
-		Socket* serverSocket = _clientServerMap.at(clientFd);
-		HostPortPair listenPair = serverSocket->getHostPortPair();
-		Log::prod("event", request.getMethod() + " request received on " + Log::hl(listenPair) + ".");
+		Socket* listeningSocket = _clientServerMap[clientFd];
+		HostPortPair listenDirective = listeningSocket->getListenDirective();
+		Log::prod("event", request.getMethod() + " request received on " + Log::hl(listenDirective) + ".");
 		Log::dev("debug", "Request:\n" + utils::str(request));
-		Response response = Router::dispatchRequest(_config, request, listenPair);
+		Response response = Router::dispatchRequest(_config, request, listenDirective);
 		Log::dev("debug", "Response:\n" + utils::str(response));
 
-		// 2. Send
-		ssize_t ret = _safeSend(clientFd, response.stringify());
-		if (ret == -1)
-			throw std::runtime_error(std::string("Send failed: ") + strerror(errno));
-		Log::prod("event", "response \"" + response.getStatus().toStr() + "\" sent on " + Log::hl(listenPair) + ".");
+		// 2. Sending in one shot (no pending response logic) // TODO do a pending system
+		std::string rawResp = response.stringify();
+		ssize_t bytesSent = send(clientFd, rawResp.data(), rawResp.length(), 0);
+		if (bytesSent < 0) { // sending error -> store to send later (stay on EPOLLOUT)
+			Log::prod("error", "Send failed on fd " + Log::hl(clientFd) + ": " + strerror(errno));
+            _disconnectClient(clientFd);
+            return;
+		}
+		Log::prod("event", "response \"" + response.getStatus().toStr() + "\" sent on " + Log::hl(listenDirective) + ".");
 
 		// 3. Manage the connection (Close/keep logic moved here)
 		if (request.isConnectionClose() || response.isConnectionClose())
@@ -166,13 +178,13 @@ void Network::_epollCreate()
 }
 
 /**
- * Adds all server listening sockets to epoll monitoring.
+ * Adds all server listening sockets to epoll monitoring (via their fd).
  * These sockets will detect incoming client connections.
  */
-void Network::_epollAddServers()
+void Network::_addServersToEpoll()
 {
-	for (size_t i = 0; i < _serverSockets.size(); ++i) {
-		int serverFd = _serverSockets[i]->getFd();
+	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+		int serverFd = _listeningSockets[i]->getFd();
 		_epollControl(serverFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
 	}
 }
@@ -205,45 +217,20 @@ void Network::_epollControl(int fd, int operation, uint32_t events, const std::s
  * Populates "events" with active I/O events.
  * Returns number of file descriptors of ready events.
  */
-int Network::_epollWait(struct epoll_event* events)
+int Network::_waitAndCollectEvents(struct epoll_event* events)
 {
 	int readyEventsCount = epoll_wait(_epollFd, events, _MAX_NB_OF_EVENTS, -1);
 	if (readyEventsCount == -1) {
-		if (errno == EINTR) // signal received (not an error)
+		if (errno == EINTR) { // signal received (not an error).
+			//!\ errno is not checked after a read or write here -> ok with subject
 			return 0; // main loop in startServers will verify sig::keepRunning() and stop webserv
+		}
 		// else: reel error
 		Log::prod("status", "Epoll Wait status: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't wait events.");
 	}
 	return (readyEventsCount);
 }
-
-ssize_t	Network::_safeRecv(int fd, void* buf, size_t size)
-{
-	struct pollfd p;
-	p.fd = fd;
-	p.events = POLLIN;
-
-	int r = poll(&p, 1, 0);  // Timeout = 0 → non-blocking
-	if (r <= 0 || !(p.revents & POLLIN))
-		return 0; // No data available, or not ready
-
-	return recv(fd, buf, size, 0);
-}
-
-ssize_t	Network::_safeSend(int fd, std::string const& rawResponse)
-{
-	struct pollfd p;
-	p.fd = fd;
-	p.events = POLLOUT;
-
-	int r = poll(&p, 1, 0); // Timeout = 0 → non-blocking
-	if (r <= 0 || !(p.revents & POLLOUT))
-		return 0; // Not ready for writing
-
-	return send(fd, rawResponse.data(), rawResponse.length(), 0);
-}
-
 
 std::string	Network::_epollOpToString(int operation)
 {
@@ -258,31 +245,39 @@ std::string	Network::_epollOpToString(int operation)
 
 // CONNECTION
 
+
 /**
- * Returns the new fd if the event is accepted, 0 if not accepted, -1 if accept() failed.
+ * Checks if the fd is a listening socket.
  */
-int Network::_connectClientIfIsServerEvent(int serverFd)
+bool Network::_isListeningSocket(int fd)
 {
-	// Iterate through listening sockets (servers)
-	for (size_t i = 0; i < _serverSockets.size(); ++i) {
-		// IF and ONLY IF the event fd equals one of my server sockets
-		if (serverFd == _serverSockets[i]->getFd()) {
-			Log::dev("event", "Server side event on fd " + Log::hl(serverFd) + ".");
-			int clientFd = _serverSockets[i]->accept();
+    for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+        if (fd == _listeningSockets[i]->getFd()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Accepts a new client connection on a listening socket.
+ */
+int Network::_acceptNewClient(int listeningFd)
+{
+    for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+        if (listeningFd == _listeningSockets[i]->getFd()) {
+            int clientFd =  _listeningSockets[i]->createNewClientSocket();
 			if (clientFd > 0)
-				_clientServerMap[clientFd] = _serverSockets[i];
-			return (clientFd);
-		}
-	}
-	// If not a server event, don't print anything and return 0
-	return (0);
+				_clientServerMap[clientFd] = _listeningSockets[i];
+			return clientFd;
+        }
+    }
+    return -1; // Should not happen if _isListeningSocket returned true
 }
 
 void Network::_prepareClientForNextRequest(int clientFd)
 {
 	_pendingRequests.erase(clientFd);
-	_pendingResponses.erase(clientFd);
-    _shouldCloseAfterResponse.erase(clientFd);
 	Log::dev("event", "Connection: keep-alive -> Resetting fd " + Log::hl(clientFd) + " to 'recv'.");
 	_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
 }
@@ -293,8 +288,6 @@ void Network::_disconnectClient(int clientFd)
 		+ " disconnected gracefully."); // log before to ensure clientFd is still valid
 	_clientServerMap.erase(clientFd);
 	_pendingRequests.erase(clientFd);
-	_pendingResponses.erase(clientFd);
-    _shouldCloseAfterResponse.erase(clientFd);
 	_epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect"); // throw
 	close(clientFd);
 }
@@ -307,9 +300,9 @@ int Network::getEpollFd() const
 	return _epollFd;
 }
 
-std::vector<Socket*> const& Network::getConnections() const
+std::vector<Socket*> const& Network::getListeningSockets() const
 {
-	return _serverSockets;
+	return _listeningSockets;
 }
 
 std::map<int, std::string> const& Network::getPendingRequests() const
@@ -328,10 +321,10 @@ std::ostream& operator<<(std::ostream& os, Network const& rhs)
 {
 	os << "- Epoll fd: " << rhs.getEpollFd() << "\n";
 
-	os << "- Listening Sockets: " << rhs.getConnections().size() << "\n";
-	const std::vector<Socket*>& sockets = rhs.getConnections();
+	os << "- Listening Sockets: " << rhs.getListeningSockets().size() << "\n";
+	const std::vector<Socket*>& sockets = rhs.getListeningSockets();
 	for (size_t i = 0; i < sockets.size(); ++i)
-		os << "  - Socket " << i << " (fd" << sockets[i]->getFd() << ") -> " << sockets[i]->getHostPortPair() << "\n";
+		os << "  - Socket " << i << " (fd" << sockets[i]->getFd() << ") -> " << sockets[i]->getListenDirective() << "\n";
 
 	os << "- Pending Requests (waiting send): " << rhs.getPendingRequests().size() << "\n";
 	os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
