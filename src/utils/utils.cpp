@@ -306,3 +306,14 @@ std::string utils::formatDate(time_t time, const std::string& format)
     return buffer;
 }
 
+/**
+ * Extract hostname from request headers (at this point we 100% have a host header)
+ * - Looks for "host" header (should have been normalized already)
+ * - Removes port if present: "example.com:8080" -> "example.com"
+ */
+std::string	utils::extractHostname(const std::map<std::string, std::string>& headers)
+{
+	const std::string& host_value = headers.at("host");
+	size_t colon_pos = host_value.find(':');
+	return (colon_pos != std::string::npos) ? host_value.substr(0, colon_pos) : host_value;
+}

@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <cerrno>
+#include <map>
 
 namespace utils {
 
@@ -56,6 +57,8 @@ namespace utils {
 	std::string	trim(std::string const&);
 	std::string	excerpt(size_t, std::string const&);
 	std::string	formatDate(time_t, const std::string&);
+
+	std::string extractHostname(const std::map<std::string, std::string>& headers);
 
 }
 
