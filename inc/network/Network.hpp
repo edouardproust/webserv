@@ -20,10 +20,12 @@ class Network
 	static size_t const			_MAX_NB_OF_EVENTS;
 
 	Config const&				_config;
-	std::vector<Socket*>		_connections;
-	std::map<int, std::string>	_pendingRequests;
-	std::map<int, Socket*>		_clientServerMap;
 	int							_epollFd;
+	std::vector<Socket*>		_serverSockets;
+	std::map<int, Socket*>		_clientServerMap; // Maps client fd with serverSocket
+	std::map<int, std::string>	_pendingRequests; // Maps client fd with the raw request being built
+	std::map<int, std::string>	_pendingResponses; // Maps client fd with the raw response being built
+	std::map<int, bool>			_shouldCloseAfterResponse; // Tells for each client fd if the client should be disconnected after the raw response was sent
 
 	void 	_addClientToEpoll(int);
 	void	_readClientRequest(int);
@@ -37,9 +39,9 @@ class Network
 	ssize_t	_safeSend(int fd, std::string const&);
 	static std::string	_epollOpToString(int operation);
 
-	int		_acceptConnection(int);
-	void	_manageConnection(int, bool);
-	void	_handleClientDisconnect(int);
+	int		_connectClientIfIsServerEvent(int);
+	void	_prepareClientForNextRequest(int);
+	void	_disconnectClient(int);
 
 	// Default and copy constructors, assignation are forbidden
 	Network();
