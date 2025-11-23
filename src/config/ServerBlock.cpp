@@ -33,13 +33,13 @@ ServerBlock::ServerBlock(std::string const& blockContent)
 ServerBlock::ServerBlock(const ServerBlock &other)
 : _root(other._root)
 , _listen(other._listen)
+, _serverName(other._serverName)
 , _clientMaxBodySize(other._clientMaxBodySize)
 , _isSetClientBodySize(other._isSetClientBodySize)
 , _uploadStore(other._uploadStore)
 , _errorPages(other._errorPages)
 , _indexFiles(other._indexFiles)
 , _locations(other._locations)
-, _serverName(other._serverName)
 {
 	// update pointers
 	for (size_t i = 0; i < _locations.size(); ++i) {
@@ -52,13 +52,13 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other)
     if (this != &other) {
         _root = other._root;
         _listen = other._listen;
+		_serverName =other._serverName;
         _clientMaxBodySize = other._clientMaxBodySize;
 		_isSetClientBodySize = other._isSetClientBodySize;
 		_uploadStore = other._uploadStore;
         _errorPages = other._errorPages;
         _indexFiles = other._indexFiles;
 		_locations = other._locations;
-		,_serverName =other._serverName;
 		// update pointers
         for (size_t i = 0; i < _locations.size(); ++i) {
             _locations[i].setServer(this);
@@ -475,6 +475,8 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs)
 	for (std::set<HostPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
 		os << "  - " << PrintableString(it->getHost()) << " -> " << it->getPort() << "\n";
 	}
+	os << "- server_name: " << PrintableString(rhs.getServerName()) << "\n";
+
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 
 	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";

@@ -13,12 +13,12 @@ class ServerBlock
 {
 	std::string					_root;
 	std::set<HostPortPair>		_listen;
+	std::string					_serverName;
 	size_t						_clientMaxBodySize;
 	bool						_isSetClientBodySize;
 	std::string					_uploadStore;
 	ErrorPages					_errorPages;
 	std::vector<std::string>	_indexFiles;
-	std::string					_serverName;
 
 	std::vector<LocationBlock>	_locations;
 
