@@ -77,7 +77,7 @@ void	Socket::safeBind()
 {
 	int status = bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
 	if (status < 0) {
-		Log::prod("status",  "Bind status: " + utils::str(strerror(errno)) + " (" + Log::hl(_listenDirective) + ").");
+		Log::prod("status",  "Bind error (fd " + Log::hl(_fd) + " on " + Log::hl(_listenDirective) + "): " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't bind socket with IP and port.");
 	}
 }
@@ -86,7 +86,7 @@ void	Socket::safeListen()
 {
 	int status = listen(_fd, 10);
 	if (status < 0) {
-		Log::prod("status", "Listen status: " + utils::str(strerror(errno)));
+		Log::prod("status", "Listen error: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't put Socket in Listen Mode.");
 	}
 	Log::dev("setup", "Socket (fd " + Log::hl(_fd) + ") is now listening on " + Log::hl(_listenDirective) + ".");
