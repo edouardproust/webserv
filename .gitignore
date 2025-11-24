@@ -6,13 +6,14 @@
 *.tmp
 *.log
 *~
-*.backup
-*.bak
+*.backup*
+*.bak*
 
 # Specific folders
 build/
 .vscode/
 tests/config/replaced
+tmp/
 
 # Specific files
 webserv

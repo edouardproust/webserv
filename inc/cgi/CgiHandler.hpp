@@ -59,7 +59,7 @@ class CgiHandler
 		CgiHandler();
 		~CgiHandler();
 
-		Response run(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
+		Response execute(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
 
 		std::string const&				getScriptName() const;
 		std::string const&				getExecutor() const;

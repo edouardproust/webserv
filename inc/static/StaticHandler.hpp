@@ -24,35 +24,36 @@ class StaticHandler
 
 	Response _serveFile();
 
-	std::string	_errorPageHtml(HttpStatus const& status) const;
-	std::string	_welcomePageHtml() const;
-	std::string	_autoindexHtml() const;
+	static std::string	_welcomePageHtml();
+	std::string			_autoindexHtml() const;
+	static std::string	_errorPageHtml(HttpStatus const&);
 
 
-	std::string	_getMime(const std::string& filePath);
-	std::string	_getMimeFromPath(const std::string& filePath);
+	static std::string	_getMime(std::string const&);
+	static std::string	_getMimeFromPath(std::string const&);
 
 	// Default and copy constructors, assignation are forbidden
 	StaticHandler();
-	StaticHandler(const StaticHandler& other);
-	StaticHandler&	operator=(StaticHandler const& other);
+	StaticHandler(const StaticHandler&);
+	StaticHandler&	operator=(StaticHandler const&);
 
 	public:
 
-		StaticHandler(RoutingDecision const& rd);
+		StaticHandler(RoutingDecision const&);
 		~StaticHandler();
 
-		Response	handleGet();
-		Response	handleDelete();
-		Response	handleHead();
-		Response	handlePut();
-		Response	handlePost();
-		Response	handleError(HttpStatus const& status);
+		Response		handleGet();
+		Response		handleDelete();
+		Response		handleHead();
+		Response		handlePut();
+		Response		handlePost();
+		Response		handleError(HttpStatus const&);
+		static Response	handleError(std::string const&);
 
 		std::string const&	getFinalPath() const;
 		bool	hasUpdatedFinalPath() const;
 };
 
-std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs);
+std::ostream& operator<<(std::ostream&, StaticHandler const&);
 
 #endif

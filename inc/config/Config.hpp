@@ -27,8 +27,6 @@ class Config
 
 	public:
 
-		static size_t const	_MAX_CLIENT_BODY_SIZE;
-
 		Config(std::string const&);
 		~Config();
 

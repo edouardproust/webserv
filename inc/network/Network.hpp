@@ -3,8 +3,10 @@
 
 #include "router/Router.hpp"
 #include "network/Socket.hpp"
+#include "static/StaticHandler.hpp"
 #include "utils/signal.hpp"
 #include <sys/epoll.h>
+#include <poll.h>
 
 /**
  * RAII wrapper managing server sockets, epoll, and client connections.
@@ -14,28 +16,33 @@
  */
 class Network
 {
-	static size_t const			_CLIENT_BUFFER;
-	static size_t const			_EVENT_MAX_SIZE;
+	static size_t const			_CLIENT_BUFFER_SIZE;
+	static size_t const			_MAX_NB_OF_EVENTS;
 
-	Config const&				_config;
-	std::vector<Socket*>		_connections;
-	std::map<int, std::string>	_requestList;
-	std::map<int, Socket*>		_clientServerMap;
-	int							_epoll;
+	Config const&				_config; // the parsed config file
+	int							_epollFd; // fd of the epoll instance
+	std::vector<Socket*>		_listeningSockets; // There is one Socket per listen directive in the config file
+	std::map<int, Socket*>		_clientServerMap; // Maps client fd with serverSocket
+	std::map<int, std::string>	_pendingRequests; // Maps client fd with the raw request being built
+	std::map<int, std::string>  _pendingResponses; // Maps client fd with the raw response being built
+	std::map<int, size_t>       _responseSendPos; // Maps client fd with the cursor position in the raw response being built
+	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
 
-	void	_epollCreate();
-	void	_epollAddServers();
-	int		_epoll_wait(struct epoll_event*);
+	void 	_registerNewClientToEpoll(int);
+	void	_readClientRequest(int);
+	void	_dispatchAndSendResponse(int);
+	void    _continuePendingSend(int clientFd);
 
-	int		_isServerSideEvent(int);
-	void	_recv(int, struct epoll_event&);
-	void	_send(int, struct epoll_event&);
+	void	_createEpollInstance();
+	void	_registerListeningSocketsToEpoll();
+	void	_epollControl(int, int, uint32_t, const std::string&);
+	int		_waitAndCollectEvents(struct epoll_event*);
+	static std::string	_epollOpToString(int operation);
 
-	void	_handleClientDisconnect(int, struct epoll_event&);
-	void	_handleRecvError(int, struct epoll_event&);
-	bool	_isRequestComplete(const std::string&);
-	bool	_shouldCloseConnection(const Request&, const Response&);
-	void	_manageConnection(int, bool, struct epoll_event&);
+	bool	_isListeningSocket(int);
+	int		_acceptNewClient(int);
+	void	_prepareClientForNextRequest(int);
+	void	_disconnectClient(int);
 
 	// Default and copy constructors, assignation are forbidden
 	Network();
@@ -50,24 +57,9 @@ class Network
 		void	startServers();
 
 		int									getEpollFd() const;
-		std::vector<Socket*> const&			getConnections() const;
-		std::map<int, std::string> const&	getRequestList() const;
+		std::vector<Socket*> const&			getListeningSockets() const;
+		std::map<int, std::string> const&	getPendingRequests() const;
 		std::map<int, Socket*> const&		getClientServerMap() const;
-
-		class EpollException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class EpollCtlException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class EpollWaitException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
 };
 
 std::ostream&	operator<<(std::ostream&, Network const&);

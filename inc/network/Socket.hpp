@@ -15,8 +15,8 @@ class Socket
 {
 	struct addrinfo		_hints;
 	struct addrinfo*	_servinfo;
-	int					_sock;
-	HostPortPair		_listenOn;
+	int					_fd;
+	HostPortPair		_listenDirective;
 
 	void	_setAddrStruct();
 	void	_loadAddressInfo();
@@ -34,50 +34,11 @@ class Socket
 
 		void	bind();
 		void	listen();
-		int		accept();
+		int		createNewClientSocket();
 
-		HostPortPair const&	getHostPortPair() const;
-		int					getSock();
+		HostPortPair const&	getListenDirective() const;
+		int					getFd() const;
 
-		class GetAddrInfoException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class SocketException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class SetSockOptException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class FcntlException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class BindException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class ListenException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class AcceptException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
-
-		class ConnectException : public std::exception {
-			public:
-				char const*	what() const throw();
-		};
 };
 
 #endif
