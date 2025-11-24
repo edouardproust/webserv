@@ -3,22 +3,28 @@
 size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
 size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 
+/**
+ * Reads the configuration and creates one listening socket for each unique port.
+ *
+ * Creates one socket per port, even if multiple websites share that port.
+ * This allows virtual hosts to work properly.
+ */
 Network::Network(Config const& config)
 : _config(config)
 , _epollFd(-1)
 {
-	// Get all unique ports only (don't create multiple sockets for same port)
-    std::set<uint16_t> uniquePorts;
+	// Get all unique ports only (no multiple sockets for the same port)
+    std::set<size_t> uniquePorts;
 	std::vector<HostPortPair> allListenPorts = _config.getAllListenPorts();
 
     // Only create socket if port is unique
 	for (size_t i = 0; i < allListenPorts.size() && sig::keepRunning(); ++i)
     {
-        uint16_t port = allListenPorts[i].getPort();
-        if (uniquePorts.find(port) == uniquePorts.end()) // Check if we've already created a socket for this PORT
+        size_t port = allListenPorts[i].getPort();
+        if (uniquePorts.find(port) == uniquePorts.end()) // Check if we've already created a socket for this port
         {
             uniquePorts.insert(port);
-            _connections.push_back(new Socket(allListenPorts[i]));
+            _listeningSockets.push_back(new Socket(allListenPorts[i]));
         }
     }
 	//  Bind and listen to each socket created
