@@ -41,7 +41,14 @@ Network::~Network()
 // MAIN LOGIC
 
 /**
- * @note `eventFd` can be the file descriptor of:
+ * Main server loop. Waits for I/O activity through epoll and dispatches events between new connections and active clients.
+ * Runs in non-blocking mode until the server is stopped.
+ *
+ * @note We use a single epoll_wait() loop as required by the subject.
+ * All I/O operations (read/write on clients and listening sockets) are performed only when epoll signals EPOLLIN or EPOLLOUT.
+ * No read() or write() is ever executed outside this event loop.
+ *
+ * @details `eventFd` can be the file descriptor of:
  * a listening socket (new client connexion),
  * an existing client (data to read/write),
  * or a CGI Pipe (output)
@@ -51,18 +58,19 @@ void Network::startServers()
 	Log::prod("ok", Const::SERVER_NAME + " started.");
 	Log::prod("info", "Press Ctrl + C to stop the Web server.");
 
-	_startEpoll(); // create the fd for epoll instance
-	_addListeningSocketsToEpoll(); // add listening sockets to the surveillance
+	_createEpollInstance(); // create the fd for epoll instance
+	_registerListeningSocketsToEpoll(); // add listening sockets to the surveillance
 
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
 		int readyEventsCount = _waitAndCollectEvents(events);
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
-			if (_isListeningSocket(eventFd)) { // 1. Event on listening socket = new client
+			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket: a new client is trying to connect.
+    			// We need to accept() it and add the new client socket to epoll.
 				int newClientFd = _acceptNewClient(eventFd);
 				if (newClientFd > 0) {
-					_addClientToEpoll(newClientFd);
+					_registerNewClientToEpoll(newClientFd);
 				} else {
 					Log::prod("error", "Accept failed on listening socket.");
 				}
@@ -73,7 +81,7 @@ void Network::startServers()
 				//else if (_isCgiEvent(eventFd)) // eventFd is a CGI pipe fd // TODO
             	//	_handleCgiOutput(eventFd); // TODO
         		else if (ev & EPOLLIN) { // can receive from client (eventFd is an existing client fd)
-					_readClientRequest(eventFd);
+					_readClientRequest(eventFd); // read preceded by epoll (EPOLLIN check) and non-blocking
 				} else if (ev & EPOLLOUT) { // can send to client (eventFd is an existing client fd)
 					if (_pendingResponses.find(eventFd) != _pendingResponses.end())
 						_continuePendingSend(eventFd);
@@ -85,7 +93,11 @@ void Network::startServers()
 	}
 }
 
-void	Network::_addClientToEpoll(int clientFd)
+/**
+ * Configures the client socket as non-blocking and registers it in epoll.
+ * Allows receiving and sending data without blocking the server.
+ */
+void	Network::_registerNewClientToEpoll(int clientFd)
 {
 	// Configuration of client's socket
 	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1
@@ -99,6 +111,14 @@ void	Network::_addClientToEpoll(int clientFd)
 	Log::dev("event", "New client fd " + Log::hl(clientFd) + " configured and added to epoll");
 }
 
+/**
+ * Reads data sent by a client. Accumulates the HTTP request until it is complete, then switches the fd to send mode.
+ *
+ * @note This method is protected by epoll (EPOLLIN) in the epoll main loop (_startServers)
+ * and is non-blocking (reading by buffer chunks).
+ * This is the only place we read from a client socket.
+ * No errno-based decision-making occurs after recv().
+ */
 void Network::_readClientRequest(int clientFd)
 {
 	char buff[_CLIENT_BUFFER_SIZE];
@@ -119,13 +139,16 @@ void Network::_readClientRequest(int clientFd)
 			Log::prod("ok", "Request complete on fd " + Log::hl(clientFd) + ". Switching to Send.");
 		}
 	} else if (bytesReceived == 0) {
-		_disconnectClient(clientFd); // finished reading, disconnect client
+		_disconnectClient(clientFd); // finished reading -> disconnect client
 	} else { // bytes == -1
 		Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
 		// Stay on EPOLLIN
 	}
 }
 
+/**
+ * Parses the completed HTTP request, generates the response, prepares progressive sending, and sends the first chunk.
+ */
 void Network::_dispatchAndSendResponse(int clientFd)
 {
 	try {
@@ -144,19 +167,13 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		Log::dev("debug", "Response:\n" + utils::str(response));
 
 		// 2. Prepare progressive sending
-		std::string rawResp = response.stringify();
-		_pendingResponses[clientFd] = rawResp;
+		std::string rawResponse = response.stringify();
+		_pendingResponses[clientFd] = rawResponse;
 		_responseSendPos[clientFd] = 0;
 		_shouldCloseAfterResponse[clientFd] = request.isConnectionClose() || response.isConnectionClose();
-		ssize_t bytesSent = send(clientFd, rawResp.data(), rawResp.length(), 0);
-		if (bytesSent < 0) { // sending error -> store to send later (stay on EPOLLOUT)
-			Log::prod("error", "Send failed on fd " + Log::hl(clientFd) + ": " + strerror(errno));
-            _disconnectClient(clientFd);
-            return;
-		}
-		Log::dev("event", "Sent " + Log::hl(rawResp.length()) + " bytes to client fd " + Log::hl(clientFd) + ".");
 
 		// 3. Start sending
+		Log::dev("event", "Starting progressive send of " + Log::hl(rawResponse.length()) + " bytes to fd " + Log::hl(clientFd) +".");
 		_continuePendingSend(clientFd);
 
 	}
@@ -166,10 +183,14 @@ void Network::_dispatchAndSendResponse(int clientFd)
 	}
 }
 
-// TODO translate in english!
 /**
- * Continues sending a pending response for a client.
+ * Sends the next part of the pending HTTP response.
+ * Continues until everything is sent or the next EPOLLOUT event.
  * Called when EPOLLOUT indicates the client is ready for more data.
+ *
+ * @note This method is protected by epoll (EPOLLOUT) and is non-blocking (sending by chunks).
+ * This is the only place we write to a client socket.
+ * No errno-based decision-making occurs after send().
  */
 void Network::_continuePendingSend(int clientFd)
 {
@@ -181,26 +202,26 @@ void Network::_continuePendingSend(int clientFd)
 	std::string& response = _pendingResponses[clientFd];
 	size_t& sendPos = _responseSendPos[clientFd];
 
-	// Envoyer la partie restante de la réponse
+	// Send remaining part of the response
 	size_t remaining = response.length() - sendPos;
 	ssize_t bytesSent = send(clientFd, response.data() + sendPos, remaining, 0);
 
 	if (bytesSent < 0) {
-		// Erreur d'envoi - déconnecter le client
+		// Sending error -> Disconnect client
 		Log::prod("error", "Send failed for fd " + Log::hl(clientFd) + " during continued send");
 		_disconnectClient(clientFd);
 		return;
 	}
 	sendPos += bytesSent;
 
-	// Vérifier si l'envoi est complet
+	// Check if send if complete
 	if (sendPos >= response.length()) {
 		Log::prod("event", "Response fully sent for fd " + Log::hl(clientFd));
 
 		// Nettoyer les structures d'envoi
 		_pendingResponses.erase(clientFd);
 		_responseSendPos.erase(clientFd);
-		// Gérer la connexion
+		// Handle connection
 		if (_shouldCloseAfterResponse[clientFd]) {
 			_disconnectClient(clientFd);
 		} else {
@@ -209,17 +230,17 @@ void Network::_continuePendingSend(int clientFd)
 		_shouldCloseAfterResponse.erase(clientFd);
 	} else {
 		Log::dev("event", "Partial send for fd " + Log::hl(clientFd) + ": " + utils::str(sendPos) + "/" + utils::str(response.length()) + " bytes");
-		// Rester en mode EPOLLOUT pour continuer l'envoi
+		// Stay in EPOLLOUT mode to continue sending
     }
 }
 
 // EPOLL
 
 /**
- * Creates the main epoll instance for monitoring all file descriptors.
- * This is the core of our event-driven, non-blocking I/O system.
+ * Creates the main epoll instance.
+ * Central component used to monitor all sockets efficiently (non-blocking).
  */
-void Network::_startEpoll()
+void Network::_createEpollInstance()
 {
 	_epollFd = epoll_create(1);
 	if (_epollFd < 0) {
@@ -229,10 +250,10 @@ void Network::_startEpoll()
 }
 
 /**
- * Adds all server listening sockets to epoll monitoring (via their fd).
- * These sockets will detect incoming client connections.
+ * Registers all server listening sockets in epoll.
+ * These sockets trigger events when new clients attempt to connect.
  */
-void Network::_addListeningSocketsToEpoll()
+void Network::_registerListeningSocketsToEpoll()
 {
 	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 		int serverFd = _listeningSockets[i]->getFd();
@@ -241,7 +262,7 @@ void Network::_addListeningSocketsToEpoll()
 }
 
 /**
- * Throws exception if epoll_ctl fails when method action is not EPOLL_CTL_DEL.
+ * Safe wrapper around epoll_ctl. Logs the operation and handles errors depending on the type of action.
  */
 void Network::_epollControl(int fd, int operation, uint32_t events, const std::string& context)
 {
@@ -264,9 +285,7 @@ void Network::_epollControl(int fd, int operation, uint32_t events, const std::s
 }
 
 /**
- * Waits for I/O activity on monitored file descriptors.
- * Populates "events" with active I/O events.
- * Returns number of file descriptors of ready events.
+ * Waits until epoll reports activity. Fills the event array with ready descriptors and returns their count.
  */
 int Network::_waitAndCollectEvents(struct epoll_event* events)
 {
@@ -283,6 +302,9 @@ int Network::_waitAndCollectEvents(struct epoll_event* events)
 	return (readyEventsCount);
 }
 
+/**
+ * Simple helper to convert epoll control operations (int) as a string.
+ */
 std::string	Network::_epollOpToString(int operation)
 {
 	switch (operation) {
@@ -294,11 +316,10 @@ std::string	Network::_epollOpToString(int operation)
 }
 
 
-// CONNECTION
-
+// CONNECTIONS
 
 /**
- * Checks if the fd is a listening socket.
+ * Checks whether a given file descriptor belongs to one of the server's listening sockets.
  */
 bool Network::_isListeningSocket(int fd)
 {
@@ -311,7 +332,8 @@ bool Network::_isListeningSocket(int fd)
 }
 
 /**
- * Accepts a new client connection on a listening socket.
+ * Calls accept() on the listening socket that triggered the event.
+ * Returns a new client fd and stores its associated server socket.
  */
 int Network::_acceptNewClient(int listeningFd)
 {
@@ -326,6 +348,9 @@ int Network::_acceptNewClient(int listeningFd)
     return -1; // Should not happen if _isListeningSocket returned true
 }
 
+/**
+ * Resets the client's internal state so it can process another request on a keep-alive connection.
+ */
 void Network::_prepareClientForNextRequest(int clientFd)
 {
 	_pendingRequests.erase(clientFd);
@@ -336,6 +361,10 @@ void Network::_prepareClientForNextRequest(int clientFd)
 	_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
 }
 
+/**
+ * Removes the client from epoll, clears all associated state, and closes the socket.
+ * Used for errors or normal closure.
+ */
 void Network::_disconnectClient(int clientFd)
 {
 	Log::prod("event", "Client " + Log::hl(clientFd)
