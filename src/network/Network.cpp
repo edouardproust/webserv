@@ -83,10 +83,9 @@ void	Network::_initListeningSockets()
 	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
 
 	// Create socket for each HostPortPair
-	for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-		_listeningSockets.push_back(new Socket(listenPorts[i]));
-
 	try {
+		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
+			_listeningSockets.push_back(new Socket(listenPorts[i]));
 		//  Bind and listen to each socket created
 		for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 			_listeningSockets[i]->safeBind();
