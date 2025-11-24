@@ -7,13 +7,20 @@ Network::Network(Config const& config)
 : _config(config)
 , _epoll(-1)
 {
-	// Get all unique host:port pairs directly from config
-	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
+	// Get all unique ports only (don't create multiple sockets for same port)
+    std::set<uint16_t> uniquePorts;
+	std::vector<HostPortPair> allListenPorts = _config.getAllListenPorts();
 
-    // Create socket for each HostPortPair
-	for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-		_connections.push_back(new Socket(listenPorts[i]));
-
+    // Only create socket if port is unique
+	for (size_t i = 0; i < allListenPorts.size() && sig::keepRunning(); ++i)
+    {
+        uint16_t port = allListenPorts[i].getPort();
+        if (uniquePorts.find(port) == uniquePorts.end()) // Check if we've already created a socket for this PORT
+        {
+            uniquePorts.insert(port);
+            _connections.push_back(new Socket(allListenPorts[i]));
+        }
+    }
 	//  Bind and listen to each socket created
 	for (size_t i = 0; i < _connections.size(); ++i) {
 		try {

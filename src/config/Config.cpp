@@ -76,15 +76,51 @@ void	Config::_addServer(Tokens const& tokens, std::string const& content, size_t
 	_servers.push_back(sb);
 }
 
+/**
+ * Validates the server blocks inside Config file.
+ * 
+ * - Tracks all IP+PORT pairs and which server blocks use them
+ * - For each IP+PORT that has multiple servers:
+ *    - Checks if ANY of those servers have server_name defined
+ *    - If NO servers have server_name -> WARNING (all requests go to first server like with nginx)
+ *    - If SOME servers have server_name -> valid (virtual hosting works)
+ * - Throws an error in case no server blocks were defined.
+ */
 void	Config::_validate() const
 {
 	if (_servers.empty())
 		throw std::runtime_error("No server blocks defined");
-
-	// Servers content validation
-	std::vector<HostPortPair> allListen = getAllListenPorts();
-	if (!utils::hasVectorUniqEntries(allListen)) {
-		throw std::runtime_error("Duplicate listen ip:port pairs over servers");
+	std::map<std::string, std::vector<size_t> > ipPortToServers;
+	for (size_t i = 0; i < _servers.size(); ++i)
+	{
+		std::set<HostPortPair> serverListens = _servers[i].getListen();
+		for (std::set<HostPortPair>::const_iterator it = serverListens.begin();
+			it != serverListens.end(); ++it)
+		{
+			std::string ipPort = it->getHost() + ":" + utils::str(it->getPort());
+			ipPortToServers[ipPort].push_back(i);
+		}
+	}
+	for (std::map<std::string, std::vector<size_t> >::const_iterator it = ipPortToServers.begin();
+		it != ipPortToServers.end(); ++it)
+	{
+		if (it->second.size() > 1)
+		{
+			bool hasServerName = false;
+			std::set<std::string> serverNames;
+            for (size_t j = 0; j < it->second.size(); ++j)
+			{
+				size_t serverIndex = it->second[j];
+				const std::vector<std::string>& names = _servers[serverIndex].getServerNames();
+				if (!names.empty())
+					hasServerName = true;
+			}
+			if (!hasServerName)
+			{
+				Log::prod("warning", "Config: conflicting server name \"\" on " + it->first + 
+					", first server will be used");
+			}
+		}
 	}
 }
 
