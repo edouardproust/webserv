@@ -34,7 +34,7 @@ CgiHandler::TimeoutException::TimeoutException(std::string const& msg)
  * Notes:
  * - Status code in the Response is set from the CGI raw response.
  */
-Response CgiHandler::run(Request const& req, LocationBlock const* loc, std::string const& scriptName, HostPortPair const& listeningOn)
+Response CgiHandler::execute(Request const& req, LocationBlock const* loc, std::string const& scriptName, HostPortPair const& listeningOn)
 {
 	try {
 		_scriptName = scriptName;

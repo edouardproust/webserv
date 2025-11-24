@@ -166,9 +166,23 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 	return resp;
 }
 
+/**
+ * Send back error before request parsing was done (in Network module for example).
+ */
+Response	StaticHandler::handleError(std::string const& errorSlug)
+{
+	HttpStatus status(errorSlug);
+	Response resp;
+	resp.setStatus(status);
+	resp.setContentType(_getMime("html"));
+	resp.setBody(_errorPageHtml(status));
+	return resp;
+}
+
+
 // HTML
 
-std::string StaticHandler::_welcomePageHtml() const
+std::string StaticHandler::_welcomePageHtml()
 {
 	std::string html;
 
@@ -246,7 +260,7 @@ std::string	StaticHandler::_autoindexHtml() const
 	return html.str();
 }
 
-std::string StaticHandler::_errorPageHtml(HttpStatus const& status) const
+std::string StaticHandler::_errorPageHtml(HttpStatus const& status)
 {
 	return std::string(
 		"<!DOCTYPE html>"

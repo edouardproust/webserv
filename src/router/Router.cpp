@@ -58,7 +58,7 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostP
 	} else {
 		CgiHandler cgi;
 		try {
-			resp = cgi.run(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
+			resp = cgi.execute(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
 		} catch (CgiHandler::ExecException& e) {
 			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("internal_server_error"));
@@ -69,7 +69,7 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostP
 			Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("timeout"));
 		}
-		Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
+        Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
 	}
 }
 

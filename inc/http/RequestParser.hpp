@@ -46,6 +46,8 @@ class RequestParser
 	public :
 
 		static void	parseRequest(Request&, std::string const&);
+		static bool	isRequestComplete(std::string const&);
+
 };
 
 #endif

@@ -1,19 +1,19 @@
 #include "network/Socket.hpp"
 
 Socket::Socket(HostPortPair const& listenPair)
-: _listenOn(listenPair)
+: _listenDirective(listenPair)
 {
-	Log::dev("setup", "Setting up socket on " + Log::hl(_listenOn) + ".");
+	Log::dev("setup", "Setting up socket on " + Log::hl(_listenDirective) + ".");
 
 	_loadAddressInfo();
 	_createSocket();
 
-	Log::dev("setup", "Socket created on " + Log::hl(_listenOn) + ".");
+	Log::dev("setup", "Socket created on " + Log::hl(_listenDirective) + ".");
 }
 
 Socket::~Socket()
 {
-	close(_sock);
+	close(_fd);
 
 	Log::dev("setup", "Freeing Address Info memory...");
 	if (_servinfo) {
@@ -21,7 +21,7 @@ Socket::~Socket()
 		_servinfo = NULL;
 	}
 
-	Log::prod("ok", "Socket " + Log::hl(_listenOn) + " closed.");
+	Log::prod("ok", "Socket " + Log::hl(_listenDirective) + " closed.");
 }
 
 void	Socket::_setAddrStruct()
@@ -39,62 +39,62 @@ void	Socket::_loadAddressInfo()
 	_setAddrStruct();
 
 	// Convert size_t (port) to C-string
-	std::string portStr = utils::str(_listenOn.getPort());
+	std::string portStr = utils::str(_listenDirective.getPort());
 
 	// Get host. If it's "0.0.0.0" or "*", we use NULL for getaddrinfo
-	std::string hostStr = _listenOn.getHost();
+	std::string hostStr = _listenDirective.getHost();
 	char const* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
 
-	// Use the values from _listenOn
+	// Use the values from _listenDirective
 	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
 
 	if (status) {
 		Log::prod("status", "Address info status: " + utils::str(gai_strerror(status)));
-		throw GetAddrInfoException();
+		throw std::runtime_error("Can't get Address's info.");
 	}
 }
 
 void	Socket::_createSocket()
 {
-	_sock = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
+	_fd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 
 	Log::dev("setup", "Creating Socket...");
-	if (_sock < 0) {
-		throw SocketException();
+	if (_fd < 0) {
+		throw std::runtime_error("Can't create Socket.");
 	}
 
 	Log::dev("setup", "Configuring Socket...");
 	int yes = 1;
-	if (setsockopt(_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-		throw SetSockOptException();
+	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+		throw std::runtime_error("Can't configure Socket.");
 	}
 
 	Log::dev("setup", "Setting Socket to non-blocking mode...");
-	int flags = fcntl(_sock, F_GETFL);
-    int fdflags = fcntl(_sock, F_GETFD);
+	int flags = fcntl(_fd, F_GETFL);
+    int fdflags = fcntl(_fd, F_GETFD);
     if (flags == -1 || fdflags == -1
-		|| fcntl(_sock, F_SETFL, flags | O_NONBLOCK) == -1
-		|| fcntl(_sock, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
-		throw FcntlException();
+		|| fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1
+		|| fcntl(_fd, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
+		throw std::runtime_error("Can't set Socket to non blocking mode.");
     }
 }
 
-int	Socket::getSock()
+int	Socket::getFd() const
 {
-	return (_sock);
+	return (_fd);
 }
 
 void	Socket::bind()
 {
 	int status;
 
-	Log::dev("setup", "Binding socket on " + Log::hl(_listenOn) + "...");
+	Log::dev("setup", "Binding socket on " + Log::hl(_listenDirective) + "...");
 
-	status = ::bind(_sock, _servinfo->ai_addr, _servinfo->ai_addrlen);
+	status = ::bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
 
 	if (status < 0) {
 		Log::prod("status",  "Bind status: " + utils::str(strerror(errno)));
-		throw BindException();
+		throw std::runtime_error("Can't bind socket with IP and port.");
 	}
 }
 
@@ -102,74 +102,36 @@ void	Socket::listen()
 {
 	int status;
 
-	Log::dev("setup", "Putting Socket " + Log::hl(_listenOn) + " in Listen Mode...");
+	Log::dev("setup", "Putting Socket " + Log::hl(_listenDirective) + " in Listen Mode...");
 
-	status = ::listen(_sock, 10);
+	status = ::listen(_fd, 10);
 	if (status < 0) {
 		Log::prod("status", "Listen status: " + utils::str(strerror(errno)));
-		throw ListenException();
+		throw std::runtime_error("Can't put Socket in Listen Mode.");
 	}
-	Log::prod("ok", "Now listening on " + Log::hl(_listenOn) + ".");
+	Log::prod("ok", "Now listening on " + Log::hl(_listenDirective) + ".");
 }
 
-int	Socket::accept()
+/**
+ * Accepts a new client connection on this listening socket.
+ * Returns new client socket's fd (or -1 in case of accept() error).
+ */
+int	Socket::createNewClientSocket()
 {
-	struct sockaddr_storage theirAddr;
-	socklen_t addrSize;
-	int newSocket;
+	struct sockaddr_storage clientInfos;
 
 	Log::dev("event", "accept() requested.");
-	addrSize = sizeof theirAddr;
-	newSocket = ::accept(_sock, (struct sockaddr *)&theirAddr, &addrSize);
-	if (newSocket < 0) {
+	socklen_t clientInfoSize = sizeof(clientInfos);
+	int newClientSocketFd = accept(_fd, (struct sockaddr*)&clientInfos, &clientInfoSize);
+	if (newClientSocketFd < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
-		throw AcceptException();
+		return -1;
 	}
 	Log::dev("ok", "accept() successfull");
-	return (newSocket);
+	return (newClientSocketFd);
 }
 
-HostPortPair const&	Socket::getHostPortPair() const
+HostPortPair const&	Socket::getListenDirective() const
 {
-    return (_listenOn);
-}
-
-char const*	Socket::GetAddrInfoException::what() const throw()
-{
-	return ("Can't get Address's info.");
-}
-
-char const*	Socket::SocketException::what() const throw()
-{
-	return ("Can't create Socket.");
-}
-
-char const*	Socket::SetSockOptException::what() const throw()
-{
-	return ("Can't configure Socket.");
-}
-
-char const*	Socket::FcntlException::what() const throw()
-{
-	return ("Can't set Socket to non blocking mode.");
-}
-
-char const*	Socket::BindException::what() const throw()
-{
-	return ("Can't bind socket with IP and port.");
-}
-
-char const*	Socket::ListenException::what() const throw()
-{
-	return ("Can't put Socket in Listen Mode.");
-}
-
-char const*	Socket::AcceptException::what() const throw()
-{
-	return ("Accept rejected.");
-}
-
-char const*	Socket::ConnectException::what() const throw()
-{
-	return ("Connect rejected.");
+    return (_listenDirective);
 }

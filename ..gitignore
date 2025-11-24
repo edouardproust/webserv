@@ -6,8 +6,8 @@
 *.tmp
 *.log
 *~
-*.backup
-*.bak
+*.backup*
+*.bak*
 
 # Specific folders
 build/
@@ -16,6 +16,7 @@ tests/
 test_files/
 .vscode/
 YoupiBanane/
+tmp/
 
 # Specific files
 webserv
