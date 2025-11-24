@@ -32,8 +32,8 @@ class Socket
 		Socket(HostPortPair const&);
 		~Socket();
 
-		void	bind();
-		void	listen();
+		void	safeBind();
+		void	safeListen();
 		int		createNewClientSocket();
 
 		HostPortPair const&	getListenDirective() const;

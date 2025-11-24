@@ -28,6 +28,9 @@ class Network
 	std::map<int, size_t>       _responseSendPos; // Maps client fd with the cursor position in the raw response being built
 	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
 
+	void	_initListeningSockets();
+	void	_cleanupListeningSockets();
+
 	void 	_registerNewClientToEpoll(int);
 	void	_readClientRequest(int);
 	void	_dispatchAndSendResponse(int);

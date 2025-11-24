@@ -3,62 +3,25 @@
 size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
 size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 
-/**
- * Reads the configuration and creates one listening socket for each unique port.
- *
- * Creates one socket per port, even if multiple websites share that port.
- * This allows virtual hosts to work properly.
- */
 Network::Network(Config const& config)
 : _config(config)
 , _epollFd(-1)
 {
-	// Get all unique ports only (no multiple sockets for the same port)
-    std::vector<size_t> usedPorts;
-	std::vector<HostPortPair> allListenPorts = _config.getAllListenPorts();
-
-    // Only create socket if port is unique
-	for (size_t i = 0; i < allListenPorts.size() && sig::keepRunning(); ++i)
-    {
-        size_t port = allListenPorts[i].getPort();
-        bool found = false;
-        for (size_t j = 0; j < usedPorts.size(); ++j)
-        {
-            if (usedPorts[j] == port)
-            {
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-        {
-            usedPorts.push_back(port);
-            _listeningSockets.push_back(new Socket(allListenPorts[i]));
-        }
-    }
-	//  Bind and listen to each socket created
-	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
-		_listeningSockets[i]->bind();
-		_listeningSockets[i]->listen();
-	}
+	_initListeningSockets();
 }
 
 Network::~Network()
 {
-	Log::dev("close", "Closing Web server...");
-
-	Log::dev("close", "Freeing Socket memory.");
-	for (size_t i = 0; i < _listeningSockets.size(); ++i)
-		delete _listeningSockets[i];
-
-	Log::dev("close", "Closing epoll...");
+	_cleanupListeningSockets();
 	if (_epollFd != -1)
 		close(_epollFd);
+	Log::dev("close", "Epoll instance stopped.");
+
+	// TODO add cleaning of CGI here
 
 	Log::prod("ok", Const::SERVER_NAME + " closed.");
 	std::cout << std::endl;
 }
-
 
 // MAIN LOGIC
 
@@ -77,20 +40,18 @@ Network::~Network()
  */
 void Network::startServers()
 {
-	Log::prod("ok", Const::SERVER_NAME + " started.");
-	Log::prod("info", "Press Ctrl + C to stop the Web server.");
-
 	_createEpollInstance(); // create the fd for epoll instance
 	_registerListeningSocketsToEpoll(); // add listening sockets to the surveillance
+	Log::prod("ok", Const::SERVER_NAME + " started.");
+	Log::prod("info", "Press Ctrl + C to stop the Web server.");
 
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
 		int readyEventsCount = _waitAndCollectEvents(events);
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
-			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket: a new client is trying to connect.
-    			// We need to accept() it and add the new client socket to epoll.
-				int newClientFd = _acceptNewClient(eventFd);
+			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket -> a new client is trying to connect.
+				int newClientFd = _acceptNewClient(eventFd); // create a new client socket and add it to epoll surveillance
 				if (newClientFd > 0) {
 					_registerNewClientToEpoll(newClientFd);
 				} else {
@@ -98,21 +59,76 @@ void Network::startServers()
 				}
 			} else { // 2. Existing client fd or CGI pipe
 				uint32_t ev = events[n].events;
-				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) // error
+				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) { // error
 					_disconnectClient(eventFd);
-				//else if (_isCgiEvent(eventFd)) // eventFd is a CGI pipe fd // TODO
+				//} else if (_isCgiEvent(eventFd)) // 2a. eventFd corresponds to a CGI pipe // TODO
             	//	_handleCgiOutput(eventFd); // TODO
-        		else if (ev & EPOLLIN) { // can receive from client (eventFd is an existing client fd)
-					_readClientRequest(eventFd); // read preceded by epoll (EPOLLIN check) and non-blocking
-				} else if (ev & EPOLLOUT) { // can send to client (eventFd is an existing client fd)
+        		} else if (ev & EPOLLIN) { // 2b. eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
+					_readClientRequest(eventFd); // read by chunks from client socket (non-blocking)
+				} else if (ev & EPOLLOUT) { // 2c. eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv
 					if (_pendingResponses.find(eventFd) != _pendingResponses.end())
-						_continuePendingSend(eventFd);
+						_continuePendingSend(eventFd); // send by chunks to client socket (non-blocking)
 					else
 						_dispatchAndSendResponse(eventFd); // (also prepares CGI pipes) // TODO
 				}
 			}
 		}
 	}
+}
+
+/**
+ * Reads the configuration and creates one listening socket for each unique port.
+ *
+ * Creates one socket per port, even if multiple websites share that port.
+ * This allows virtual hosts to work properly.
+ */
+void	Network::_initListeningSockets()
+{
+	// Get all unique ports only
+    std::vector<size_t> usedPorts;
+	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
+
+	// Only create socket if port is unique
+	try {
+		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
+        {
+            size_t port = listenPorts[i].getPort();
+            bool found = false;
+            for (size_t j = 0; j < usedPorts.size(); ++j)
+            {
+                if (usedPorts[j] == port)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                usedPorts.push_back(port);
+                _listeningSockets.push_back(new Socket(listenPorts[i]));
+            }
+        }
+		//  Bind and listen to each socket created
+		for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+			_listeningSockets[i]->safeBind();
+			_listeningSockets[i]->safeListen();
+		}
+	} catch (...) {
+		_cleanupListeningSockets();
+		throw;
+	}
+}
+
+void	Network::_cleanupListeningSockets()
+{
+    for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+        if (_listeningSockets[i]) {
+            Log::dev("close", "Closing listening socket (fd " +  Log::hl(_listeningSockets[i]->getFd()) + ").");
+            delete _listeningSockets[i];
+            _listeningSockets[i] = NULL;
+        }
+    }
+    _listeningSockets.clear();
 }
 
 /**
@@ -278,8 +294,10 @@ void Network::_createEpollInstance()
 void Network::_registerListeningSocketsToEpoll()
 {
 	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
-		int serverFd = _listeningSockets[i]->getFd();
-		_epollControl(serverFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
+		int socketFd = _listeningSockets[i]->getFd();
+		_epollControl(socketFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
+		Log::dev("setup", "Socket (fd " + Log::hl(socketFd) + ") added to epoll surveillance.");
+		Log::prod("ok", Const::SERVER_NAME + " will listen on " + Log::hl(_listeningSockets[i]->getListenDirective()) + " (socket fd " + Log::hl(socketFd) + ").");
 	}
 }
 
