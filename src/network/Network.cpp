@@ -14,16 +14,25 @@ Network::Network(Config const& config)
 , _epollFd(-1)
 {
 	// Get all unique ports only (no multiple sockets for the same port)
-    std::set<size_t> uniquePorts;
+    std::vector<size_t> usedPorts;
 	std::vector<HostPortPair> allListenPorts = _config.getAllListenPorts();
 
     // Only create socket if port is unique
 	for (size_t i = 0; i < allListenPorts.size() && sig::keepRunning(); ++i)
     {
         size_t port = allListenPorts[i].getPort();
-        if (uniquePorts.find(port) == uniquePorts.end()) // Check if we've already created a socket for this port
+        bool found = false;
+        for (size_t j = 0; j < usedPorts.size(); ++j)
         {
-            uniquePorts.insert(port);
+            if (usedPorts[j] == port)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            usedPorts.push_back(port);
             _listeningSockets.push_back(new Socket(allListenPorts[i]));
         }
     }

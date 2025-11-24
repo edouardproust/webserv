@@ -466,7 +466,7 @@ std::vector<std::string> const&	ServerBlock::getIndexFiles() const
 bool	ServerBlock::matchesHost(const std::string& hostname) const
 {
 	if (_serverNames.empty())
-		return true;
+		return false;
 	for (size_t i = 0; i < _serverNames.size(); ++i)
 	{
 		if (_serverNames[i] == hostname)
