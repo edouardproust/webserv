@@ -67,8 +67,7 @@ void Network::startServers()
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
 			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket: a new client is trying to connect.
-    			// We need to accept() it and add the new client socket to epoll.
-				int newClientFd = _acceptNewClient(eventFd);
+				int newClientFd = _acceptNewClient(eventFd); // create a new client socket and add it to epoll surveillance
 				if (newClientFd > 0) {
 					_registerNewClientToEpoll(newClientFd);
 				} else {
@@ -76,15 +75,15 @@ void Network::startServers()
 				}
 			} else { // 2. Existing client fd or CGI pipe
 				uint32_t ev = events[n].events;
-				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) // error
+				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) { // error
 					_disconnectClient(eventFd);
-				//else if (_isCgiEvent(eventFd)) // eventFd is a CGI pipe fd // TODO
+				//} else if (_isCgiEvent(eventFd)) { // eventFd corresponds to a CGI pipe // TODO
             	//	_handleCgiOutput(eventFd); // TODO
-        		else if (ev & EPOLLIN) { // can receive from client (eventFd is an existing client fd)
-					_readClientRequest(eventFd); // read preceded by epoll (EPOLLIN check) and non-blocking
-				} else if (ev & EPOLLOUT) { // can send to client (eventFd is an existing client fd)
+				} else if (ev & EPOLLIN) { // eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
+					_readClientRequest(eventFd); // read by chunks from client socket (non-blocking)
+				} else if (ev & EPOLLOUT) { // eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv
 					if (_pendingResponses.find(eventFd) != _pendingResponses.end())
-						_continuePendingSend(eventFd);
+						_continuePendingSend(eventFd); // send by chunks to client socket (non-blocking)
 					else
 						_dispatchAndSendResponse(eventFd); // (also prepares CGI pipes) // TODO
 				}
