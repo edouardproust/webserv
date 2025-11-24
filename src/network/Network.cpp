@@ -25,7 +25,7 @@ Network::~Network()
 {
 	Log::dev("close", "Closing Web server...");
 
-	Log::dev("close", "Freeing Socket memory.");
+	Log::dev("close", "Freeing Socket memory...");
 	for (size_t i = 0; i < _listeningSockets.size(); ++i)
 		delete _listeningSockets[i];
 
@@ -55,18 +55,17 @@ Network::~Network()
  */
 void Network::startServers()
 {
+	_createEpollInstance(); // create the fd for epoll instance
+	_registerListeningSocketsToEpoll(); // add listening sockets to epoll surveillance
 	Log::prod("ok", Const::SERVER_NAME + " started.");
 	Log::prod("info", "Press Ctrl + C to stop the Web server.");
-
-	_createEpollInstance(); // create the fd for epoll instance
-	_registerListeningSocketsToEpoll(); // add listening sockets to the surveillance
 
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
 		int readyEventsCount = _waitAndCollectEvents(events);
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
-			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket: a new client is trying to connect.
+			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket -> a new client is trying to connect.
 				int newClientFd = _acceptNewClient(eventFd); // create a new client socket and add it to epoll surveillance
 				if (newClientFd > 0) {
 					_registerNewClientToEpoll(newClientFd);
@@ -77,11 +76,11 @@ void Network::startServers()
 				uint32_t ev = events[n].events;
 				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) { // error
 					_disconnectClient(eventFd);
-				//} else if (_isCgiEvent(eventFd)) { // eventFd corresponds to a CGI pipe // TODO
+				//} else if (_isCgiEvent(eventFd)) { // 2a. eventFd corresponds to a CGI pipe // TODO
             	//	_handleCgiOutput(eventFd); // TODO
-				} else if (ev & EPOLLIN) { // eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
+				} else if (ev & EPOLLIN) { // 2b. eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
 					_readClientRequest(eventFd); // read by chunks from client socket (non-blocking)
-				} else if (ev & EPOLLOUT) { // eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv
+				} else if (ev & EPOLLOUT) { // 2c. eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv
 					if (_pendingResponses.find(eventFd) != _pendingResponses.end())
 						_continuePendingSend(eventFd); // send by chunks to client socket (non-blocking)
 					else
@@ -246,6 +245,7 @@ void Network::_createEpollInstance()
 		Log::prod("status", "Epoll status: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't create epoll.");
 	}
+	Log::dev("setup", "Epoll instance created (fd " + Log::hl(_epollFd) + ").");
 }
 
 /**
@@ -255,8 +255,10 @@ void Network::_createEpollInstance()
 void Network::_registerListeningSocketsToEpoll()
 {
 	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
-		int serverFd = _listeningSockets[i]->getFd();
-		_epollControl(serverFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
+		int socketFd = _listeningSockets[i]->getFd();
+		_epollControl(socketFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
+		Log::dev("setup", "Socket (fd " + Log::hl(socketFd) + ") added to epoll surveillance.");
+		Log::prod("ok", Const::SERVER_NAME + " will listen on " + Log::hl(_listeningSockets[i]->getListenDirective()) + " (socket fd " + Log::hl(socketFd) + ").");
 	}
 }
 

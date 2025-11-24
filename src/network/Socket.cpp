@@ -3,12 +3,9 @@
 Socket::Socket(HostPortPair const& listenPair)
 : _listenDirective(listenPair)
 {
-	Log::dev("setup", "Setting up socket on " + Log::hl(_listenDirective) + ".");
-
 	_loadAddressInfo();
 	_createSocket();
-
-	Log::dev("setup", "Socket created on " + Log::hl(_listenDirective) + ".");
+	Log::dev("setup", "New socket created as non-blocking (fd " + Log::hl(_fd) + ").");
 }
 
 Socket::~Socket()
@@ -34,8 +31,7 @@ void	Socket::_setAddrStruct()
 
 void	Socket::_loadAddressInfo()
 {
-	Log::dev("setup", "Loading address info...");
-	int status;
+	//Log::dev("setup", "Loading address info...");
 	_setAddrStruct();
 
 	// Convert size_t (port) to C-string
@@ -46,7 +42,7 @@ void	Socket::_loadAddressInfo()
 	char const* host = (hostStr == "*" || hostStr == "0.0.0.0") ? NULL : hostStr.c_str();
 
 	// Use the values from _listenDirective
-	status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
+	int status = getaddrinfo(host, portStr.c_str(), &_hints, &_servinfo);
 
 	if (status) {
 		Log::prod("status", "Address info status: " + utils::str(gai_strerror(status)));
@@ -58,18 +54,16 @@ void	Socket::_createSocket()
 {
 	_fd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 
-	Log::dev("setup", "Creating Socket...");
+	//Log::dev("setup", "Creating Socket...");
 	if (_fd < 0) {
 		throw std::runtime_error("Can't create Socket.");
 	}
-
-	Log::dev("setup", "Configuring Socket...");
+	//Log::dev("setup", "Configuring Socket...");
 	int yes = 1;
 	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
 		throw std::runtime_error("Can't configure Socket.");
 	}
-
-	Log::dev("setup", "Setting Socket to non-blocking mode...");
+	//Log::dev("setup", "Setting Socket to non-blocking mode...");
 	int flags = fcntl(_fd, F_GETFL);
     int fdflags = fcntl(_fd, F_GETFD);
     if (flags == -1 || fdflags == -1
@@ -86,12 +80,8 @@ int	Socket::getFd() const
 
 void	Socket::bind()
 {
-	int status;
-
-	Log::dev("setup", "Binding socket on " + Log::hl(_listenDirective) + "...");
-
-	status = ::bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
-
+	//Log::dev("setup", "Binding socket on " + Log::hl(_listenDirective) + "...");
+	int status = ::bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
 	if (status < 0) {
 		Log::prod("status",  "Bind status: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't bind socket with IP and port.");
@@ -100,16 +90,13 @@ void	Socket::bind()
 
 void	Socket::listen()
 {
-	int status;
-
-	Log::dev("setup", "Putting Socket " + Log::hl(_listenDirective) + " in Listen Mode...");
-
-	status = ::listen(_fd, 10);
+	//Log::dev("setup", "Putting Socket " + Log::hl(_listenDirective) + " in Listen Mode...");
+	int status = ::listen(_fd, 10);
 	if (status < 0) {
 		Log::prod("status", "Listen status: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't put Socket in Listen Mode.");
 	}
-	Log::prod("ok", "Now listening on " + Log::hl(_listenDirective) + ".");
+	Log::dev("setup", "Socket (fd " + Log::hl(_fd) + ") is now listening on " + Log::hl(_listenDirective) + ".");
 }
 
 /**
