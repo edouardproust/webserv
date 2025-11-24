@@ -12,11 +12,10 @@ Network::Network(Config const& config)
 
 Network::~Network()
 {
-	Log::dev("close", "Closing Web server...");
 	_cleanupListeningSockets();
-	Log::dev("close", "Closing epoll...");
 	if (_epollFd != -1)
 		close(_epollFd);
+	Log::dev("close", "Epoll instance stopped.");
 
 	// TODO add cleaning of CGI here
 
