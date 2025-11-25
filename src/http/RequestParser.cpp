@@ -228,7 +228,7 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 		else if (normalizedValue != "chunked")
 			return HttpStatus("bad_request");
 	}
-	request.addHeader(normalizedName, value);
+	request.setHeader(normalizedName, value);
 	return HttpStatus("ok");
 }
 

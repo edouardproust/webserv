@@ -14,9 +14,9 @@
  */
 class Response
 {
-	HttpStatus							_status;
-	std::map<std::string, std::string>	_headers;
-	std::string							_body;
+	HttpStatus	_status;
+	UniqHeaders	_headers;
+	std::string	_body;
 
 	void		_updateContentLength();
 	void		_manageContentType();
@@ -46,9 +46,9 @@ class Response
 		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
 
-		HttpStatus const& 							getStatus() const;
-		std::map<std::string, std::string> const&	getHeaders() const;
-		std::string const&							getBody() const;
+		HttpStatus const& 	getStatus() const;
+		UniqHeaders const&	getHeaders() const;
+		std::string const&	getBody() const;
 
 		class RawException: public std::runtime_error {
 			public:

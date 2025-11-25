@@ -65,7 +65,7 @@ HttpStatus const&	Response::getStatus() const
 	return _status;
 }
 
-std::map<std::string, std::string> const& Response::getHeaders() const
+UniqHeaders const& Response::getHeaders() const
 {
 	return _headers;
 }
@@ -122,9 +122,10 @@ void	Response::clearBody()
 
 void	Response::setConnectionFromRequest(Request const& request)
 {
-	UniqHeaders headers = request.getUniqHeaders();
-	if (headers.find("connection") != headers.end())
-		setHeader("Connection", headers.find("connection")->second);
+	UniqHeaders const& headers = request.getUniqHeaders();
+	UniqHeaders::const_iterator it = headers.find("connection");
+	if (it != headers.end())
+		setHeader("Connection", it->second);
 	else
 		setHeader("Connection", "keep-alive");
 }

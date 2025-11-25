@@ -87,7 +87,7 @@ void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, H
 	tmp["SERVER_NAME"] = listeningOn.getHost();
 	tmp["SERVER_PORT"] = utils::str(listeningOn.getPort());
 	// HTTP headers (prefixed with HTTP_)
-	UniqHeaders headers = req.getUniqHeaders();
+	UniqHeaders const& headers = req.getUniqHeaders();
 	for (UniqHeaders::const_iterator it = headers.begin(); it != headers.end(); ++it)
 		tmp[_headerToEnvVar(it->first)] = it->second;
 	// PHP specific variables
@@ -96,7 +96,7 @@ void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, H
 		tmp["PHP_SELF"] = req.getPath();
 	}
 	// Build "KEY=VALUE" strings in persistent storage
-	for (std::map<std::string, std::string>::const_iterator it = tmp.begin(); it != tmp.end(); ++it)
+	for (UniqHeaders::const_iterator it = tmp.begin(); it != tmp.end(); ++it)
 		_envStorage.push_back(it->first + "=" + it->second);
 }
 

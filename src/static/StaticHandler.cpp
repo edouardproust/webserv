@@ -284,7 +284,7 @@ std::string StaticHandler::_errorPageHtml(HttpStatus const& status)
  */
 std::string	StaticHandler::_getMime(const std::string& extension)
 {
-	static std::map<std::string, std::string> types;
+	static MimeTypes types;
 
 	types["html"]	= "text/html";
 	types["htm"]	= "text/html";
@@ -308,7 +308,7 @@ std::string	StaticHandler::_getMime(const std::string& extension)
 
 	// -- additional types can be added here --
 
-	std::map<std::string, std::string>::const_iterator it = types.find(extension);
+	MimeTypes::const_iterator it = types.find(extension);
 	if (it != types.end())
 		return it->second;
 	return "application/octet-stream";
@@ -328,7 +328,7 @@ std::string	StaticHandler::_getMimeFromPath(const std::string& filePath)
 // UTILS
 
 /**
- * TODO (optionnal): If is CGI file, call CGIHandler instead
+ * // TODO (optionnal): If is CGI file, call CGIHandler instead
  */
 Response	StaticHandler::_serveFile()
 {

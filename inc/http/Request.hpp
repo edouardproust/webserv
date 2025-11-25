@@ -70,7 +70,7 @@ class Request
 		void	setPathInfo(std::string const&);
 		void	setQueryString(std::string const&);
 		void	setVersion(std::string const&);
-		void	addHeader(std::string const&, std::string const&);
+		void	setHeader(std::string const&, std::string const&);
 		void	setContentType(std::string const&);
 		void	setBody(std::string const&);
 		void	setRawRequest(std::string const&);

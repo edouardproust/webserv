@@ -197,7 +197,7 @@ void	Request::setVersion(std::string const& version)
 	_version = version;
 }
 
-void	Request::addHeader(std::string const& name, std::string const& value)
+void	Request::setHeader(std::string const& name, std::string const& value)
 {
 	// Update _allHeaders
 	_allHeaders.push_back(std::make_pair(name, value));
@@ -239,7 +239,7 @@ std::ostream& operator<<(std::ostream& os, Request const& request)
 	for (AllHeaders::const_iterator it = rawHeaders.begin();
 		it != rawHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	const UniqHeaders& combinedHeaders = request.getUniqHeaders();
+	UniqHeaders const& combinedHeaders = request.getUniqHeaders();
 	os << "- Combined Headers: " << combinedHeaders.size() << "\n";
 	for (UniqHeaders::const_iterator it = combinedHeaders.begin();
 		it != combinedHeaders.end(); ++it)
