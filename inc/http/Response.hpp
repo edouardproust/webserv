@@ -1,8 +1,9 @@
 #ifndef RESPONSE_HPP
-# define RESPONSE_HPP
+#define RESPONSE_HPP
 
-# include "http/RequestParser.hpp"
-# include "http/HttpStatus.hpp"
+#include "http/RequestParser.hpp"
+#include "http/HttpStatus.hpp"
+#include "cgi/CgiParams.hpp"
 #include "utils/utils.hpp"
 #include <ctime>
 
@@ -14,9 +15,12 @@
  */
 class Response
 {
-	HttpStatus	_status;
-	UniqHeaders	_headers;
-	std::string	_body;
+	HttpStatus		_status;
+	UniqHeaders		_headers;
+	std::string		_body;
+	bool			_needsCgiExecution;
+	CgiParams*		_cgiParams;
+	Request const*	_cgiRequest; // Non-owning to prevent big duplicates (eg. request with a 100MB body)
 
 	void		_updateContentLength();
 	void		_manageContentType();
@@ -45,10 +49,14 @@ class Response
 		void	clearBody();
 		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
+		void	markForCgiExecution(CgiParams const&, Request const&);
 
 		HttpStatus const& 	getStatus() const;
 		UniqHeaders const&	getHeaders() const;
 		std::string const&	getBody() const;
+		bool				needsCgiExecution() const;
+    	CgiParams const&	getCgiParams() const;
+    	Request const&		getCgiRequest() const;
 
 		class RawException: public std::runtime_error {
 			public:

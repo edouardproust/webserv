@@ -1,8 +1,9 @@
 #ifndef WEBSERVER_HPP
 #define WEBSERVER_HPP
 
-#include "router/Router.hpp"
 #include "network/Socket.hpp"
+#include "router/Router.hpp"
+#include "cgi/CgiHandler.hpp"
 #include "static/StaticHandler.hpp"
 #include "utils/signal.hpp"
 #include <sys/epoll.h>
@@ -27,6 +28,7 @@ class Network
 	std::map<int, std::string>  _pendingResponses; // Maps client fd with the raw response being built
 	std::map<int, size_t>       _responseSendPos; // Maps client fd with the cursor position in the raw response being built
 	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
+	CgiHandler					_cgi; // Instance of CgiHandler
 
 	void	_initListeningSockets();
 	void	_cleanupListeningSockets();

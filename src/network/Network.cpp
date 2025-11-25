@@ -6,6 +6,7 @@ size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 Network::Network(Config const& config)
 : _config(config)
 , _epollFd(-1)
+, _cgi() // CGI Handler instance
 {
 	_initListeningSockets();
 }
@@ -41,6 +42,7 @@ Network::~Network()
 void Network::startServers()
 {
 	_createEpollInstance(); // create the fd for epoll instance
+	_cgi.init(_epollFd); // Init CGI handler
 	_registerListeningSocketsToEpoll(); // add listening sockets to epoll surveillance
 	Log::prod("ok", Const::SERVER_NAME + " started.");
 	Log::prod("info", "Press Ctrl + C to stop the Web server.");
@@ -61,8 +63,8 @@ void Network::startServers()
 				uint32_t ev = events[n].events;
 				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) { // error
 					_disconnectClient(eventFd);
-				//} else if (_isCgiEvent(eventFd)) // 2a. eventFd corresponds to a CGI pipe // TODO
-            	//	_handleCgiOutput(eventFd); // TODO
+				} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
+					_cgi.handlePipeRead(eventFd);
         		} else if (ev & EPOLLIN) { // 2b. eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
 					_readClientRequest(eventFd); // read by chunks from client socket (non-blocking)
 				} else if (ev & EPOLLOUT) { // 2c. eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv

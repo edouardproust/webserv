@@ -2,6 +2,9 @@
 
 Response::Response()
 : _status(HttpStatus())
+, _needsCgiExecution(false)
+, _cgiParams(NULL)
+, _cgiRequest(NULL)
 {
 	_initDefaultHeaders();
 }
@@ -11,6 +14,9 @@ Response::Response()
  */
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
+, _needsCgiExecution(false)
+, _cgiParams(NULL)
+, _cgiRequest(NULL)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -20,6 +26,9 @@ Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
 , _body(other._body)
+, _needsCgiExecution(other._needsCgiExecution)
+, _cgiParams(other._cgiParams ? new CgiParams(*other._cgiParams) : NULL) // Deep copy
+, _cgiRequest(other._cgiRequest) // Pointer copy
 {}
 
 Response& Response::operator=(Response const& other)
@@ -29,12 +38,19 @@ Response& Response::operator=(Response const& other)
 		_status = other._status;
 		_headers = other._headers;
 		_body = other._body;
+		_needsCgiExecution = other._needsCgiExecution;
+		delete _cgiParams;
+		_cgiParams = other._cgiParams ? new CgiParams(*other._cgiParams) : NULL; // Deep copy
+		_cgiRequest = other._cgiRequest; // Pointer copy
 	}
 	return *this;
 }
 
 Response::~Response()
-{}
+{
+	delete _cgiParams;
+	// no delete for _cgiRequest (non-owning)
+}
 
 Response::RawException::RawException(std::string const& msg)
 : std::runtime_error(msg)
@@ -58,21 +74,6 @@ std::string	Response::stringify() const
 	if (!_body.empty())
 		response << _body;
 	return response.str();
-}
-
-HttpStatus const&	Response::getStatus() const
-{
-	return _status;
-}
-
-UniqHeaders const& Response::getHeaders() const
-{
-	return _headers;
-}
-
-std::string const& Response::getBody() const
-{
-	return _body;
 }
 
 void	Response::setStatus(HttpStatus const& status)
@@ -136,6 +137,43 @@ bool	Response::isConnectionClose() const {
 		return false;
 	std::string value = utils::toLowerCase(utils::trim(found->second));
 	return value == "close";
+}
+
+void Response::markForCgiExecution(CgiParams const& params, Request const& req) {
+	_needsCgiExecution = true;
+	_cgiParams = new CgiParams(params);
+	_cgiRequest = &req;  // Reference only (can have a big body)
+}
+
+HttpStatus const&	Response::getStatus() const
+{
+	return _status;
+}
+
+UniqHeaders const& Response::getHeaders() const
+{
+	return _headers;
+}
+
+std::string const& Response::getBody() const
+{
+	return _body;
+}
+
+bool Response::needsCgiExecution() const {
+    return _needsCgiExecution;
+}
+
+CgiParams const& Response::getCgiParams() const {
+	if (!_cgiParams)
+		throw std::runtime_error("No CGI params in response");
+	return *_cgiParams;
+}
+
+Request const& Response::getCgiRequest() const {
+	if (!_cgiRequest)
+		throw std::runtime_error("No CGI request in response");
+	return *_cgiRequest;
 }
 
 void	Response::_updateContentLength()
@@ -269,13 +307,15 @@ int	Response::_setHeaders(std::string const& headersPart) {
 std::ostream& operator<<(std::ostream& os, Response const& response)
 {
 	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
+	os << "- Needs CGI Execution: " << (response.needsCgiExecution() ? "Yes" : "No") << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	UniqHeaders const& headers = response.getHeaders();
-	for (UniqHeaders::const_iterator it = headers.begin();
-		it != headers.end(); ++it)
-			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
-	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
-	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, response.stringify())) << "\n";
+	for (UniqHeaders::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+		os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
+	}
+	if (response.needsCgiExecution()) {
+		os << response.getCgiParams();
+	}
+	os << "- Raw response:\n" << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, response.stringify())) << "\n";
 	return os;
 }

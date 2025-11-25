@@ -43,6 +43,7 @@ BASE_SRC_FILES = \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp \
 	cgi/CgiParams.cpp \
+	cgi/CgiContext.cpp \
 	utils/Const.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \
