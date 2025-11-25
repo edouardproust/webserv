@@ -100,7 +100,6 @@ void	Network::_cleanupListeningSockets()
 {
     for (size_t i = 0; i < _listeningSockets.size(); ++i) {
         if (_listeningSockets[i]) {
-            Log::dev("close", "Closing listening socket (fd " +  Log::hl(_listeningSockets[i]->getFd()) + ").");
             delete _listeningSockets[i];
             _listeningSockets[i] = NULL;
         }
