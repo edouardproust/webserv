@@ -238,9 +238,9 @@ std::ostream& operator<<(std::ostream& os, Request const& request)
 	os << "  - Path Info: " << PrintableString(request.getPathInfo()) << "\n";
 	os << "  - Query String: " << PrintableString(request.getQueryString()) << "\n";
 	os << "- Version: " << PrintableString(request.getVersion()) << "\n";
-	const std::vector<std::pair<std::string, std::string> >& rawHeaders = request.getAllHeaders();
+	AllHeaders const& rawHeaders = request.getAllHeaders();
 	os << "- Raw Headers: " << rawHeaders.size() << "\n";
-	for (std::vector<std::pair<std::string, std::string> >::const_iterator it = rawHeaders.begin();
+	for (AllHeaders::const_iterator it = rawHeaders.begin();
 		it != rawHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
 	const UniqHeaders& combinedHeaders = request.getHeaders();
