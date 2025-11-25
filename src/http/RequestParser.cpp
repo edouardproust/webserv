@@ -79,8 +79,7 @@ bool	RequestParser::isRequestComplete(std::string const& rawRequest)
 
 HttpStatus	RequestParser::_parseRequestLine(Request& request, std::string const& line)
 {
-	for (size_t i = 0; i < line.length(); i++)
-	{
+	for (size_t i = 0; i < line.length(); i++) {
 		if (line[i] != ' ' && std::isspace(line[i]))
 			return HttpStatus("bad_request");
 	}
@@ -89,8 +88,7 @@ HttpStatus	RequestParser::_parseRequestLine(Request& request, std::string const&
 	if (!(requestLineStream >> methodStr >> uri >> versionStr))
 		return HttpStatus("bad_request");
 	char c;
-	while (requestLineStream.get(c))
-	{
+	while (requestLineStream.get(c)) {
 		if (c != ' ')
 			return HttpStatus("bad_request");
 	}
@@ -116,8 +114,7 @@ HttpStatus	RequestParser::_parseUri(Request& request, std::string const& uri)
 {
 	request.setUri(uri);
 	size_t queryPos = uri.find('?');
-	if (queryPos != std::string::npos)
-	{
+	if (queryPos != std::string::npos) {
 		std::string path = uri.substr(0, queryPos);
 		std::string query = uri.substr(queryPos + 1);
 		if (!_isValidPath(path))
@@ -146,10 +143,8 @@ HttpStatus	RequestParser::_parseUri(Request& request, std::string const& uri)
 HttpStatus RequestParser::_parseUrl(std::string& result, std::string const& encoded)
 {
 	result.clear();
-	for (size_t i = 0; i < encoded.length(); i++)
-	{
-		if (encoded[i] == '%' && i + 2 < encoded.length())
-		{
+	for (size_t i = 0; i < encoded.length(); i++) {
+		if (encoded[i] == '%' && i + 2 < encoded.length()) {
 			std::string hex = encoded.substr(i + 1, 2);
 			if (!std::isxdigit(hex[0]) || !std::isxdigit(hex[1]))
 				return HttpStatus("bad_request");
@@ -172,8 +167,7 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
-	while (std::getline(headersStream, line))
-	{
+	while (std::getline(headersStream, line)) {
 		if (line.length() > _HEADER_MAX_LEN)
 			return HttpStatus("request_header_fields_too_large");
 		if (!line.empty() && line[line.length() - 1] == '\r')
@@ -192,8 +186,7 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 			return HttpStatus("bad_request");
 	if (headers.find("host") == headers.end())
 		return HttpStatus("bad_request");
-	if (hasBody)
-	{
+	if (hasBody) {
 		if ((headers.find("content-length") == headers.end()) &&
 			headers.find("transfer-encoding") == headers.end())
 			return HttpStatus("length_required");
@@ -218,19 +211,16 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 	if (!_isValidHeaderValue(value))
 		return HttpStatus("bad_request");
 	std::string normalizedName = _normalizeHeaderName(name);
-	if (normalizedName == "content-length")
-	{
+	if (normalizedName == "content-length") {
 		if (!_isValidContentLength(value))
 			return HttpStatus("bad_request");
 	}
-	if (normalizedName == "content-type")
-	{
+	if (normalizedName == "content-type") {
 		if (!_isValidContentType(value))
 			return HttpStatus("bad_request");
 		request.setContentType(value);
 	}
-	if (normalizedName == "transfer-encoding")
-	{
+	if (normalizedName == "transfer-encoding") {
 		std::string normalizedValue = utils::toLowerCase(value);
 		if (normalizedValue == "gzip" || normalizedValue == "deflate" ||
 			normalizedValue == "compress" || normalizedValue == "br")
@@ -249,16 +239,14 @@ HttpStatus	RequestParser::_parseChunkedBody(Request& request)
 	size_t pos = 0;
 	const size_t dataLength = chunkedData.length();
 
-	while (pos < dataLength)
-	{
+	while (pos < dataLength) {
 		size_t lineEnd = chunkedData.find("\r\n", pos);
 		if (lineEnd == std::string::npos)
 			return HttpStatus("bad_request");
 		std::string chunkSizeStr = chunkedData.substr(pos, lineEnd - pos);
 		if (chunkSizeStr.empty())
 			return HttpStatus("bad_request");
-		for (size_t i = 0; i < chunkSizeStr.length(); i++)
-		{
+		for (size_t i = 0; i < chunkSizeStr.length(); i++) {
 			if (!std::isxdigit(chunkSizeStr[i]))
 				return HttpStatus("bad_request");
 		}
@@ -287,8 +275,7 @@ HttpStatus	RequestParser::_validateBody(Request& request)
 {
 	std::map<std::string, std::string> headers = request.getHeaders();
 
-	if (headers.find("content-length") != headers.end())
-	{
+	if (headers.find("content-length") != headers.end()) {
 		std::string contentLengthStr = headers["content-length"];
 		unsigned long contentLength;
 		std::istringstream contentLengthStream(contentLengthStr);
@@ -304,8 +291,7 @@ HttpStatus	RequestParser::_validateBody(Request& request)
 
 bool	RequestParser::_isValidStart(std::string const& rawRequest, size_t& requestStart)
 {
-	for (size_t i = 0; i < rawRequest.length(); i++)
-	{
+	for (size_t i = 0; i < rawRequest.length(); i++) {
 		if (rawRequest[i] == '\r' || rawRequest[i] == '\n')
 			continue ;
 		if (std::isspace(rawRequest[i]))
@@ -320,8 +306,7 @@ bool	RequestParser::_isValidMethod(std::string const& methodStr)
 {
 	if (methodStr.empty())
 		return false;
-	for (size_t i = 0; i < methodStr.length(); i++)
-	{
+	for (size_t i = 0; i < methodStr.length(); i++) {
 		if (!std::isalpha(methodStr[i]) || !std::isupper(methodStr[i]))
 			return false;
     }
@@ -341,8 +326,7 @@ void	RequestParser::_extractScriptAndPathInfo(Request& request, std::string cons
 {
 	std::vector<std::string> segments = utils::split(path, '/');
 	std::string current_path = "";
-	for (size_t i = 0; i < segments.size(); i++)
-	{
+	for (size_t i = 0; i < segments.size(); i++) {
 		if (current_path.empty())
 			current_path = segments[i];
 		else
@@ -383,8 +367,7 @@ bool	RequestParser::_isValidVersion(std::string const& versionStr)
 	if (versionNum[0] == '.' || versionNum[versionNum.length() - 1] == '.')
 		return false;
 	size_t dotPos = versionNum.find('.');
-	if (dotPos != std::string::npos)
-	{
+	if (dotPos != std::string::npos) {
 		if (dotPos == 0 || dotPos == versionNum.length() - 1)
 			return false;
 		std::string majorStr = versionNum.substr(0, dotPos);
@@ -393,9 +376,7 @@ bool	RequestParser::_isValidVersion(std::string const& versionStr)
 			return false;
 		if (!_isValidVersionNumber(majorStr) || !_isValidVersionNumber(minorStr))
 			return false;
-	}
-	else
-	{
+	} else {
 		if (!_isValidVersionNumber(versionNum))
 			return false;
 	}
@@ -406,8 +387,7 @@ bool	RequestParser::_isValidVersionNumber(std::string const& numStr)
 {
 	if (numStr.empty())
 		return false;
-	for (size_t i = 0; i < numStr.length(); i++)
-	{
+	for (size_t i = 0; i < numStr.length(); i++) {
 		if (!std::isdigit(numStr[i]))
 			return false;
 	}
@@ -420,8 +400,7 @@ bool	RequestParser::_isValidHeaderName(std::string const& name)
 {
 	const std::string validChars = "!#$%&'*+-.^_`|~";
 
-	for (size_t i = 0; i < name.length(); i++)
-	{
+	for (size_t i = 0; i < name.length(); i++) {
 		if (!std::isalnum(name[i]) && validChars.find(name[i]) == std::string::npos)
 			return false;
 	}
@@ -437,8 +416,7 @@ bool	RequestParser::_headersIndicateBody(Request const& request)
 
 bool	RequestParser::_isValidHeaderValue(std::string const& value)
 {
-	for (size_t i = 0; i < value.length(); i++)
-	{
+	for (size_t i = 0; i < value.length(); i++) {
 		if (value[i] == '\0')
 			return false;
 		if (value[i] < 0x20 || value[i] == 0x7F)
@@ -463,8 +441,7 @@ bool	RequestParser::_isValidContentLength(std::string const& contentLength)
 {
 	if (contentLength.empty())
 		return false;
-	for (size_t i = 0; i < contentLength.length(); i++)
-	{
+	for (size_t i = 0; i < contentLength.length(); i++) {
 		if (contentLength[i] < '0' || contentLength[i] > '9')
 			return false;
 	}

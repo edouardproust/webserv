@@ -22,7 +22,7 @@ Request::Request(const Request& other)
 , _pathInfo(other._pathInfo)
 , _queryString(other._queryString)
 , _version(other._version)
-, _headers(other._headers)
+, _allHeaders(other._allHeaders)
 , _contentType(other._contentType)
 , _body(other._body)
 , _rawRequest(other._rawRequest)
@@ -30,8 +30,7 @@ Request::Request(const Request& other)
 
 Request& Request::operator=(const Request& other)
 {
-	if (this != &other)
-	{
+	if (this != &other) {
 		_status = other._status;
 		_method = other._method;
 		_uri = other._uri;
@@ -40,7 +39,7 @@ Request& Request::operator=(const Request& other)
 		_pathInfo = other._pathInfo;
 		_queryString = other._queryString;
 		_version = other._version;
-		_headers = other._headers;
+		_allHeaders = other._allHeaders;
 		_contentType = other._contentType;
 		_body = other._body;
 		_rawRequest = other._rawRequest;
@@ -82,73 +81,71 @@ bool	Request::isExistingMethod(std::string const& method)
 }
 
 bool	Request::isConnectionClose() const {
-	for (size_t i = 0; i < _headers.size(); ++i) {
-		std::string name = utils::toLowerCase(_headers[i].first);
-		std::string value = utils::toLowerCase(utils::trim(_headers[i].second));
+	for (size_t i = 0; i < _allHeaders.size(); ++i) {
+		std::string name = utils::toLowerCase(_allHeaders[i].first);
+		std::string value = utils::toLowerCase(utils::trim(_allHeaders[i].second));
 		if (name == "connection" && value == "close")
 			return true;
 	}
 	return false;
 }
 
-const HttpStatus& Request::getStatus() const
+HttpStatus const& Request::getStatus() const
 {
 	return (this->_status);
 }
 
-const std::string& Request::getMethod() const
+std::string const& Request::getMethod() const
 {
 	return this->_method;
 }
 
-const std::string& Request::getUri() const
+std::string const& Request::getUri() const
 {
 	return this->_uri;
 }
 
-const std::string& Request::getPath() const
+std::string const& Request::getPath() const
 {
 	static const std::string root("/");
 	return _path.empty() ? root : _path;
 }
 
-const std::string& Request::getScriptName() const
+std::string const& Request::getScriptName() const
 {
 	return this->_scriptName;
 }
 
-const std::string& Request::getPathInfo() const
+std::string const& Request::getPathInfo() const
 {
 	return this->_pathInfo;
 }
 
-const std::string& Request::getQueryString() const
+std::string const& Request::getQueryString() const
 {
 	return this->_queryString;
 }
 
-const std::string& Request::getVersion() const
+std::string const& Request::getVersion() const
 {
 	return this->_version;
 }
 
-const std::map<std::string, std::string> Request::getHeaders() const
+UniqHeaders const Request::getHeaders() const
 {
 	return getCombinedHeaders();
 }
 
-const std::vector<std::pair<std::string, std::string> >& Request::getAllHeaders() const
+AllHeaders const& Request::getAllHeaders() const
 {
-	return _headers;
+	return _allHeaders;
 }
 
-std::map<std::string, std::string> Request::getCombinedHeaders() const
+UniqHeaders Request::getCombinedHeaders() const
 {
-	std::map<std::string, std::string> combined;
+	UniqHeaders combined;
 
-	for (std::vector<std::pair<std::string, std::string> >::const_iterator it = _headers.begin();
-		it != _headers.end(); ++it)
-	{
+	for (AllHeaders::const_iterator it = _allHeaders.begin(); it != _allHeaders.end(); ++it) {
 		std::string normalizedName = utils::toLowerCase(it->first);
 		if (combined.find(normalizedName) != combined.end())
 			combined[normalizedName] += ", " + it->second;
@@ -158,12 +155,12 @@ std::map<std::string, std::string> Request::getCombinedHeaders() const
 	return combined;
 }
 
-const std::string& Request::getContentType() const
+std::string const& Request::getContentType() const
 {
     return this->_contentType;
 }
 
-const std::string& Request::getBody() const
+std::string const& Request::getBody() const
 {
 	return this->_body;
 }
@@ -182,56 +179,56 @@ void	Request::setMethod(std::string const& method)
 	this->_method = method;
 }
 
-void	Request::setUri(const std::string& uri)
+void	Request::setUri(std::string const& uri)
 {
 	this->_uri = uri;
 }
 
-void	Request::setScriptName(const std::string& scriptName)
+void	Request::setScriptName(std::string const& scriptName)
 {
 	this->_scriptName = scriptName;
 }
 
-void	Request::setPathInfo(const std::string& pathInfo)
+void	Request::setPathInfo(std::string const& pathInfo)
 {
 	this->_pathInfo = pathInfo;
 }
 
-void	Request::setPath(const std::string& path)
+void	Request::setPath(std::string const& path)
 {
 	this->_path = path;
 }
 
-void	Request::setQueryString(const std::string& queryString)
+void	Request::setQueryString(std::string const& queryString)
 {
 	this->_queryString = queryString;
 }
 
-void	Request::setVersion(const std::string& version)
+void	Request::setVersion(std::string const& version)
 {
 	this->_version = version;
 }
 
-void	Request::addHeader(const std::string& name, const std::string& value)
+void	Request::addHeader(std::string const& name, std::string const& value)
 {
-	_headers.push_back(std::make_pair(name, value));
+	_allHeaders.push_back(std::make_pair(name, value));
 }
 
-void Request::setContentType(const std::string& value)
+void Request::setContentType(std::string const& value)
 {
     this->_contentType = value;
 }
 
-void	Request::setBody(const std::string& body)
+void	Request::setBody(std::string const& body)
 {
 	this->_body = body;
 }
 
-void	Request::setRawRequest(const std::string& rawRequest) {
+void	Request::setRawRequest(std::string const& rawRequest) {
 	this->_rawRequest = rawRequest;
 }
 
-std::ostream& operator<<(std::ostream& os, const Request& request)
+std::ostream& operator<<(std::ostream& os, Request const& request)
 {
 	os << "- Status: " << request.getStatus() << "\n";
 	os << "- Method: " << PrintableString(request.getMethod()) << "\n";
@@ -246,9 +243,9 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	for (std::vector<std::pair<std::string, std::string> >::const_iterator it = rawHeaders.begin();
 		it != rawHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	const std::map<std::string, std::string>& combinedHeaders = request.getHeaders();
+	const UniqHeaders& combinedHeaders = request.getHeaders();
 	os << "- Combined Headers: " << combinedHeaders.size() << "\n";
-	for (std::map<std::string, std::string>::const_iterator it = combinedHeaders.begin();
+	for (UniqHeaders::const_iterator it = combinedHeaders.begin();
 		it != combinedHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getBody())) << "\n";

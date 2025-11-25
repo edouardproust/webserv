@@ -63,7 +63,7 @@ CgiParams&	CgiParams::operator=(CgiParams const& other)
 void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, HostPortPair const& listeningOn)
 {
 	_envStorage.clear(); // security
-	std::map<std::string, std::string> tmp;
+	UniqHeaders tmp;
 	// Essential CGI environment variables
 	tmp["REQUEST_METHOD"] = req.getMethod();
 	tmp["SCRIPT_FILENAME"] = _scriptName; // absolute path
@@ -87,8 +87,8 @@ void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, H
 	tmp["SERVER_NAME"] = listeningOn.getHost();
 	tmp["SERVER_PORT"] = utils::str(listeningOn.getPort());
 	// HTTP headers (prefixed with HTTP_)
-	Headers headers = req.getHeaders();
-	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	UniqHeaders headers = req.getHeaders();
+	for (UniqHeaders::const_iterator it = headers.begin(); it != headers.end(); ++it)
 		tmp[_headerToEnvVar(it->first)] = it->second;
 	// PHP specific variables
 	if (_extension == ".php") {

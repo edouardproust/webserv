@@ -23,27 +23,27 @@ class Response
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
 	void		_initDefaultHeaders();
-	void		_parseRawResponse(std::string const& rawResponse);
-	int			_setHeaders(std::string const& headersPart);
-	bool		_hasHeader(std::string const& keyLowcase) const;
+	void		_parseRawResponse(std::string const&);
+	int			_setHeaders(std::string const&);
+	bool		_hasHeader(std::string const&) const;
 
 	public:
 
  		// Othodox canonical form
 		Response();
-		Response(std::string const& rawResponse);
-		Response(Response const& other);
-		Response& operator=(Response const& other);
+		Response(std::string const&);
+		Response(Response const&);
+		Response& operator=(Response const&);
 		~Response();
 
 		std::string stringify() const;
 
-		void	setStatus(HttpStatus const& status);
-		void	setContentType(std::string const& value);
-		void	setHeader(std::string const& name, std::string const& value);
-		void	setBody(std::string const& body);
+		void	setStatus(HttpStatus const&);
+		void	setContentType(std::string const&);
+		void	setHeader(std::string const&, std::string const&);
+		void	setBody(std::string const&);
 		void	clearBody();
-		void	setConnectionFromRequest(Request const& request);
+		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
 
 		HttpStatus const& 							getStatus() const;
@@ -52,10 +52,10 @@ class Response
 
 		class RawException: public std::runtime_error {
 			public:
-				RawException(std::string const& msg);
+				RawException(std::string const&);
 		};
 };
 
-std::ostream& operator<<(std::ostream& os, Response const& response);
+std::ostream& operator<<(std::ostream&, Response const&);
 
 #endif

@@ -8,7 +8,8 @@
 
 // http
 
-typedef std::map<std::string, std::string>	Headers; // {header_name:header_value, ...}
+typedef std::vector<std::pair<std::string, std::string> >	AllHeaders; // Allows duplicate entries
+typedef std::map<std::string, std::string>					UniqHeaders; // Unique entries {header_name:header_value, ...}
 
 // config
 
