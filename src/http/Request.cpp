@@ -94,17 +94,17 @@ bool	Request::isConnectionClose() const {
 
 HttpStatus const& Request::getStatus() const
 {
-	return (this->_status);
+	return _status;
 }
 
 std::string const& Request::getMethod() const
 {
-	return this->_method;
+	return _method;
 }
 
 std::string const& Request::getUri() const
 {
-	return this->_uri;
+	return _uri;
 }
 
 std::string const& Request::getPath() const
@@ -115,35 +115,27 @@ std::string const& Request::getPath() const
 
 std::string const& Request::getScriptName() const
 {
-	return this->_scriptName;
+	return _scriptName;
 }
 
 std::string const& Request::getPathInfo() const
 {
-	return this->_pathInfo;
+	return _pathInfo;
 }
 
 std::string const& Request::getQueryString() const
 {
-	return this->_queryString;
+	return _queryString;
 }
 
 std::string const& Request::getVersion() const
 {
-	return this->_version;
+	return _version;
 }
 
-UniqHeaders const Request::getUniqHeaders() const
+UniqHeaders const& Request::getUniqHeaders() const
 {
-	UniqHeaders combined;
-	for (AllHeaders::const_iterator it = _allHeaders.begin(); it != _allHeaders.end(); ++it) {
-		std::string normalizedName = utils::toLowerCase(it->first);
-		if (combined.find(normalizedName) != combined.end())
-			combined[normalizedName] += ", " + it->second;
-		else
-			combined[normalizedName] = it->second;
-	}
-	return combined;
+	return _uniqHeaders;
 }
 
 AllHeaders const& Request::getAllHeaders() const
@@ -153,12 +145,12 @@ AllHeaders const& Request::getAllHeaders() const
 
 std::string const& Request::getContentType() const
 {
-    return this->_contentType;
+    return _contentType;
 }
 
 std::string const& Request::getBody() const
 {
-	return this->_body;
+	return _body;
 }
 
 std::string const&	Request::getRawRequest() const {
@@ -167,61 +159,69 @@ std::string const&	Request::getRawRequest() const {
 
 void	Request::setStatus(HttpStatus const& status)
 {
-	this->_status = status;
+	_status = status;
 }
 
 void	Request::setMethod(std::string const& method)
 {
-	this->_method = method;
+	_method = method;
 }
 
 void	Request::setUri(std::string const& uri)
 {
-	this->_uri = uri;
+	_uri = uri;
 }
 
 void	Request::setScriptName(std::string const& scriptName)
 {
-	this->_scriptName = scriptName;
+	_scriptName = scriptName;
 }
 
 void	Request::setPathInfo(std::string const& pathInfo)
 {
-	this->_pathInfo = pathInfo;
+	_pathInfo = pathInfo;
 }
 
 void	Request::setPath(std::string const& path)
 {
-	this->_path = path;
+	_path = path;
 }
 
 void	Request::setQueryString(std::string const& queryString)
 {
-	this->_queryString = queryString;
+	_queryString = queryString;
 }
 
 void	Request::setVersion(std::string const& version)
 {
-	this->_version = version;
+	_version = version;
 }
 
 void	Request::addHeader(std::string const& name, std::string const& value)
 {
+	// Update _allHeaders
 	_allHeaders.push_back(std::make_pair(name, value));
+
+	// Udpate _uniqHeaders
+	std::string normalizedName = utils::toLowerCase(name);
+	if (_uniqHeaders.find(normalizedName) != _uniqHeaders.end())
+		_uniqHeaders[normalizedName] += ", " + value;
+	else
+		_uniqHeaders[normalizedName] = value;
 }
 
 void Request::setContentType(std::string const& value)
 {
-    this->_contentType = value;
+    _contentType = value;
 }
 
 void	Request::setBody(std::string const& body)
 {
-	this->_body = body;
+	_body = body;
 }
 
 void	Request::setRawRequest(std::string const& rawRequest) {
-	this->_rawRequest = rawRequest;
+	_rawRequest = rawRequest;
 }
 
 std::ostream& operator<<(std::ostream& os, Request const& request)

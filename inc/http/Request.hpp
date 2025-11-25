@@ -57,7 +57,7 @@ class Request
 		std::string const&	getQueryString() const;
 		std::string const&	getVersion() const;
 		AllHeaders const& 	getAllHeaders() const;
-		UniqHeaders const	getUniqHeaders() const;
+		UniqHeaders const&	getUniqHeaders() const;
 		std::string const&	getContentType() const;
 		std::string const&	getBody() const;
 		std::string const&	getRawRequest() const;
