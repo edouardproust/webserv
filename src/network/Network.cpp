@@ -7,36 +7,21 @@ Network::Network(Config const& config)
 : _config(config)
 , _epollFd(-1)
 {
-	// Get all unique host:port pairs directly from config
-	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
-
-	// Create socket for each HostPortPair
-	for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-		_listeningSockets.push_back(new Socket(listenPorts[i]));
-
-	//  Bind and listen to each socket created
-	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
-		_listeningSockets[i]->bind();
-		_listeningSockets[i]->listen();
-	}
+	_initListeningSockets();
 }
 
 Network::~Network()
 {
-	Log::dev("close", "Closing Web server...");
-
-	Log::dev("close", "Freeing Socket memory...");
-	for (size_t i = 0; i < _listeningSockets.size(); ++i)
-		delete _listeningSockets[i];
-
-	Log::dev("close", "Closing epoll...");
+	_cleanupListeningSockets();
 	if (_epollFd != -1)
 		close(_epollFd);
+	Log::dev("close", "Epoll instance stopped.");
+
+	// TODO add cleaning of CGI here
 
 	Log::prod("ok", Const::SERVER_NAME + " closed.");
 	std::cout << std::endl;
 }
-
 
 // MAIN LOGIC
 
@@ -76,9 +61,9 @@ void Network::startServers()
 				uint32_t ev = events[n].events;
 				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) { // error
 					_disconnectClient(eventFd);
-				//} else if (_isCgiEvent(eventFd)) { // 2a. eventFd corresponds to a CGI pipe // TODO
+				//} else if (_isCgiEvent(eventFd)) // 2a. eventFd corresponds to a CGI pipe // TODO
             	//	_handleCgiOutput(eventFd); // TODO
-				} else if (ev & EPOLLIN) { // 2b. eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
+        		} else if (ev & EPOLLIN) { // 2b. eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
 					_readClientRequest(eventFd); // read by chunks from client socket (non-blocking)
 				} else if (ev & EPOLLOUT) { // 2c. eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv
 					if (_pendingResponses.find(eventFd) != _pendingResponses.end())
@@ -89,6 +74,37 @@ void Network::startServers()
 			}
 		}
 	}
+}
+
+void	Network::_initListeningSockets()
+{
+	// Get all unique host:port pairs directly from config
+	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
+
+	// Create socket for each HostPortPair
+	try {
+		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
+			_listeningSockets.push_back(new Socket(listenPorts[i]));
+		//  Bind and listen to each socket created
+		for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+			_listeningSockets[i]->safeBind();
+			_listeningSockets[i]->safeListen();
+		}
+	} catch (...) {
+		_cleanupListeningSockets();
+		throw;
+	}
+}
+
+void	Network::_cleanupListeningSockets()
+{
+    for (size_t i = 0; i < _listeningSockets.size(); ++i) {
+        if (_listeningSockets[i]) {
+            delete _listeningSockets[i];
+            _listeningSockets[i] = NULL;
+        }
+    }
+    _listeningSockets.clear();
 }
 
 /**
