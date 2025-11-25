@@ -180,7 +180,7 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 		if (result.getSlug() != "ok")
 			return result;
 	}
-	UniqHeaders headers = request.getHeaders();
+	UniqHeaders headers = request.getUniqHeaders();
 	if (headers.find("content-length") != headers.end() &&
 		headers.find("transfer-encoding") != headers.end())
 			return HttpStatus("bad_request");
@@ -273,7 +273,7 @@ HttpStatus	RequestParser::_parseChunkedBody(Request& request)
 
 HttpStatus	RequestParser::_validateBody(Request& request)
 {
-	UniqHeaders headers = request.getHeaders();
+	UniqHeaders headers = request.getUniqHeaders();
 
 	if (headers.find("content-length") != headers.end()) {
 		std::string contentLengthStr = headers["content-length"];
@@ -409,7 +409,7 @@ bool	RequestParser::_isValidHeaderName(std::string const& name)
 
 bool	RequestParser::_headersIndicateBody(Request const& request)
 {
-	std::map<std::string, std::string> headers = request.getHeaders();
+	UniqHeaders headers = request.getUniqHeaders();
 	return (headers.find("content-length") != headers.end() ||
 			headers.find("transfer-encoding") != headers.end());
 }

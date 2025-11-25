@@ -26,6 +26,7 @@ class Request
 	std::string	_queryString;
 	std::string	_version;
 	AllHeaders	_allHeaders;
+	UniqHeaders	_uniqHeaders;
 	std::string	_contentType;
 	std::string	_body;
 	std::string	_rawRequest;
@@ -55,9 +56,8 @@ class Request
 		std::string const&	getPathInfo() const;
 		std::string const&	getQueryString() const;
 		std::string const&	getVersion() const;
-		UniqHeaders const 	getHeaders() const;
 		AllHeaders const& 	getAllHeaders() const;
-		UniqHeaders			getCombinedHeaders() const;
+		UniqHeaders const	getUniqHeaders() const;
 		std::string const&	getContentType() const;
 		std::string const&	getBody() const;
 		std::string const&	getRawRequest() const;

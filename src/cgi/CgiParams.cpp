@@ -87,7 +87,7 @@ void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, H
 	tmp["SERVER_NAME"] = listeningOn.getHost();
 	tmp["SERVER_PORT"] = utils::str(listeningOn.getPort());
 	// HTTP headers (prefixed with HTTP_)
-	UniqHeaders headers = req.getHeaders();
+	UniqHeaders headers = req.getUniqHeaders();
 	for (UniqHeaders::const_iterator it = headers.begin(); it != headers.end(); ++it)
 		tmp[_headerToEnvVar(it->first)] = it->second;
 	// PHP specific variables

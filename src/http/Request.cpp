@@ -23,6 +23,7 @@ Request::Request(const Request& other)
 , _queryString(other._queryString)
 , _version(other._version)
 , _allHeaders(other._allHeaders)
+, _uniqHeaders(other._uniqHeaders)
 , _contentType(other._contentType)
 , _body(other._body)
 , _rawRequest(other._rawRequest)
@@ -40,6 +41,7 @@ Request& Request::operator=(const Request& other)
 		_queryString = other._queryString;
 		_version = other._version;
 		_allHeaders = other._allHeaders;
+		_uniqHeaders = other._uniqHeaders;
 		_contentType = other._contentType;
 		_body = other._body;
 		_rawRequest = other._rawRequest;
@@ -131,20 +133,9 @@ std::string const& Request::getVersion() const
 	return this->_version;
 }
 
-UniqHeaders const Request::getHeaders() const
-{
-	return getCombinedHeaders();
-}
-
-AllHeaders const& Request::getAllHeaders() const
-{
-	return _allHeaders;
-}
-
-UniqHeaders Request::getCombinedHeaders() const
+UniqHeaders const Request::getUniqHeaders() const
 {
 	UniqHeaders combined;
-
 	for (AllHeaders::const_iterator it = _allHeaders.begin(); it != _allHeaders.end(); ++it) {
 		std::string normalizedName = utils::toLowerCase(it->first);
 		if (combined.find(normalizedName) != combined.end())
@@ -153,6 +144,11 @@ UniqHeaders Request::getCombinedHeaders() const
 			combined[normalizedName] = it->second;
 	}
 	return combined;
+}
+
+AllHeaders const& Request::getAllHeaders() const
+{
+	return _allHeaders;
 }
 
 std::string const& Request::getContentType() const
@@ -243,7 +239,7 @@ std::ostream& operator<<(std::ostream& os, Request const& request)
 	for (AllHeaders::const_iterator it = rawHeaders.begin();
 		it != rawHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	const UniqHeaders& combinedHeaders = request.getHeaders();
+	const UniqHeaders& combinedHeaders = request.getUniqHeaders();
 	os << "- Combined Headers: " << combinedHeaders.size() << "\n";
 	for (UniqHeaders::const_iterator it = combinedHeaders.begin();
 		it != combinedHeaders.end(); ++it)

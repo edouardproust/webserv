@@ -122,7 +122,7 @@ void	Response::clearBody()
 
 void	Response::setConnectionFromRequest(Request const& request)
 {
-	std::map<std::string, std::string> headers = request.getHeaders();
+	UniqHeaders headers = request.getUniqHeaders();
 	if (headers.find("connection") != headers.end())
 		setHeader("Connection", headers.find("connection")->second);
 	else
@@ -130,7 +130,7 @@ void	Response::setConnectionFromRequest(Request const& request)
 }
 
 bool	Response::isConnectionClose() const {
-	std::map<std::string, std::string>::const_iterator found = _headers.find("connection");
+	UniqHeaders::const_iterator found = _headers.find("connection");
 	if (found == _headers.end())
 		return false;
 	std::string value = utils::toLowerCase(utils::trim(found->second));
@@ -154,7 +154,7 @@ void	Response::_manageContentType()
 
 bool	Response::_hasHeader(std::string const& keyLowcase) const
 {
-	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
+	for (UniqHeaders::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
 		if (utils::toLowerCase(it->first) == keyLowcase)
 			return true;
 	}
@@ -185,10 +185,10 @@ std::string Response::_buildHeaders() const
 		headerStream << "Cache-Control: " << _headers.find("cache-control")->second << "\r\n";
 	if (_headers.find("content-disposition") != _headers.end())
 		headerStream << "Content-Disposition: " << _headers.find("content-disposition")->second << "\r\n";
-	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
+	for (UniqHeaders::const_iterator it = _headers.begin();
 		it != _headers.end(); ++it)
 		{
-			const std::string& key = it->first;
+			std::string const& key = it->first;
 			if (key != "server" && key != "date" && key != "content-type" &&
 				key != "content-length" && key != "connection" &&
 				key != "location" && key != "cache-control" && key != "content-disposition")
@@ -269,8 +269,8 @@ std::ostream& operator<<(std::ostream& os, Response const& response)
 {
 	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
-	const std::map<std::string, std::string>& headers = response.getHeaders();
-	for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+	UniqHeaders const& headers = response.getHeaders();
+	for (UniqHeaders::const_iterator it = headers.begin();
 		it != headers.end(); ++it)
 			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
