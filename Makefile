@@ -110,7 +110,6 @@ fclean: clean
 	rm -f $(NAME) $(NAME_DEV)
 	rm -rf $(LOG_DIR)
 	rm -rf $(CONFIG_DST_DIR)
-	rm -rf $(TMP_FILES_DIR)
 
 re: fclean all
 
