@@ -1,10 +1,12 @@
 #ifndef CGI_HANDLER_HPP
 #define CGI_HANDLER_HPP
 
+#include "cgi/CgiParams.hpp"
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
+#include "static/StaticHandler.hpp"
 #include "utils/signal.hpp"
 #include "utils/utils.hpp"
 #include "utils/typedefs.hpp"
@@ -19,27 +21,23 @@
  */
 class CgiHandler
 {
-	static size_t const			_TIMEOUT_MS;
-	static size_t const			_STEP_MS;
-	static size_t const			_READ_BUFFER;
+	static size_t const	_TIMEOUT_MS;
+	static size_t const	_STEP_MS;
+	static size_t const	_READ_BUFFER;
 
-	std::string					_scriptName;
-	std::string					_extension;
-	std::string					_executor;
-	std::vector<std::string>	_envp;
-	std::vector<std::string>	_argv;
-	std::string					_cgiOutput;
-	std::string					_cgiError;
+	Request const&		_request;
+	CgiParams const&	_cgiParams;
 
-	int							_stdinPipe[2];
-	int							_stdoutPipe[2];
-	int							_stderrPipe[2];
-	std::string					_tmpFile;
+	int			_stdinPipe[2];
+	int			_stdoutPipe[2];
+	int			_stderrPipe[2];
+	std::string	_tmpFile;
 
-	void		_buildEnvp(Request const&, std::string const&, HostPortPair const&);
-	void		_buildArgv();
+	std::string	_cgiOutput;
+	std::string	_cgiError;
+
 	pid_t		_forkAndExec() const;
-	void		_prepareIo(std::string const&, std::string const&);
+	void		_prepareIo();
 	Response	_handleStatus(int);
 	void		_redirectIoInChild() const;
 	void		_setNonBlocking(int);
@@ -47,26 +45,21 @@ class CgiHandler
 	void		_readPipes();
 	void		_cleanupPipes();
 
-	static std::string			_headerToEnvVar(std::string const&);
-	static std::vector<char*>	_toCharPtrArrayInChild(const std::vector<std::string>&);
-
-	// Copy constructor and assignation are forbidden
+	// Defaut constructore and copy / assignation are forbidden
+	CgiHandler();
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 
 	public:
 
-		CgiHandler();
+		CgiHandler(Request const&, CgiParams const&);
 		~CgiHandler();
 
-		Response execute(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
+		Response execute();
 
-		std::string const&				getScriptName() const;
-		std::string const&				getExecutor() const;
-		std::vector<std::string> const&	getEnvp() const;
-		std::vector<std::string> const&	getArgv() const;
-		std::string const&				getCgiOutput() const;
-		std::string const&				getCgiError() const;
+		CgiParams const&	getCgiParams() const;
+		std::string const&	getCgiOutput() const;
+		std::string const&	getCgiError() const;
 
 		class ExecException: public std::runtime_error {
 			public:

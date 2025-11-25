@@ -48,7 +48,8 @@ class StaticHandler
 		Response		handlePut();
 		Response		handlePost();
 		Response		handleError(HttpStatus const&);
-		static Response	handleError(std::string const&);
+		Response		handleError(std::string const&);
+		static Response	errorBeforeParsing(std::string const&);
 
 		std::string const&	getFinalPath() const;
 		bool	hasUpdatedFinalPath() const;

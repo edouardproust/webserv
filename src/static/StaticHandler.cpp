@@ -161,10 +161,16 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 	return resp;
 }
 
+Response	StaticHandler::handleError(std::string const& errorSlug)
+{
+	HttpStatus const status(errorSlug);
+	return handleError(status);
+}
+
 /**
  * Send back error before request parsing was done (in Network module for example).
  */
-Response	StaticHandler::handleError(std::string const& errorSlug)
+Response	StaticHandler::errorBeforeParsing(std::string const& errorSlug)
 {
 	HttpStatus status(errorSlug);
 	Response resp;

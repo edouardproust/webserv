@@ -42,6 +42,7 @@ BASE_SRC_FILES = \
 	router/RedirectionHandler.cpp \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp \
+	cgi/CgiParams.cpp \
 	utils/Const.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \

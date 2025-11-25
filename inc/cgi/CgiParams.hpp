@@ -28,18 +28,27 @@ class CgiParams
 
 	static std::string	_headerToEnvVar(std::string const&);
 
+
+
 	public:
 
+		CgiParams();
 		CgiParams(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
+		CgiParams(CgiParams const&);
+		CgiParams&	operator=(CgiParams const&);
 
 		bool	isValid() const;
 
-		std::string const&			getExecutor() const;
-		std::string const&			getScriptName() const;
-		std::string const&			getInputData() const;
-		std::vector<char*> const&	getArgv() const;
-		std::vector<char*> const&	getEnvp() const;
-		std::string const&			getExtension() const;
+		std::string const&				getExecutor() const;
+		std::string const&				getScriptName() const;
+		std::string const&				getInputData() const;
+		std::vector<std::string> const&	getEnvStorage() const;
+		std::vector<char*> const&		getEnvp() const;
+		std::vector<std::string> const&	getArgStorage() const;
+		std::vector<char*> const&		getArgv() const;
+		std::string const&				getExtension() const;
 };
+
+std::ostream&	operator<<(std::ostream&, CgiParams const&);
 
 #endif

@@ -1,5 +1,13 @@
 #include "cgi/CgiParams.hpp"
 
+CgiParams::CgiParams()
+: _isValid(false)
+, _scriptName()
+, _extension()
+, _executor()
+, _inputData()
+{}
+
 CgiParams::CgiParams(Request const& req, LocationBlock const* location, std::string const& scriptName, HostPortPair const& listeningOn)
 : _isValid(false)
 , _scriptName(scriptName)
@@ -16,6 +24,35 @@ CgiParams::CgiParams(Request const& req, LocationBlock const* location, std::str
     _setArgStorage();
 	_setArgv();
     _isValid = true;
+}
+
+CgiParams::CgiParams(CgiParams const& other)
+: _isValid(other._isValid)
+, _scriptName(other._scriptName)
+, _extension(other._extension)
+, _executor(other._executor)
+, _inputData(other._inputData)
+, _envStorage(other._envStorage)
+, _argStorage(other._argStorage)
+{
+	_setEnvp();
+	_setArgv();
+}
+
+CgiParams&	CgiParams::operator=(CgiParams const& other)
+{
+	if (this != &other) {
+		_isValid = other._isValid;
+		_scriptName = other._scriptName;
+		_extension = other._extension;
+		_executor = other._executor;
+		_inputData = other._inputData;
+		_envStorage = other._envStorage;
+		_argStorage = other._argStorage;
+		_setEnvp();
+		_setArgv();
+	}
+	return *this;
 }
 
 /**
@@ -111,14 +148,24 @@ std::string const&	CgiParams::getInputData() const
 	return _inputData;
 }
 
-std::vector<char*> const&	CgiParams::getArgv() const
+std::vector<std::string> const&	CgiParams::getEnvStorage() const
 {
-	return _argv;
+	return _envStorage;
 }
 
 std::vector<char*> const&	CgiParams::getEnvp() const
 {
 	return _envp;
+}
+
+std::vector<std::string> const&	CgiParams::getArgStorage() const
+{
+	return _argStorage;
+}
+
+std::vector<char*> const&	CgiParams::getArgv() const
+{
+	return _argv;
 }
 
 std::string const&	CgiParams::getExtension() const
@@ -148,4 +195,25 @@ std::string	CgiParams::_headerToEnvVar(std::string const& headerName)
 			result += static_cast<char>(std::toupper(c));
 	}
 	return result;
+}
+
+// PRINT
+
+std::ostream&	operator<<(std::ostream& os, CgiParams const& rhs)
+{
+	os << "- script name: " << PrintableString(rhs.getScriptName()) << "\n";
+	os << "- executor: " << PrintableString(rhs.getExecutor()) << "\n";
+	os << "- input data " << PrintableString(rhs.getInputData()) << "\n";
+
+	std::vector<std::string> envp = rhs.getEnvStorage();
+	os << "- envp: " << envp.size() << "\n";
+	for (size_t i = 0; i < envp.size(); ++i)
+		os << "  - " << PrintableString(envp[i]) << "\n";
+
+	std::vector<std::string> argv = rhs.getArgStorage();
+	os << "- argv: " << argv.size() << "\n";
+	for (size_t i = 0; i < argv.size(); ++i)
+		os << "  - " << PrintableString(argv[i]) << "\n";
+
+	return os;
 }

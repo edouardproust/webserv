@@ -141,7 +141,7 @@ void Network::_readClientRequest(int clientFd)
 	if (bytesReceived > 0) {
 		if (currentReq.size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
             Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(currentReq.size()) + " bytes)");
-            Response response = StaticHandler::handleError("content_too_large");
+            Response response = StaticHandler::errorBeforeParsing("content_too_large");
             std::string rawResponse = response.stringify();
 			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
