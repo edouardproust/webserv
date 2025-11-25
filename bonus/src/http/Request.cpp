@@ -26,6 +26,7 @@ Request::Request(const Request& other)
 , _contentType(other._contentType)
 , _body(other._body)
 , _rawRequest(other._rawRequest)
+, _cookies(other._cookies)
 {}
 
 Request& Request::operator=(const Request& other)
@@ -44,6 +45,7 @@ Request& Request::operator=(const Request& other)
 		_contentType = other._contentType;
 		_body = other._body;
 		_rawRequest = other._rawRequest;
+		_cookies = other._cookies;
 	}
 	return (*this);
 }
@@ -168,8 +170,22 @@ const std::string& Request::getBody() const
 	return this->_body;
 }
 
-std::string const&	Request::getRawRequest() const {
+std::string const&	Request::getRawRequest() const
+{
 	return _rawRequest;
+}
+
+const std::map<std::string, std::string>& Request::getCookies() const
+{
+	return this->_cookies;
+}
+
+const std::string Request::getCookie(const std::string& name) const
+{
+	std::map<std::string, std::string>::const_iterator it = _cookies.find(name);
+	if (it != _cookies.end())
+		return it->second;
+	return "";
 }
 
 void	Request::setStatus(HttpStatus const& status)
@@ -227,8 +243,19 @@ void	Request::setBody(const std::string& body)
 	this->_body = body;
 }
 
-void	Request::setRawRequest(const std::string& rawRequest) {
+void	Request::setRawRequest(const std::string& rawRequest)
+{
 	this->_rawRequest = rawRequest;
+}
+
+void	Request::addCookie(const std::string& name, const std::string& value)
+{
+	_cookies[name] = value;
+}
+
+bool	Request::hasCookie(const std::string& name) const
+{
+	return _cookies.find(name) != _cookies.end();
 }
 
 std::ostream& operator<<(std::ostream& os, const Request& request)
@@ -250,6 +277,11 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "- Combined Headers: " << combinedHeaders.size() << "\n";
 	for (std::map<std::string, std::string>::const_iterator it = combinedHeaders.begin();
 		it != combinedHeaders.end(); ++it)
+		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
+	os << "- Cookies: " << request.getCookies().size() << "\n";
+	const std::map<std::string, std::string>& cookies = request.getCookies();
+	for (std::map<std::string, std::string>::const_iterator it = cookies.begin();
+		it != cookies.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";

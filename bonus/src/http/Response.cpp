@@ -21,6 +21,7 @@ Response::Response(std::string const& rawResponse)
 Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
+, _setCookies(other._setCookies)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
 {}
@@ -31,6 +32,7 @@ Response& Response::operator=(Response const& other)
 	{
 		_status = other._status;
 		_headers = other._headers;
+		_setCookies = other._setCookies;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
 	}
@@ -72,6 +74,11 @@ HttpStatus const&	Response::getStatus() const
 std::map<std::string, std::string> const& Response::getHeaders() const
 {
 	return _headers;
+}
+
+const std::vector<std::string>& Response::getSetCookies() const
+{
+	return _setCookies;
 }
 
 std::string const& Response::getBody() const
@@ -140,7 +147,18 @@ void	Response::setConnectionFromRequest(Request const& request)
 		setHeader("Connection", "keep-alive");
 }
 
-bool	Response::isConnectionClose() const {
+void	Response::setCookie(const std::string& name, const std::string& value, 
+                        const std::string& options)
+{
+	std::string cookieHeader = name + "=" + value;
+    
+    if (!options.empty())
+		cookieHeader += "; " + options;
+	_setCookies.push_back(cookieHeader);
+}
+
+bool	Response::isConnectionClose() const
+{
 	std::map<std::string, std::string>::const_iterator found = _headers.find("connection");
 	if (found == _headers.end())
 		return false;
@@ -190,6 +208,9 @@ std::string Response::_buildHeaders() const
 		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
 	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
 	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
+	for (std::vector<std::string>::const_iterator it = _setCookies.begin();
+		it != _setCookies.end(); ++it)
+			headerStream << "Set-Cookie: " << *it << "\r\n";
 	if (_headers.find("location") != _headers.end())
 		headerStream << "Location: " << _headers.find("location")->second << "\r\n";
 	if (_headers.find("cache-control") != _headers.end())
