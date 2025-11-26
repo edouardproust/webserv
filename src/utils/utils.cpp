@@ -312,7 +312,7 @@ std::string utils::formatDate(time_t time, const std::string& format)
  * - Removes port if present: "example.com:8080" -> "example.com"
  * - Returns "unknown" if host header is not found
  */
-std::string	utils::extractHostname(const std::map<std::string, std::string>& headers)
+std::string	utils::extractHostname(const Headers& headers)
 {
 	std::map<std::string, std::string>::const_iterator it = headers.find("host");
 	if (it == headers.end())
