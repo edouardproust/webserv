@@ -2,6 +2,7 @@
 #define UTILS_HPP
 
 #include "utils/Const.hpp"
+#include "utils/typedefs.hpp"
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>
@@ -9,6 +10,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <cerrno>
+#include <map>
 
 namespace utils {
 
@@ -56,6 +58,8 @@ namespace utils {
 	std::string	trim(std::string const&);
 	std::string	excerpt(size_t, std::string const&);
 	std::string	formatDate(time_t, const std::string&);
+
+	std::string extractHostname(const Headers& headers);
 
 }
 

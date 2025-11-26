@@ -180,11 +180,19 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 		if (result.getSlug() != "ok")
 			return result;
 	}
+	AllHeaders const& allHeaders = request.getAllHeaders();
+	int hostHeaderCount = 0;
+	for (size_t i = 0; i < allHeaders.size(); ++i) {
+		if (allHeaders[i].first == "host")
+			hostHeaderCount++;
+	}
+	if (hostHeaderCount != 1)
+		return HttpStatus("bad_request");
 	UniqHeaders const& headers = request.getUniqHeaders();
 	if (headers.find("content-length") != headers.end() &&
 		headers.find("transfer-encoding") != headers.end())
 			return HttpStatus("bad_request");
-	if (headers.find("host") == headers.end())
+	if (hostHeaderCount == 0)
 		return HttpStatus("bad_request");
 	if (hasBody) {
 		if ((headers.find("content-length") == headers.end()) &&

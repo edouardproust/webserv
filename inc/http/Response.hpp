@@ -18,6 +18,7 @@ class Response
 	HttpStatus		_status;
 	UniqHeaders		_headers;
 	std::string		_body;
+	bool			_bodyClearedForHead;
 	bool			_needsCgiExecution;
 	CgiParams*		_cgiParams;
 	Request const*	_cgiRequest; // Non-owning to prevent big duplicates (eg. request with a 100MB body)
@@ -47,6 +48,7 @@ class Response
 		void	setHeader(std::string const&, std::string const&);
 		void	setBody(std::string const&);
 		void	clearBody();
+		void	clearBodyForHead();
 		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
 		void	markForCgiExecution(CgiParams const&, Request const&);

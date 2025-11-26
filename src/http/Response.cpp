@@ -2,6 +2,7 @@
 
 Response::Response()
 : _status(HttpStatus())
+, _bodyClearedForHead(false)
 , _needsCgiExecution(false)
 , _cgiParams(NULL)
 , _cgiRequest(NULL)
@@ -14,6 +15,7 @@ Response::Response()
  */
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
+, _bodyClearedForHead(false)
 , _needsCgiExecution(false)
 , _cgiParams(NULL)
 , _cgiRequest(NULL)
@@ -26,6 +28,7 @@ Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
 , _body(other._body)
+, _bodyClearedForHead(other._bodyClearedForHead)
 , _needsCgiExecution(other._needsCgiExecution)
 , _cgiParams(other._cgiParams ? new CgiParams(*other._cgiParams) : NULL) // Deep copy
 , _cgiRequest(other._cgiRequest) // Pointer copy
@@ -38,6 +41,7 @@ Response& Response::operator=(Response const& other)
 		_status = other._status;
 		_headers = other._headers;
 		_body = other._body;
+		_bodyClearedForHead = other._bodyClearedForHead;
 		_needsCgiExecution = other._needsCgiExecution;
 		delete _cgiParams;
 		_cgiParams = other._cgiParams ? new CgiParams(*other._cgiParams) : NULL; // Deep copy
@@ -118,7 +122,14 @@ void	Response::setBody(std::string const& body)
 void	Response::clearBody()
 {
 	_body.clear();
-	_manageContentType();
+	_bodyClearedForHead = false;
+}
+
+void	Response::clearBodyForHead()
+{
+	bool hadBody = !_body.empty();
+	_body.clear();
+	_bodyClearedForHead = hadBody;
 }
 
 void	Response::setConnectionFromRequest(Request const& request)
@@ -185,10 +196,10 @@ void	Response::_updateContentLength()
 
 void	Response::_manageContentType()
 {
-	if (_body.empty())
-		_headers.erase("content-type");
-	else if (_headers.find("content-type") == _headers.end() && !_body.empty())
+	if (!_body.empty() && _headers.find("content-type") == _headers.end())
 		_headers["content-type"] = "text/html";
+	else if (_body.empty() && !_bodyClearedForHead)
+		_headers.erase("content-type");
 }
 
 bool	Response::_hasHeader(std::string const& keyLowcase) const

@@ -38,23 +38,51 @@ void	RoutingDecision::_makeDecision()
 		_decision = STATIC;
 }
 
+/**
+ * Selects the appropriate server block based on request connection details and Host header.
+ * 
+ * Server selection follows a priority-based matching system:
+ * 
+ * 1. Exact match: Server with exact IP:Port + matching Hostname
+ *    - Example: Request to 127.0.0.1:8080 with Host: example.com
+ *    - Matches: Server listening on 127.0.0.1:8080 with server_name example.com
+ * 2. Exact port: Server with exact IP:Port (Hostname mismatch)
+ *    - Fallback when port matches but hostname doesn't
+ *	  - In case of multiple servers with the same matching port, fallbacks to the 1st server
+ *    - Example: Request to 127.0.0.1:8080 with Host: wrong.com
+ *	  - Matches: First server listening on 127.0.0.1:8080 (regardless of server_name)
+ * 3. Wildcard IP: Server with wildcard IP (0.0.0.0) matching requested port
+ *    - Example: Request to 192.168.1.1:8080 matches server on 0.0.0.0:8080
+ * 4. Port only: Any server listening on the requested port
+ *    - Final fallback for port-based routing when hostname doesn't match
+ *    - Follows Nginx behavior of using first server block on the port
+ */
 void	RoutingDecision::_setServer()
 {
 	_server = NULL;
 	std::vector<ServerBlock> const& servers = _config.getServers();
+	std::string requestedHost = utils::extractHostname(_request.getHeaders());
 	ServerBlock const* wildcardMatch = NULL;
+	ServerBlock const* exactPortMatch = NULL;
 	for (size_t i = 0; i < servers.size(); ++i) {
 		std::set<HostPortPair> const& serverListens = servers[i].getListen();
 		for (std::set<HostPortPair>::const_iterator it = serverListens.begin(); it != serverListens.end(); ++it) {
 			if (*it == _listeningOn) {
-				_server = &servers[i]; // exact match (priority 1)
-				return;
+				if (servers[i].matchesHost(requestedHost)) {
+					_server = &servers[i]; // exact match (priority 1)
+					return;
+				}
+				if (!exactPortMatch)
+					exactPortMatch = &servers[i];
 			}
-			if (!wildcardMatch && it->isWildcardFor(_listeningOn))
+			if (!wildcardMatch && it->isWildcardFor(_listeningOn)) // wildcard match (priority 2)
                 wildcardMatch = &servers[i];
 		}
 	}
-	if (wildcardMatch) _server = wildcardMatch; // wildcard match (priority 2)
+	if (exactPortMatch)
+		_server = exactPortMatch;
+	else if (wildcardMatch)
+		_server = wildcardMatch; // wildcard match (priority 2)
 	else _server = &servers[0]; // fallback for security (priority 3), but should never happen
 }
 
