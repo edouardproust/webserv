@@ -16,7 +16,7 @@ class Response
 {
 	HttpStatus							_status;
 	std::map<std::string, std::string>	_headers;
-	std::vector<std::string>			_setCookies;
+	std::vector<std::string>			_setCookieHeaders;
 	std::string							_body;
 	bool								_bodyClearedForHead;
 
@@ -47,13 +47,13 @@ class Response
 		void	clearBody();
 		void	clearBodyForHead();
 		void	setConnectionFromRequest(Request const& request);
-		void	setCookie(const std::string& name, const std::string& value, 
+		void	addSetCookieHeader(const std::string& name, const std::string& value, 
                    const std::string& options);
 		bool	isConnectionClose() const;
 
 		HttpStatus const& 							getStatus() const;
 		std::map<std::string, std::string> const&	getHeaders() const;
-		const std::vector<std::string>&				getSetCookies() const;
+		const std::vector<std::string>&				getSetCookieHeaders() const;
 		std::string const&							getBody() const;
 
 		class RawException: public std::runtime_error {

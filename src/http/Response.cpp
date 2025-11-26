@@ -21,7 +21,7 @@ Response::Response(std::string const& rawResponse)
 Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
-, _setCookies(other._setCookies)
+, _setCookieHeaders(other._setCookieHeaders)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
 {}
@@ -32,7 +32,7 @@ Response& Response::operator=(Response const& other)
 	{
 		_status = other._status;
 		_headers = other._headers;
-		_setCookies = other._setCookies;
+		_setCookieHeaders = other._setCookieHeaders;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
 	}
@@ -76,9 +76,9 @@ std::map<std::string, std::string> const& Response::getHeaders() const
 	return _headers;
 }
 
-const std::vector<std::string>& Response::getSetCookies() const
+const std::vector<std::string>& Response::getSetCookieHeaders() const
 {
-	return _setCookies;
+	return _setCookieHeaders;
 }
 
 std::string const& Response::getBody() const
@@ -147,14 +147,14 @@ void	Response::setConnectionFromRequest(Request const& request)
 		setHeader("Connection", "keep-alive");
 }
 
-void	Response::setCookie(const std::string& name, const std::string& value, 
+void	Response::addSetCookieHeader(const std::string& name, const std::string& value, 
                         const std::string& options)
 {
-	std::string cookieHeader = name + "=" + value;
+	std::string setCookieHeader = name + "=" + value;
     
     if (!options.empty())
-		cookieHeader += "; " + options;
-	_setCookies.push_back(cookieHeader);
+		setCookieHeader += "; " + options;
+	_setCookieHeaders.push_back(setCookieHeader);
 }
 
 bool	Response::isConnectionClose() const
@@ -208,8 +208,8 @@ std::string Response::_buildHeaders() const
 		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
 	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
 	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
-	for (std::vector<std::string>::const_iterator it = _setCookies.begin();
-		it != _setCookies.end(); ++it)
+	for (std::vector<std::string>::const_iterator it = _setCookieHeaders.begin();
+		it != _setCookieHeaders.end(); ++it)
 			headerStream << "Set-Cookie: " << *it << "\r\n";
 	if (_headers.find("location") != _headers.end())
 		headerStream << "Location: " << _headers.find("location")->second << "\r\n";

@@ -90,20 +90,16 @@ void	Network::_initListeningSockets()
 
 	// Only create socket if port is unique
 	try {
-		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-        {
+		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i) {
             size_t port = listenPorts[i].getPort();
             bool found = false;
-            for (size_t j = 0; j < usedPorts.size(); ++j)
-            {
-                if (usedPorts[j] == port)
-                {
+            for (size_t j = 0; j < usedPorts.size(); ++j) {
+                if (usedPorts[j] == port) {
                     found = true;
                     break;
                 }
             }
-            if (!found)
-            {
+            if (!found) {
                 usedPorts.push_back(port);
                 _listeningSockets.push_back(new Socket(listenPorts[i]));
             }
