@@ -89,32 +89,26 @@ void	Config::_validate() const
 	if (_servers.empty())
 		throw std::runtime_error("No server blocks defined");
 	std::map<std::string, std::vector<size_t> > ipPortToServers;
-	for (size_t i = 0; i < _servers.size(); ++i)
-	{
+	for (size_t i = 0; i < _servers.size(); ++i) {
 		std::set<HostPortPair> serverListens = _servers[i].getListen();
 		for (std::set<HostPortPair>::const_iterator it = serverListens.begin();
-			it != serverListens.end(); ++it)
-		{
+			it != serverListens.end(); ++it) {
 			std::string ipPort = it->getHost() + ":" + utils::str(it->getPort());
 			ipPortToServers[ipPort].push_back(i);
 		}
 	}
 	for (std::map<std::string, std::vector<size_t> >::const_iterator it = ipPortToServers.begin();
-		it != ipPortToServers.end(); ++it)
-	{
-		if (it->second.size() > 1)
-		{
+		it != ipPortToServers.end(); ++it) {
+		if (it->second.size() > 1) {
 			bool hasServerName = false;
 			std::set<std::string> serverNames;
-            for (size_t j = 0; j < it->second.size(); ++j)
-			{
+            for (size_t j = 0; j < it->second.size(); ++j) {
 				size_t serverIndex = it->second[j];
 				const std::vector<std::string>& names = _servers[serverIndex].getServerNames();
 				if (!names.empty())
 					hasServerName = true;
 			}
-			if (!hasServerName)
-			{
+			if (!hasServerName) {
 				Log::prod("warning", "Config: conflicting server name \"\" on " + it->first + 
 					", first server will be used");
 			}

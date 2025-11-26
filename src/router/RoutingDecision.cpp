@@ -64,19 +64,11 @@ void	RoutingDecision::_setServer()
 	std::string requestedHost = utils::extractHostname(_request.getHeaders());
 	ServerBlock const* wildcardMatch = NULL;
 	ServerBlock const* exactPortMatch = NULL;
-	ServerBlock const* portOnlyMatch = NULL;
 	for (size_t i = 0; i < servers.size(); ++i) {
 		std::set<HostPortPair> const& serverListens = servers[i].getListen();
 		for (std::set<HostPortPair>::const_iterator it = serverListens.begin(); it != serverListens.end(); ++it) {
-			bool portMatches = (*it == _listeningOn || it->isWildcardFor(_listeningOn));
-			if (portMatches)
-			{
-				if (!portOnlyMatch)
-					portOnlyMatch = &servers[i];
-			}
 			if (*it == _listeningOn) {
-				if (servers[i].matchesHost(requestedHost))
-				{
+				if (servers[i].matchesHost(requestedHost)) {
 					_server = &servers[i]; // exact match (priority 1)
 					return;
 				}
@@ -91,8 +83,6 @@ void	RoutingDecision::_setServer()
 		_server = exactPortMatch;
 	else if (wildcardMatch)
 		_server = wildcardMatch; // wildcard match (priority 2)
-	else if (portOnlyMatch)
-		_server = portOnlyMatch;
 	else _server = &servers[0]; // fallback for security (priority 3), but should never happen
 }
 
