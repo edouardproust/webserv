@@ -17,6 +17,7 @@ test_files/
 .vscode/
 YoupiBanane/
 tmp/
+tests/config/replaced
 
 # Specific files
 webserv
@@ -26,6 +27,8 @@ README.md
 .gitkeep
 log*
 /*.config
+tests/website/*.txt
+
 
 # Development files
 dev.*
