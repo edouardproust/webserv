@@ -172,6 +172,7 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 {
 	std::istringstream	headersStream(headersPart);
 	std::string	line;
+
 	while (std::getline(headersStream, line))
 	{
 		if (line.length() > _HEADER_MAX_LEN)
@@ -186,11 +187,20 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 		if (result.getSlug() != "ok")
 			return result;
 	}
+	const std::vector<std::pair<std::string, std::string> >& allHeaders = request.getAllHeaders();
+	int hostHeaderCount = 0;
+	for (size_t i = 0; i < allHeaders.size(); ++i)
+	{
+		if (allHeaders[i].first == "host")
+			hostHeaderCount++;
+	}
+	if (hostHeaderCount != 1)
+		return HttpStatus("bad_request");
 	std::map<std::string, std::string> headers = request.getHeaders();
 	if (headers.find("content-length") != headers.end() &&
 		headers.find("transfer-encoding") != headers.end())
 			return HttpStatus("bad_request");
-	if (headers.find("host") == headers.end())
+	if (hostHeaderCount == 0)
 		return HttpStatus("bad_request");
 	if (hasBody)
 	{

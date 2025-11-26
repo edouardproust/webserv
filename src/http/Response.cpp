@@ -2,6 +2,7 @@
 
 Response::Response()
 : _status(HttpStatus())
+, _bodyClearedForHead(false)
 {
 	_initDefaultHeaders();
 }
@@ -11,6 +12,7 @@ Response::Response()
  */
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
+, _bodyClearedForHead(false)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -20,6 +22,7 @@ Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
 , _body(other._body)
+, _bodyClearedForHead(other._bodyClearedForHead)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -29,6 +32,7 @@ Response& Response::operator=(Response const& other)
 		_status = other._status;
 		_headers = other._headers;
 		_body = other._body;
+		_bodyClearedForHead = other._bodyClearedForHead;
 	}
 	return *this;
 }
@@ -117,7 +121,14 @@ void	Response::setBody(std::string const& body)
 void	Response::clearBody()
 {
 	_body.clear();
-	_manageContentType();
+	_bodyClearedForHead = false;
+}
+
+void	Response::clearBodyForHead()
+{
+	bool hadBody = !_body.empty();
+	_body.clear();
+	_bodyClearedForHead = hadBody;
 }
 
 void	Response::setConnectionFromRequest(Request const& request)
@@ -146,10 +157,10 @@ void	Response::_updateContentLength()
 
 void	Response::_manageContentType()
 {
-	if (_body.empty())
-		_headers.erase("content-type");
-	else if (_headers.find("content-type") == _headers.end() && !_body.empty())
+	if (!_body.empty() && _headers.find("content-type") == _headers.end())
 		_headers["content-type"] = "text/html";
+	else if (_body.empty() && !_bodyClearedForHead)
+		_headers.erase("content-type");
 }
 
 bool	Response::_hasHeader(std::string const& keyLowcase) const

@@ -17,6 +17,7 @@ class Response
 	HttpStatus							_status;
 	std::map<std::string, std::string>	_headers;
 	std::string							_body;
+	bool								_bodyClearedForHead;
 
 	void		_updateContentLength();
 	void		_manageContentType();
@@ -43,6 +44,7 @@ class Response
 		void	setHeader(std::string const& name, std::string const& value);
 		void	setBody(std::string const& body);
 		void	clearBody();
+		void	clearBodyForHead();
 		void	setConnectionFromRequest(Request const& request);
 		bool	isConnectionClose() const;
 

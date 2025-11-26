@@ -70,8 +70,8 @@ Response	StaticHandler::handleDelete()
 {
 	if (!utils::fileExists(_finalPath))
 		return handleError(HttpStatus("not_found"));
-	_finalPath = _finalPath.substr(0, _finalPath.find_last_of('/')); //!\ final path updated
-	if (access(_finalPath.c_str(), W_OK) != 0)
+	std::string directoryPath = _finalPath.substr(0, _finalPath.find_last_of('/'));
+	if (access(directoryPath.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"));
 	if (std::remove(_finalPath.c_str()) == 0)
 	{
@@ -93,7 +93,7 @@ Response StaticHandler::handlePost() {
 Response	StaticHandler::handleHead()
 {
 	Response response = handleGet();
-	response.clearBody();
+	response.clearBodyForHead();
 	return response;
 }
 
@@ -157,6 +157,11 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 			}
 		}
 		resp.setBody(_errorPageHtml(status));
+	}
+	else
+	{
+		std::string errorBody = _errorPageHtml(status);
+        resp.setHeader("Content-Length", utils::str(errorBody.size()));
 	}
 	return resp;
 }

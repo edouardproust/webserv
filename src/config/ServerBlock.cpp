@@ -33,6 +33,7 @@ ServerBlock::ServerBlock(std::string const& blockContent)
 ServerBlock::ServerBlock(const ServerBlock &other)
 : _root(other._root)
 , _listen(other._listen)
+, _serverNames(other._serverNames)
 , _clientMaxBodySize(other._clientMaxBodySize)
 , _isSetClientBodySize(other._isSetClientBodySize)
 , _uploadStore(other._uploadStore)
@@ -51,6 +52,7 @@ ServerBlock& ServerBlock::operator=(ServerBlock const& other)
     if (this != &other) {
         _root = other._root;
         _listen = other._listen;
+		_serverNames =other._serverNames;
         _clientMaxBodySize = other._clientMaxBodySize;
 		_isSetClientBodySize = other._isSetClientBodySize;
 		_uploadStore = other._uploadStore;
@@ -168,6 +170,8 @@ void	ServerBlock::_parseDirective(std::string& token, Tokens& tokens, bool inQuo
 			_setIndexFiles(tokens);
 		else if (directiveName == "upload_store")
 			_setUploadStore(tokens);
+		else if (directiveName == "server_name")
+			_setServerName(tokens);
 		// -- additional directives can be added here --
 		else {
 			throw std::runtime_error(directiveName + ": Unsupported directive.\n"
@@ -283,6 +287,15 @@ void	ServerBlock::_setListen(Tokens const& tokens)
 		HostPortPair listen(tokens[i]); // throw
 		_listen.insert(listen);
 	}
+}
+
+void	ServerBlock::_setServerName(Tokens const& tokens)
+{
+	_serverNames.clear();
+	if (tokens.size() < 2)
+		throw std::runtime_error("Should have at least one server name");
+	for (size_t i = 1; i < tokens.size(); ++i)
+		_serverNames.push_back(tokens[i]);
 }
 
 /**
@@ -422,6 +435,11 @@ std::set<HostPortPair> const&	ServerBlock::getListen() const
 	return _listen;
 }
 
+std::vector<std::string> const&	ServerBlock::getServerNames() const
+{
+	return _serverNames;
+}
+
 /**
  * Defaults to `ABSOLUTE_MAX_CLIENT_BODY_SIZE`.
  */
@@ -445,8 +463,22 @@ std::vector<std::string> const&	ServerBlock::getIndexFiles() const
 	return _indexFiles;
 }
 
+bool	ServerBlock::matchesHost(const std::string& hostname) const
+{
+	if (_serverNames.empty())
+		return false;
+	for (size_t i = 0; i < _serverNames.size(); ++i)
+	{
+		if (_serverNames[i] == hostname)
+			return true;
+	}
+	return false;
+}
+
 std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs)
 {
+	os << "=== SERVER BLOCK ===" << "\n";
+
 	os << "- root: " << PrintableString(rhs.getRoot()) << "\n";
 
 	std::set<HostPortPair> const& listen = rhs.getListen();
@@ -454,6 +486,12 @@ std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs)
 	for (std::set<HostPortPair>::const_iterator it = listen.begin(); it != listen.end(); it++) {
 		os << "  - " << PrintableString(it->getHost()) << " -> " << it->getPort() << "\n";
 	}
+
+	const std::vector<std::string>& serverNames = rhs.getServerNames();
+	os << "- server_names: " << serverNames.size() << "\n";
+	for (size_t i = 0; i < serverNames.size(); ++i)
+		os << "  - " << PrintableString(serverNames[i]) << "\n";
+
 	os << "- client_max_body_size: " << rhs.getClientMaxBodySize() << "\n";
 
 	os << "- upload_store: " << PrintableString(rhs.getUploadStore()) << "\n";

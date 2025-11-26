@@ -76,15 +76,38 @@ void Network::startServers()
 	}
 }
 
+/**
+ * Reads the configuration and creates one listening socket for each unique port.
+ *
+ * Creates one socket per port, even if multiple websites share that port.
+ * This allows virtual hosts to work properly.
+ */
 void	Network::_initListeningSockets()
 {
-	// Get all unique host:port pairs directly from config
+	// Get all unique ports only
+    std::vector<size_t> usedPorts;
 	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
 
-	// Create socket for each HostPortPair
+	// Only create socket if port is unique
 	try {
 		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-			_listeningSockets.push_back(new Socket(listenPorts[i]));
+        {
+            size_t port = listenPorts[i].getPort();
+            bool found = false;
+            for (size_t j = 0; j < usedPorts.size(); ++j)
+            {
+                if (usedPorts[j] == port)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                usedPorts.push_back(port);
+                _listeningSockets.push_back(new Socket(listenPorts[i]));
+            }
+        }
 		//  Bind and listen to each socket created
 		for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 			_listeningSockets[i]->safeBind();
