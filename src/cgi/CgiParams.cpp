@@ -55,6 +55,9 @@ CgiParams&	CgiParams::operator=(CgiParams const& other)
 	return *this;
 }
 
+CgiParams::~CgiParams()
+{}
+
 /**
  * Builds the environment variables for the CGI script from the Request and LocationBlock.
  *

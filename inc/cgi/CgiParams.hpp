@@ -4,7 +4,15 @@
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
 
-// TODO canonical class + class comment
+/**
+ * Represents the complete set of parameters required to run a CGI executable
+ * (executor path, script path, input body, environment and arguments).
+ *
+ * Value-type class: copyable and assignable (orthodox canonical form).
+ * All stored data is owned, including environment and argument storage required for execve().
+ *
+ * Ensures envp/argv pointers remain valid by regenerating them after copy or assignment.
+ */
 class CgiParams
 {
 	bool		_isValid;
@@ -28,14 +36,14 @@ class CgiParams
 
 	static std::string	_headerToEnvVar(std::string const&);
 
-
-
 	public:
 
+		// Orthodox canonical form
 		CgiParams();
 		CgiParams(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
 		CgiParams(CgiParams const&);
 		CgiParams&	operator=(CgiParams const&);
+		~CgiParams();
 
 		bool	isValid() const;
 
