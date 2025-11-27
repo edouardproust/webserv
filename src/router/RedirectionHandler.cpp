@@ -30,6 +30,7 @@ Response	RedirectionHandler::run()
 		return static_.handleError(HttpStatus("internal_server_error"));
 	}
 	Response response;
+	response.setServedFilePath("redirected"); // for debug
 	response.setStatus(HttpStatus(_code));
 	if (_code >= 300 && _code < 400)
 		response.setHeader("Location", _path);
@@ -38,7 +39,7 @@ Response	RedirectionHandler::run()
 	else if (_code == 302)
 		response.setHeader("Cache-Control", "no-cache");
 	response.setBody(_generateRedirectionHtml());
-	response.setContentType("text/html");
+	response.setHeader("Content-Type", "text/html");
 	return response;
 }
 

@@ -25,6 +25,7 @@ Response	StaticHandler::handleGet()
 	// Serve webserv welcome page
 	 if (_location->getRoot().empty() && _finalPath == "/") {
 		resp.setBody(_welcomePageHtml());
+		resp.setServedFilePath("built-in welcome page"); // for debug
 		return resp;
 	}
 
@@ -56,6 +57,7 @@ Response	StaticHandler::handleGet()
 		// No index file found
 		if (isAutoindex) { // Generate HTML listing
 			resp.setBody(_autoindexHtml());
+			resp.setServedFilePath("built-in index"); // for debug
 			return resp;
 
 		}
@@ -76,6 +78,7 @@ Response	StaticHandler::handleDelete()
 	if (std::remove(_finalPath.c_str()) == 0)
 	{
 		Response response;
+		response.setServedFilePath(_finalPath);
 		response.setStatus(HttpStatus("no_content"));
 		return response;
 	}
@@ -93,6 +96,7 @@ Response StaticHandler::handlePost() {
 Response	StaticHandler::handleHead()
 {
 	Response response = handleGet();
+	response.setServedFilePath(_finalPath);
 	response.clearBodyForHead();
 	return response;
 }
@@ -132,6 +136,7 @@ Response	StaticHandler::handlePut()
 		response.setStatus(HttpStatus("created"));
 		response.setHeader("Location", request.getPath());
 	}
+	response.setServedFilePath(_finalPath);
 	return response;
 }
 
@@ -142,7 +147,7 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 
 	Response resp;
 	resp.setStatus(status);
-	resp.setContentType(_getMime("html"));
+	resp.setHeader("Content-Type", _getMime("html"));
 
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (_routingDecision.getRequest().getMethod() != "HEAD")
@@ -163,6 +168,7 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 		std::string errorBody = _errorPageHtml(status);
         resp.setHeader("Content-Length", utils::str(errorBody.size()));
 	}
+	resp.setServedFilePath(_finalPath);
 	return resp;
 }
 
@@ -179,8 +185,9 @@ Response	StaticHandler::errorBeforeParsing(std::string const& errorSlug)
 {
 	HttpStatus status(errorSlug);
 	Response resp;
+	resp.setServedFilePath("built-in error page"); // for debug
 	resp.setStatus(status);
-	resp.setContentType(_getMime("html"));
+	resp.setHeader("Content-Type", _getMime("html"));
 	resp.setBody(_errorPageHtml(status));
 	return resp;
 }
@@ -346,10 +353,11 @@ Response	StaticHandler::_serveFile()
 
 	Response resp;
 	resp.setStatus(HttpStatus("ok"));
-	resp.setContentType(_getMimeFromPath(_finalPath));
+	resp.setHeader("Content-Type", _getMimeFromPath(_finalPath));
 	std::string filename = utils::getFileName(_finalPath);
 	resp.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
 	resp.setBody(content);
+	resp.setServedFilePath(_finalPath);
 	return resp;
 }
 

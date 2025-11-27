@@ -216,6 +216,7 @@ Response	CgiHandler::_handleStatus(int status)
 			throw ExecException(_cgiError.empty() ? ("Error code " + utils::str(exitCode)) : _cgiError);
 		}
 		Response res(_cgiOutput); // throw Response::RawException if raw response invalid syntax
+		res.setServedFilePath(_cgiParams.getScriptName());
 		return res;
 	} else if (WIFSIGNALED(status)) {
 		int signal = WTERMSIG(status);

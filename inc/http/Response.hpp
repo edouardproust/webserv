@@ -15,6 +15,7 @@
 class Response
 {
 	HttpStatus	_status;
+	std::string	_servedFilePath; // for debug purpose
 	UniqHeaders	_headers;
 	std::string	_body;
 	bool		_bodyClearedForHead;
@@ -40,7 +41,7 @@ class Response
 		std::string stringify() const;
 
 		void	setStatus(HttpStatus const&);
-		void	setContentType(std::string const&);
+		void	setServedFilePath(std::string const&);
 		void	setHeader(std::string const&, std::string const&);
 		void	setBody(std::string const&);
 		void	clearBody();
@@ -49,6 +50,7 @@ class Response
 		bool	isConnectionClose() const;
 
 		HttpStatus const& 	getStatus() const;
+		std::string const&	getServedFilePath() const;
 		UniqHeaders const&	getHeaders() const;
 		std::string const&	getBody() const;
 

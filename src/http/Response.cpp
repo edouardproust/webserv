@@ -20,6 +20,7 @@ Response::Response(std::string const& rawResponse)
 
 Response::Response(Response const& other)
 : _status(other._status)
+, _servedFilePath(other._servedFilePath)
 , _headers(other._headers)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
@@ -30,6 +31,7 @@ Response& Response::operator=(Response const& other)
 	if (this != &other)
 	{
 		_status = other._status;
+		_servedFilePath = other._servedFilePath;
 		_headers = other._headers;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
@@ -69,6 +71,11 @@ HttpStatus const&	Response::getStatus() const
 	return _status;
 }
 
+std::string const&	Response::getServedFilePath() const
+{
+	return _servedFilePath;
+}
+
 UniqHeaders const& Response::getHeaders() const
 {
 	return _headers;
@@ -86,15 +93,14 @@ void	Response::setStatus(HttpStatus const& status)
 		setBody("");
 }
 
-/**
- * Set header "Content-Type".
- * It is a wrapper of `setHeader` method that prevents mispelling.
- */
-void	Response::setContentType(std::string const& value)
+void	Response::setServedFilePath(std::string const& absoluteFilePath)
 {
-	setHeader("Content-Type", value);
+	_servedFilePath = absoluteFilePath;
 }
 
+/**
+ * @param name Not case-sensitive
+ */
 void	Response::setHeader(std::string const& name, std::string const& value)
 {
 	std::string normalizedName = utils::toLowerCase(name);
@@ -280,6 +286,7 @@ int	Response::_setHeaders(std::string const& headersPart) {
 std::ostream& operator<<(std::ostream& os, Response const& response)
 {
 	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
+	os << "- Served file path: " << PrintableString(response.getServedFilePath()) << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	UniqHeaders const& headers = response.getHeaders();
 	for (UniqHeaders::const_iterator it = headers.begin();
