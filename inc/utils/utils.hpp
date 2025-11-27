@@ -2,6 +2,7 @@
 #define UTILS_HPP
 
 #include "utils/Const.hpp"
+#include "utils/typedefs.hpp"
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>
@@ -9,6 +10,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <cerrno>
+#include <map>
 
 namespace utils {
 
@@ -30,7 +32,7 @@ namespace utils {
 	bool	isRelativePath(std::string const&);
 
 	bool	isAccessibleDirectory(std::string const&);
-	bool	isWritableDirectory(const std::string& path);
+	bool	isWritableDirectory(std::string const&);
 	bool	isReadableFile(std::string const&);
 	bool	isExecutableFile(std::string const&);
 	bool	fileExists(std::string const&);
@@ -43,7 +45,7 @@ namespace utils {
 
 
 	std::string	readFile(std::string const&);
-	std::string	getFileName(const std::string& path);
+	std::string	getFileName(std::string const&);
 	std::string	getFileExtension(std::string const&);
 	std::string	toLowerCase(std::string const&);
 	std::vector<std::string>	split(std::string const&, char);
@@ -57,6 +59,7 @@ namespace utils {
 	std::string	excerpt(size_t, std::string const&);
 	std::string	formatDate(time_t, const std::string&);
 
+	std::string extractHostname(UniqHeaders const&);
 }
 
 #include "../src/utils/utils.tpp"

@@ -17,6 +17,7 @@ class Response
 	HttpStatus	_status;
 	UniqHeaders	_headers;
 	std::string	_body;
+	bool		_bodyClearedForHead;
 
 	void		_updateContentLength();
 	void		_manageContentType();
@@ -43,6 +44,7 @@ class Response
 		void	setHeader(std::string const&, std::string const&);
 		void	setBody(std::string const&);
 		void	clearBody();
+		void	clearBodyForHead();
 		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
 

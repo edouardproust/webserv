@@ -73,7 +73,7 @@ bool	utils::fileExists(std::string const& path)
 	return (stat(path.c_str(), &buffer) == 0);
 }
 
-size_t	utils::getFileSize(const std::string& path)
+size_t	utils::getFileSize(std::string const& path)
 {
 	std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
 	if (!file.is_open())
@@ -306,3 +306,18 @@ std::string utils::formatDate(time_t time, const std::string& format)
     return buffer;
 }
 
+/**
+ * Extract hostname from request headers (at this point we 100% have a host header)
+ * - Looks for "host" header (should have been normalized already)
+ * - Removes port if present: "example.com:8080" -> "example.com"
+ * - Returns "unknown" if host header is not found
+ */
+std::string	utils::extractHostname(UniqHeaders const& headers)
+{
+	UniqHeaders::const_iterator it = headers.find("host");
+	if (it == headers.end())
+		return "unknown";
+	const std::string& host_value = headers.at("host");
+	size_t colon_pos = host_value.find(':');
+	return (colon_pos != std::string::npos) ? host_value.substr(0, colon_pos) : host_value;
+}
