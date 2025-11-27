@@ -19,16 +19,13 @@ class StaticHandler
 
 	RoutingDecision const&	_routingDecision;
 	LocationBlock const*	_location;
-
 	std::string				_finalPath;
 
-	Response _serveFile();
-
-	static std::string	_welcomePageHtml();
-	std::string			_autoindexHtml() const;
-	static std::string	_errorPageHtml(HttpStatus const&);
-
-
+	Response			_serveFile();
+	std::string			_builtinAutoindexHtml() const;
+	static Response		_buildErrorResponse(HttpStatus, std::string const&, std::string const&, ErrorPages const&);
+	static std::string	_builtinErrorPageHtml(HttpStatus const&);
+	static std::string	_builtinWelcomePageHtml();
 	static std::string	_getMime(std::string const&);
 	static std::string	_getMimeFromPath(std::string const&);
 
@@ -47,14 +44,10 @@ class StaticHandler
 		Response		handleHead();
 		Response		handlePut();
 		Response		handlePost();
-		Response		handleError(HttpStatus const&);
-		Response		handleError(std::string const&);
-		static Response	errorBeforeParsing(std::string const&);
+		static Response	handleError(std::string const&, RoutingDecision const&);
+		static Response	builtinError(std::string const&, std::string const&);
 
 		std::string const&	getFinalPath() const;
-		bool	hasUpdatedFinalPath() const;
 };
-
-std::ostream& operator<<(std::ostream&, StaticHandler const&);
 
 #endif

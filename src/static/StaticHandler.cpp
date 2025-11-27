@@ -24,7 +24,7 @@ Response	StaticHandler::handleGet()
 
 	// Serve webserv welcome page
 	 if (_location->getRoot().empty() && _finalPath == "/") {
-		resp.setBody(_welcomePageHtml());
+		resp.setBody(_builtinWelcomePageHtml());
 		resp.setServedFilePath("built-in welcome page"); // for debug
 		return resp;
 	}
@@ -36,7 +36,7 @@ Response	StaticHandler::handleGet()
 	{
 		DIR* dir = opendir(_finalPath.c_str());
 		if (!dir)
-			return handleError(HttpStatus("forbidden"));
+			return handleError("forbidden");
 		closedir(dir);
 		// Trying serving index files
 		for (size_t i = 0; i < locIndexes.size(); ++i)
@@ -56,25 +56,25 @@ Response	StaticHandler::handleGet()
 		}
 		// No index file found
 		if (isAutoindex) { // Generate HTML listing
-			resp.setBody(_autoindexHtml());
+			resp.setBody(_builtinAutoindexHtml());
 			resp.setServedFilePath("built-in index"); // for debug
 			return resp;
 
 		}
-		return handleError(HttpStatus("not_found"));
+		return handleError("not_found");
 	}
 	else if (utils::isReadableFile(_finalPath))
 		return _serveFile();
-	return handleError(HttpStatus("not_found"));
+	return handleError("not_found");
 }
 
 Response	StaticHandler::handleDelete()
 {
 	if (!utils::fileExists(_finalPath))
-		return handleError(HttpStatus("not_found"));
+		return handleError("not_found");
 	std::string directoryPath = _finalPath.substr(0, _finalPath.find_last_of('/'));
 	if (access(directoryPath.c_str(), W_OK) != 0)
-		return handleError(HttpStatus("forbidden"));
+		return handleError("forbidden");
 	if (std::remove(_finalPath.c_str()) == 0)
 	{
 		Response response;
@@ -83,14 +83,14 @@ Response	StaticHandler::handleDelete()
 		return response;
 	}
 	else
-		return handleError(HttpStatus("internal_server_error"));
+		return handleError("internal_server_error");
 }
 
 /**
  * Simply return an error (POST method not allowed on a static file).
  */
 Response StaticHandler::handlePost() {
-	return handleError(HttpStatus("method_not_allowed"));
+	return handleError("method_not_allowed");
 }
 
 Response	StaticHandler::handleHead()
@@ -108,7 +108,7 @@ Response	StaticHandler::handlePut()
 
 	std::string directory = _finalPath;
 	if (utils::isAccessibleDirectory(_finalPath))
-        return handleError(HttpStatus("forbidden"));
+        return handleError("forbidden");
 	else
 	{
 		size_t lastSlash = _finalPath.find_last_of('/');
@@ -118,12 +118,12 @@ Response	StaticHandler::handlePut()
 	if (directory.empty())
 		directory = "/";
 	if (!utils::isWritableDirectory(directory))
-		return handleError(HttpStatus("forbidden"));
+		return handleError("forbidden", rd);
 	std::string const& body = request.getBody();
 	bool fileExists = utils::fileExists(_finalPath);
 	std::ofstream file(_finalPath.c_str(), std::ios::binary);
 	if (!file.is_open())
-		return handleError(HttpStatus("internal_server_error"));
+		return handleError("internal_server_error");
 	file.write(body.c_str(), body.size());
 	file.close();
     if (fileExists)
@@ -140,85 +140,67 @@ Response	StaticHandler::handlePut()
 	return response;
 }
 
-Response	StaticHandler::handleError(HttpStatus const& status)
+Response	StaticHandler::_buildErrorResponse(HttpStatus status, std::string const& method, std::string const& finalPath, ErrorPages const& locErrorPages)
 {
-	std::string const& locRoot = _location->getRoot();
-	ErrorPages const& locErrorPages = _location->getErrorPages();
-
-	Response resp;
-	resp.setStatus(status);
-	resp.setHeader("Content-Type", _getMime("html"));
-	resp.setServedFilePath("built-in error page"); // default, for debug
-
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
-	if (_routingDecision.getRequest().getMethod() != "HEAD")
-	{
-		if (search != locErrorPages.end())
-		{
-			std::string errorPath = search->second;
-			if (utils::isReadableFile(errorPath)) {
-				_finalPath = errorPath; //!\ final path updated
-				resp.setBody(utils::readFile(_finalPath));
-				resp.setServedFilePath(_finalPath);
-				return resp;
-			}
+	if (search != locErrorPages.end()) {
+		std::string errorPath = search->second;
+		if (utils::isReadableFile(errorPath)) {
+			Response resp;
+			std::string errorBody = utils::readFile(errorPath);
+			resp.setStatus(status);
+			resp.setHeader("Content-Type", _getMime("html"));
+			resp.setHeader("Content-Length", utils::str(errorBody.length()));
+			if (method != "HEAD")
+				resp.setBody(errorBody);
+			resp.setServedFilePath(errorPath);
+			return resp;
 		}
-		resp.setBody(_errorPageHtml(status));
 	}
-	else
-	{
-		std::string errorBody = _errorPageHtml(status);
-        resp.setHeader("Content-Length", utils::str(errorBody.size()));
-	}
-	return resp;
+	return builtinError(status.getSlug(), method);
 }
 
 Response	StaticHandler::handleError(std::string const& errorSlug)
 {
-	HttpStatus const status(errorSlug);
-	return handleError(status);
+	HttpStatus	status(errorSlug);
+	std::string const& method = _routingDecision.getRequest().getMethod();
+	std::string const& finalPath = _routingDecision.getFinalPath();
+	ErrorPages const& errorPages = _routingDecision.getLocation()->getErrorPages();
+
+	return _buildErrorResponse(status, method, finalPath, errorPages);
+}
+
+Response	StaticHandler::handleError(std::string const& errorSlug, RoutingDecision const& rd)
+{
+	HttpStatus	status(errorSlug);
+	std::string const& method = rd.getRequest().getMethod();
+	std::string const& finalPath = rd.getFinalPath();
+	ErrorPages const& errorPages = rd.getLocation()->getErrorPages();
+
+	return _buildErrorResponse(status, method, finalPath, errorPages);
 }
 
 /**
  * Send back error before request parsing was done (in Network module for example).
+ * @param method Uppercase HTTP method: `GET`, `PUT`, `HEAD`, etc.
  */
-Response	StaticHandler::errorBeforeParsing(std::string const& errorSlug)
+Response	StaticHandler::builtinError(std::string const& errorSlug, std::string const& method)
 {
 	HttpStatus status(errorSlug);
+	std::string errorBody = _builtinErrorPageHtml(status);
+
 	Response resp;
 	resp.setServedFilePath("built-in error page"); // for debug
 	resp.setStatus(status);
 	resp.setHeader("Content-Type", _getMime("html"));
-	resp.setBody(_errorPageHtml(status));
+    resp.setHeader("Content-Length", utils::str(errorBody.length()));
+	if (method != "HEAD")
+		resp.setBody(errorBody);
 	return resp;
 }
 
 
 // HTML
-
-std::string StaticHandler::_welcomePageHtml()
-{
-	std::string html;
-
-	return std::string(
-		"<!DOCTYPE html>"
-		"<html>"
-		"<head>"
-		" <title>Welcome to " + Const::SERVER_NAME + "!</title>"
-		" <style>"
-		"  html { color-scheme: light dark; }"
-		"  body { width: 35em; margin: 0 auto; font-family: Tahoma, Verdana, Arial, sans-serif; }"
-		" </style>"
-		"</head>"
-		"<body>"
-		" <h1>Welcome to " + Const::SERVER_NAME + "!</h1>"
-		" <p>If you see this page, the web server is successfully working. Further configuration is required.</p>"
-		" <p>For online documentation and support please refer to <a href=\"" + Const::SERVER_REPO + "\">Github repository</a>.</p>"
-		" <p><em>Thank you for using " + Const::SERVER_NAME + ".</em></p>"
-		"</body>"
-		"</html>"
-	);
-}
 
 /**
  * Generates an automatic directory listing HTML page.
@@ -233,7 +215,7 @@ std::string StaticHandler::_welcomePageHtml()
  * though exact alignment may vary depending on font and browser rendering.
  * Entries are sorted alphabetically for consistent browsing.
  */
-std::string	StaticHandler::_autoindexHtml() const
+std::string	StaticHandler::_builtinAutoindexHtml() const
 {
 	std::string currentPath = _routingDecision.getRequest().getPath();
 	if (!currentPath.empty() && currentPath[currentPath.length() - 1] != '/')
@@ -274,7 +256,31 @@ std::string	StaticHandler::_autoindexHtml() const
 	return html.str();
 }
 
-std::string StaticHandler::_errorPageHtml(HttpStatus const& status)
+std::string StaticHandler::_builtinWelcomePageHtml()
+{
+	std::string html;
+
+	return std::string(
+		"<!DOCTYPE html>"
+		"<html>"
+		"<head>"
+		" <title>Welcome to " + Const::SERVER_NAME + "!</title>"
+		" <style>"
+		"  html { color-scheme: light dark; }"
+		"  body { width: 35em; margin: 0 auto; font-family: Tahoma, Verdana, Arial, sans-serif; }"
+		" </style>"
+		"</head>"
+		"<body>"
+		" <h1>Welcome to " + Const::SERVER_NAME + "!</h1>"
+		" <p>If you see this page, the web server is successfully working. Further configuration is required.</p>"
+		" <p>For online documentation and support please refer to <a href=\"" + Const::SERVER_REPO + "\">Github repository</a>.</p>"
+		" <p><em>Thank you for using " + Const::SERVER_NAME + ".</em></p>"
+		"</body>"
+		"</html>"
+	);
+}
+
+std::string StaticHandler::_builtinErrorPageHtml(HttpStatus const& status)
 {
 	return std::string(
 		"<!DOCTYPE html>"
@@ -360,19 +366,4 @@ Response	StaticHandler::_serveFile()
 	resp.setBody(content);
 	resp.setServedFilePath(_finalPath);
 	return resp;
-}
-
-std::string const&	StaticHandler::getFinalPath() const
-{
-	return _finalPath;
-}
-
-bool	StaticHandler::hasUpdatedFinalPath() const {
-	return (_routingDecision.getFinalPath() != _finalPath);
-}
-
-std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs) {
-	os << "- finalPath: " << PrintableString(rhs.getFinalPath()) << "\n";
-
-	return os;
 }
