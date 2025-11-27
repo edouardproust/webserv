@@ -15,10 +15,10 @@
 class Response
 {
 	HttpStatus	_status;
-	std::string	_servedFilePath; // for debug purpose
 	UniqHeaders	_headers;
 	std::string	_body;
 	bool		_bodyClearedForHead;
+	std::string	_servedFilePath; // for debug purpose only
 
 	void		_updateContentLength();
 	void		_manageContentType();
@@ -41,18 +41,18 @@ class Response
 		std::string stringify() const;
 
 		void	setStatus(HttpStatus const&);
-		void	setServedFilePath(std::string const&);
 		void	setHeader(std::string const&, std::string const&);
 		void	setBody(std::string const&);
+		void	setServedFilePath(std::string const&);
 		void	clearBody();
 		void	clearBodyForHead();
 		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
 
 		HttpStatus const& 	getStatus() const;
-		std::string const&	getServedFilePath() const;
 		UniqHeaders const&	getHeaders() const;
 		std::string const&	getBody() const;
+		std::string const&	getServedFilePath() const;
 
 		class RawException: public std::runtime_error {
 			public:

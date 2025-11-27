@@ -148,6 +148,7 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 	Response resp;
 	resp.setStatus(status);
 	resp.setHeader("Content-Type", _getMime("html"));
+	resp.setServedFilePath("built-in error page"); // default, for debug
 
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (_routingDecision.getRequest().getMethod() != "HEAD")
@@ -158,6 +159,7 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 			if (utils::isReadableFile(errorPath)) {
 				_finalPath = errorPath; //!\ final path updated
 				resp.setBody(utils::readFile(_finalPath));
+				resp.setServedFilePath(_finalPath);
 				return resp;
 			}
 		}
@@ -168,7 +170,6 @@ Response	StaticHandler::handleError(HttpStatus const& status)
 		std::string errorBody = _errorPageHtml(status);
         resp.setHeader("Content-Length", utils::str(errorBody.size()));
 	}
-	resp.setServedFilePath(_finalPath);
 	return resp;
 }
 

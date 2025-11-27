@@ -20,10 +20,10 @@ Response::Response(std::string const& rawResponse)
 
 Response::Response(Response const& other)
 : _status(other._status)
-, _servedFilePath(other._servedFilePath)
 , _headers(other._headers)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
+, _servedFilePath(other._servedFilePath)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -31,10 +31,10 @@ Response& Response::operator=(Response const& other)
 	if (this != &other)
 	{
 		_status = other._status;
-		_servedFilePath = other._servedFilePath;
 		_headers = other._headers;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
+		_servedFilePath = other._servedFilePath;
 	}
 	return *this;
 }
@@ -71,11 +71,6 @@ HttpStatus const&	Response::getStatus() const
 	return _status;
 }
 
-std::string const&	Response::getServedFilePath() const
-{
-	return _servedFilePath;
-}
-
 UniqHeaders const& Response::getHeaders() const
 {
 	return _headers;
@@ -86,16 +81,16 @@ std::string const& Response::getBody() const
 	return _body;
 }
 
+std::string const&	Response::getServedFilePath() const
+{
+	return _servedFilePath;
+}
+
 void	Response::setStatus(HttpStatus const& status)
 {
 	_status = status;
 	if (status.getCode() == 204)
 		setBody("");
-}
-
-void	Response::setServedFilePath(std::string const& absoluteFilePath)
-{
-	_servedFilePath = absoluteFilePath;
 }
 
 /**
@@ -122,6 +117,11 @@ void	Response::setBody(std::string const& body)
 	_body = body;
 	_updateContentLength();
 	_manageContentType();
+}
+
+void	Response::setServedFilePath(std::string const& absoluteFilePath)
+{
+	_servedFilePath = absoluteFilePath;
 }
 
 void	Response::clearBody()
