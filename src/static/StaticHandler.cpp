@@ -12,7 +12,6 @@ size_t const	StaticHandler::_FILE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 StaticHandler::StaticHandler(RoutingDecision const& rd)
 : _routingDecision(rd)
 , _location(rd.getLocation())
-, _finalPath(rd.getFinalPath())
 {}
 
 StaticHandler::~StaticHandler()
@@ -21,9 +20,11 @@ StaticHandler::~StaticHandler()
 Response	StaticHandler::handleGet()
 {
 	Response resp;
+	std::string finalPath = resp.getServedFilePath();
+	resp.setServedFilePath(finalPath);
 
 	// Serve webserv welcome page
-	 if (_location->getRoot().empty() && _finalPath == "/") {
+	if (_location->getRoot().empty() && finalPath == "/") {
 		resp.setBody(_welcomePageHtml());
 		return resp;
 	}
@@ -31,25 +32,21 @@ Response	StaticHandler::handleGet()
 	std::vector<std::string> locIndexes = _location->getIndexFiles();
 	bool isAutoindex = _location->getAutoindex() == "on";
 
-	if (utils::isAccessibleDirectory(_finalPath))
+	if (utils::isAccessibleDirectory(finalPath))
 	{
-		DIR* dir = opendir(_finalPath.c_str());
+		DIR* dir = opendir(finalPath.c_str());
 		if (!dir)
 			return handleError(HttpStatus("forbidden"));
 		closedir(dir);
 		// Trying serving index files
-		for (size_t i = 0; i < locIndexes.size(); ++i)
-		{
+		for (size_t i = 0; i < locIndexes.size(); ++i) {
 			std::string const& indexPath = locIndexes[i];
-			std::string tmp;
-			if (utils::isAbsolutePath(indexPath))
-				tmp = indexPath;
-			else {
+			if (!utils::isAbsolutePath(indexPath))  {
 				// no transversal check needed (finalPath already secured in RoutingDecision::_setFilePath)
-				tmp = utils::pathsJoin(_finalPath, indexPath);
+				finalPath = utils::pathsJoin(finalPath, indexPath);
 			}
-			if (utils::isReadableFile(tmp)) {
-				_finalPath = tmp; //!\ final path updated
+			if (utils::isReadableFile(finalPath)) {
+				resp.setServedFilePath(finalPath); //!\ final path updated
 				return _serveFile();
 			}
 		}
@@ -61,7 +58,7 @@ Response	StaticHandler::handleGet()
 		}
 		return handleError(HttpStatus("not_found"));
 	}
-	else if (utils::isReadableFile(_finalPath))
+	else if (utils::isReadableFile(finalPath))
 		return _serveFile();
 	return handleError(HttpStatus("not_found"));
 }
@@ -73,8 +70,7 @@ Response	StaticHandler::handleDelete()
 	std::string directoryPath = _finalPath.substr(0, _finalPath.find_last_of('/'));
 	if (access(directoryPath.c_str(), W_OK) != 0)
 		return handleError(HttpStatus("forbidden"));
-	if (std::remove(_finalPath.c_str()) == 0)
-	{
+	if (std::remove(_finalPath.c_str()) == 0) {
 		Response response;
 		response.setStatus(HttpStatus("no_content"));
 		return response;
@@ -105,8 +101,7 @@ Response	StaticHandler::handlePut()
 	std::string directory = _finalPath;
 	if (utils::isAccessibleDirectory(_finalPath))
         return handleError(HttpStatus("forbidden"));
-	else
-	{
+	else {
 		size_t lastSlash = _finalPath.find_last_of('/');
 		if (lastSlash != std::string::npos)
 			directory = _finalPath.substr(0, lastSlash);
@@ -122,44 +117,45 @@ Response	StaticHandler::handlePut()
 		return handleError(HttpStatus("internal_server_error"));
 	file.write(body.c_str(), body.size());
 	file.close();
-    if (fileExists)
-	{
+    if (fileExists) {
         response.setStatus(HttpStatus("ok"));
 		response.setHeader("Content-Location", request.getPath());
 	}
-	else
-	{
+	else {
 		response.setStatus(HttpStatus("created"));
 		response.setHeader("Location", request.getPath());
 	}
 	return response;
 }
 
-Response	StaticHandler::handleError(HttpStatus const& status)
+Response	StaticHandler::handleError(std::string const& errorSlug)
 {
 	std::string const& locRoot = _location->getRoot();
 	ErrorPages const& locErrorPages = _location->getErrorPages();
+	std::string const& method = _routingDecision.getRequest().getMethod();
+	return _buildErrorResponse(errorSlug, locRoot, locErrorPages, method, _finalPath);
+}
 
+Response	StaticHandler::_buildErrorResponse(std::string const& errorSlug, std::string const& locRoot,
+	ErrorPages const& locErrorPages, std::string const& method, std::string& finalPath)
+{
 	Response resp;
+	HttpStatus status(errorSlug);
 	resp.setStatus(status);
 	resp.setContentType(_getMime("html"));
 
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
-	if (_routingDecision.getRequest().getMethod() != "HEAD")
-	{
-		if (search != locErrorPages.end())
-		{
+	if (method != "HEAD") {
+		if (search != locErrorPages.end()) {
 			std::string errorPath = search->second;
 			if (utils::isReadableFile(errorPath)) {
-				_finalPath = errorPath; //!\ final path updated
-				resp.setBody(utils::readFile(_finalPath));
+				finalPath = errorPath; //!\ final path updated
+				resp.setBody(utils::readFile(finalPath));
 				return resp;
 			}
 		}
 		resp.setBody(_errorPageHtml(status));
-	}
-	else
-	{
+	} else {
 		std::string errorBody = _errorPageHtml(status);
         resp.setHeader("Content-Length", utils::str(errorBody.size()));
 	}
@@ -172,8 +168,16 @@ Response	StaticHandler::handleError(std::string const& errorSlug)
 	return handleError(status);
 }
 
+Response	StaticHandler::handleError(std::string const& errorSlug, Request const& request)
+{
+	HttpStatus status(errorSlug);
+	Response resp = handleError(status);
+	resp.setHeader("Connection", request.isConnectionClose() ? "close" : "keep-alive");
+	return resp;
+}
+
 /**
- * Send back error before request parsing was done (in Network module for example).
+ * [static] Send back error before request parsing was done (in Network module for example).
  */
 Response	StaticHandler::errorBeforeParsing(std::string const& errorSlug)
 {
@@ -351,19 +355,4 @@ Response	StaticHandler::_serveFile()
 	resp.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
 	resp.setBody(content);
 	return resp;
-}
-
-std::string const&	StaticHandler::getFinalPath() const
-{
-	return _finalPath;
-}
-
-bool	StaticHandler::hasUpdatedFinalPath() const {
-	return (_routingDecision.getFinalPath() != _finalPath);
-}
-
-std::ostream& operator<<(std::ostream& os, StaticHandler const& rhs) {
-	os << "- finalPath: " << PrintableString(rhs.getFinalPath()) << "\n";
-
-	return os;
 }

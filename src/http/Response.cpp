@@ -2,7 +2,10 @@
 
 Response::Response()
 : _status(HttpStatus())
+, _headers()
+, _body()
 , _bodyClearedForHead(false)
+, _servedFilePath()
 , _needsCgiExecution(false)
 , _cgiParams(NULL)
 , _cgiRequest(NULL)
@@ -15,7 +18,10 @@ Response::Response()
  */
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
+, _headers()
+, _body()
 , _bodyClearedForHead(false)
+, _servedFilePath()
 , _needsCgiExecution(false)
 , _cgiParams(NULL)
 , _cgiRequest(NULL)
@@ -29,6 +35,7 @@ Response::Response(Response const& other)
 , _headers(other._headers)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
+, _servedFilePath(other._servedFilePath)
 , _needsCgiExecution(other._needsCgiExecution)
 , _cgiParams(other._cgiParams ? new CgiParams(*other._cgiParams) : NULL) // Deep copy
 , _cgiRequest(other._cgiRequest) // Pointer copy
@@ -42,6 +49,7 @@ Response& Response::operator=(Response const& other)
 		_headers = other._headers;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
+		_servedFilePath = other._servedFilePath;
 		_needsCgiExecution = other._needsCgiExecution;
 		delete _cgiParams;
 		_cgiParams = other._cgiParams ? new CgiParams(*other._cgiParams) : NULL; // Deep copy
@@ -130,6 +138,11 @@ void	Response::clearBodyForHead()
 	bool hadBody = !_body.empty();
 	_body.clear();
 	_bodyClearedForHead = hadBody;
+}
+
+void	Response::setServedFilePath(std::string const& filePath)
+{
+	_servedFilePath = filePath;
 }
 
 void	Response::setConnectionFromRequest(Request const& request)
@@ -318,6 +331,7 @@ int	Response::_setHeaders(std::string const& headersPart) {
 std::ostream& operator<<(std::ostream& os, Response const& response)
 {
 	os << "- Status: " << PrintableString(response.getStatus().toStr()) << "\n";
+	os << "- Served file path: " << PrintableString(response.getServedFilePath()) << "\n";
 	os << "- Needs CGI Execution: " << (response.needsCgiExecution() ? "Yes" : "No") << "\n";
 	os << "- Headers: " << response.getHeaders().size() << "\n";
 	UniqHeaders const& headers = response.getHeaders();

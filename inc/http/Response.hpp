@@ -19,6 +19,7 @@ class Response
 	UniqHeaders		_headers;
 	std::string		_body;
 	bool			_bodyClearedForHead;
+	std::string		_servedFilePath; // Absolute path of the file whose content is served in response body
 	bool			_needsCgiExecution;
 	CgiParams*		_cgiParams;
 	Request const*	_cgiRequest; // Non-owning to prevent big duplicates (eg. request with a 100MB body)
@@ -49,6 +50,7 @@ class Response
 		void	setBody(std::string const&);
 		void	clearBody();
 		void	clearBodyForHead();
+		void	setServedFilePath(std::string const&);
 		void	setConnectionFromRequest(Request const&);
 		bool	isConnectionClose() const;
 		void	markForCgiExecution(CgiParams const&, Request const&);
@@ -59,6 +61,7 @@ class Response
 		bool				needsCgiExecution() const;
     	CgiParams const&	getCgiParams() const;
     	Request const&		getCgiRequest() const;
+		std::string const&	getServedFilePath() const;
 
 		class RawException: public std::runtime_error {
 			public:
