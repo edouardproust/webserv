@@ -9,139 +9,158 @@
 
 size_t const	StaticHandler::_FILE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-StaticHandler::StaticHandler(RoutingDecision const& rd)
-: _routingDecision(rd)
-, _location(rd.getLocation())
-, _finalPath(rd.getFinalPath())
-{}
-
-StaticHandler::~StaticHandler()
-{}
-
-Response	StaticHandler::handleGet()
+Response	StaticHandler::get(RoutingDecision const& rd)
 {
 	Response resp;
+	std::string const& finalPath = rd.getFinalPath();
+	LocationBlock const* location = rd.getLocation();
+	Request const& req = rd.getRequest();
 
 	// Serve webserv welcome page
-	 if (_location->getRoot().empty() && _finalPath == "/") {
-		resp.setBody(_builtinWelcomePageHtml());
+	 if (location->getRoot().empty() && finalPath == "/") {
+		resp.setBodyAndContentLength(_builtinWelcomePageHtml());
 		resp.setServedFilePath("built-in welcome page"); // for debug
+		resp.setConnectionFromRequest(req);
 		return resp;
 	}
 
-	std::vector<std::string> locIndexes = _location->getIndexFiles();
-	bool isAutoindex = _location->getAutoindex() == "on";
+	std::vector<std::string> locIndexes = location->getIndexFiles();
+	bool isAutoindex = location->getAutoindex() == "on";
 
-	if (utils::isAccessibleDirectory(_finalPath))
-	{
-		DIR* dir = opendir(_finalPath.c_str());
+	if (utils::isAccessibleDirectory(finalPath)) {
+		DIR* dir = opendir(finalPath.c_str());
 		if (!dir)
-			return handleError("forbidden");
+			return error("forbidden", rd);
 		closedir(dir);
 		// Trying serving index files
 		for (size_t i = 0; i < locIndexes.size(); ++i)
 		{
 			std::string const& indexPath = locIndexes[i];
-			std::string tmp;
+			std::string pathToServe;
 			if (utils::isAbsolutePath(indexPath))
-				tmp = indexPath;
-			else {
-				// no transversal check needed (finalPath already secured in RoutingDecision::_setFilePath)
-				tmp = utils::pathsJoin(_finalPath, indexPath);
-			}
-			if (utils::isReadableFile(tmp)) {
-				_finalPath = tmp; //!\ final path updated
-				return _serveFile();
-			}
+				pathToServe = indexPath;
+			else
+				pathToServe = utils::pathsJoin(finalPath, indexPath);
+			if (utils::isReadableFile(pathToServe))
+				return _serveFile(pathToServe, rd);
 		}
 		// No index file found
 		if (isAutoindex) { // Generate HTML listing
-			resp.setBody(_builtinAutoindexHtml());
+			resp.setBodyAndContentLength(_builtinAutoindexHtml(rd));
 			resp.setServedFilePath("built-in index"); // for debug
+			resp.setConnectionFromRequest(req);
 			return resp;
-
 		}
-		return handleError("not_found");
+		return error("not_found", rd);
 	}
-	else if (utils::isReadableFile(_finalPath))
-		return _serveFile();
-	return handleError("not_found");
+	else if (utils::isReadableFile(finalPath))
+		return _serveFile(finalPath, rd);
+	return error("not_found", rd);
 }
 
-Response	StaticHandler::handleDelete()
+Response	StaticHandler::del(RoutingDecision const& rd)
 {
-	if (!utils::fileExists(_finalPath))
-		return handleError("not_found");
-	std::string directoryPath = _finalPath.substr(0, _finalPath.find_last_of('/'));
+	std::string const& finalPath = rd.getFinalPath();
+	Request const& req = rd.getRequest();
+
+	if (!utils::fileExists(finalPath))
+		return error("not_found", rd);
+	std::string directoryPath = finalPath.substr(0, finalPath.find_last_of('/'));
 	if (access(directoryPath.c_str(), W_OK) != 0)
-		return handleError("forbidden");
-	if (std::remove(_finalPath.c_str()) == 0)
+		return error("forbidden", rd);
+	if (std::remove(finalPath.c_str()) == 0)
 	{
-		Response response;
-		response.setServedFilePath(_finalPath);
-		response.setStatus(HttpStatus("no_content"));
-		return response;
+		Response resp;
+		resp.setServedFilePath(finalPath);
+		resp.setStatus(HttpStatus("no_content"));
+		resp.setConnectionFromRequest(req);
+		return resp;
 	}
 	else
-		return handleError("internal_server_error");
+		return error("internal_server_error", rd);
 }
 
 /**
  * Simply return an error (POST method not allowed on a static file).
  */
-Response StaticHandler::handlePost() {
-	return handleError("method_not_allowed");
+Response StaticHandler::post(RoutingDecision const& rd) {
+	return error("method_not_allowed", rd);
 }
 
-Response	StaticHandler::handleHead()
+Response	StaticHandler::head(RoutingDecision const& rd)
 {
-	Response response = handleGet();
-	response.setServedFilePath(_finalPath);
-	response.clearBodyForHead();
-	return response;
+	Response resp = get(rd);
+	resp.clearBodyForHead();
+	return resp;
 }
 
-Response	StaticHandler::handlePut()
+Response	StaticHandler::put(RoutingDecision const& rd)
 {
-	Response response;
-	Request const& request = _routingDecision.getRequest();
+	Request const& req = rd.getRequest();
+	std::string const& finalPath = rd.getFinalPath();
 
-	std::string directory = _finalPath;
-	if (utils::isAccessibleDirectory(_finalPath))
-        return handleError("forbidden");
-	else
-	{
-		size_t lastSlash = _finalPath.find_last_of('/');
+	std::string directory = finalPath;
+	if (utils::isAccessibleDirectory(finalPath)) {
+        return error("forbidden", rd);
+	} else {
+		size_t lastSlash = finalPath.find_last_of('/');
 		if (lastSlash != std::string::npos)
-			directory = _finalPath.substr(0, lastSlash);
+			directory = finalPath.substr(0, lastSlash);
     }
 	if (directory.empty())
 		directory = "/";
 	if (!utils::isWritableDirectory(directory))
-		return handleError("forbidden", rd);
-	std::string const& body = request.getBody();
-	bool fileExists = utils::fileExists(_finalPath);
-	std::ofstream file(_finalPath.c_str(), std::ios::binary);
+		return error("forbidden", rd);
+	std::string const& body = req.getBody();
+	bool fileExists = utils::fileExists(finalPath);
+	std::ofstream file(finalPath.c_str(), std::ios::binary);
 	if (!file.is_open())
-		return handleError("internal_server_error");
+		return error("internal_server_error", rd);
 	file.write(body.c_str(), body.size());
 	file.close();
-    if (fileExists)
-	{
-        response.setStatus(HttpStatus("ok"));
-		response.setHeader("Content-Location", request.getPath());
+
+	Response resp;
+    if (fileExists) {
+        resp.setStatus(HttpStatus("ok"));
+		resp.setHeader("Content-Location", req.getPath());
+	} else {
+		resp.setStatus(HttpStatus("created"));
+		resp.setHeader("Location", req.getPath());
 	}
-	else
-	{
-		response.setStatus(HttpStatus("created"));
-		response.setHeader("Location", request.getPath());
-	}
-	response.setServedFilePath(_finalPath);
-	return response;
+	resp.setServedFilePath(finalPath);
+	resp.setConnectionFromRequest(req);
+	return resp;
 }
 
-Response	StaticHandler::_buildErrorResponse(HttpStatus status, std::string const& method, std::string const& finalPath, ErrorPages const& locErrorPages)
+/**
+ * // TODO (optionnal): If is CGI file, call CGIHandler instead
+ */
+Response	StaticHandler::_serveFile(std::string const& filePath, RoutingDecision const& rd)
 {
+	size_t fileSize = utils::getFileSize(filePath);
+	if (fileSize > _FILE_MAX_SIZE)
+		return error("content_too_large", rd);
+	std::string content = utils::readFile(filePath);
+	if (content.empty() && fileSize > 0)
+		return error("internal_server_error", rd);
+
+	Response resp;
+	resp.setStatus(HttpStatus("ok"));
+	resp.setHeader("Content-Type", _getMimeFromPath(filePath));
+	resp.setHeader("Content-Disposition", "inline; filename=\"" + utils::getFileName(filePath) + "\"");
+	resp.setBodyAndContentLength(content);
+	resp.setServedFilePath(filePath);
+	resp.setConnectionFromRequest(rd.getRequest());
+	return resp;
+}
+
+Response	StaticHandler::error(std::string const& errorSlug, RoutingDecision const& rd)
+{
+	HttpStatus	status(errorSlug);
+	std::string const& method = rd.getRequest().getMethod();
+	ErrorPages const& locErrorPages = rd.getLocation()->getErrorPages();
+	Request const& req = rd.getRequest();
+
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (search != locErrorPages.end()) {
 		std::string errorPath = search->second;
@@ -150,34 +169,14 @@ Response	StaticHandler::_buildErrorResponse(HttpStatus status, std::string const
 			std::string errorBody = utils::readFile(errorPath);
 			resp.setStatus(status);
 			resp.setHeader("Content-Type", _getMime("html"));
-			resp.setHeader("Content-Length", utils::str(errorBody.length()));
 			if (method != "HEAD")
-				resp.setBody(errorBody);
+				resp.setBodyAndContentLength(errorBody);
 			resp.setServedFilePath(errorPath);
+			resp.setConnectionFromRequest(req);
 			return resp;
 		}
 	}
 	return builtinError(status.getSlug(), method);
-}
-
-Response	StaticHandler::handleError(std::string const& errorSlug)
-{
-	HttpStatus	status(errorSlug);
-	std::string const& method = _routingDecision.getRequest().getMethod();
-	std::string const& finalPath = _routingDecision.getFinalPath();
-	ErrorPages const& errorPages = _routingDecision.getLocation()->getErrorPages();
-
-	return _buildErrorResponse(status, method, finalPath, errorPages);
-}
-
-Response	StaticHandler::handleError(std::string const& errorSlug, RoutingDecision const& rd)
-{
-	HttpStatus	status(errorSlug);
-	std::string const& method = rd.getRequest().getMethod();
-	std::string const& finalPath = rd.getFinalPath();
-	ErrorPages const& errorPages = rd.getLocation()->getErrorPages();
-
-	return _buildErrorResponse(status, method, finalPath, errorPages);
 }
 
 /**
@@ -193,9 +192,9 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
 	resp.setServedFilePath("built-in error page"); // for debug
 	resp.setStatus(status);
 	resp.setHeader("Content-Type", _getMime("html"));
-    resp.setHeader("Content-Length", utils::str(errorBody.length()));
 	if (method != "HEAD")
-		resp.setBody(errorBody);
+		resp.setBodyAndContentLength(errorBody);
+	// TODO keep alive ?
 	return resp;
 }
 
@@ -215,16 +214,18 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
  * though exact alignment may vary depending on font and browser rendering.
  * Entries are sorted alphabetically for consistent browsing.
  */
-std::string	StaticHandler::_builtinAutoindexHtml() const
+std::string	StaticHandler::_builtinAutoindexHtml(RoutingDecision const& rd)
 {
-	std::string currentPath = _routingDecision.getRequest().getPath();
-	if (!currentPath.empty() && currentPath[currentPath.length() - 1] != '/')
+	std::string const& finalPath = rd.getFinalPath();
+	std::string currentPath = rd.getRequest().getPath();
+
+	if (!currentPath.empty() && currentPath[currentPath.size() - 1] != '/')
 		currentPath += "/";
 	std::stringstream html;
 	html << "<html>\n<head><title>Index of " << currentPath << "</title></head>\n<body>\n"
 		 << "<h1>Index of " << currentPath << "</h1><hr><pre>\n"
 		 << "<a href=\"../\">../</a>\n";
-	DIR* dir = opendir(_finalPath.c_str());
+	DIR* dir = opendir(finalPath.c_str());
 	std::vector<std::string> files;
 	struct dirent* entry;
 	while ((entry = readdir(dir)) != NULL)
@@ -238,7 +239,7 @@ std::string	StaticHandler::_builtinAutoindexHtml() const
 	std::sort(files.begin(), files.end());
 	for (size_t i = 0; i < files.size(); i++)
 	{
-		std::string fullPath = utils::pathsJoin(_finalPath, files[i]);
+		std::string fullPath = utils::pathsJoin(finalPath, files[i]);
 		bool isDir = utils::isAccessibleDirectory(fullPath);
 		size_t fileSize = utils::getFileSize(fullPath);
 		std::string sizeStr = isDir ? "-" : utils::str(fileSize);
@@ -249,7 +250,7 @@ std::string	StaticHandler::_builtinAutoindexHtml() const
 		std::string displayName = files[i] + (isDir ? "/" : "");
 		html << "<a href=\"" << currentPath << files[i] << (isDir ? "/" : "") << "\">"
 			 << displayName << "</a>"
-			 << std::setw(50 - displayName.length()) << " "
+			 << std::setw(50 - displayName.size()) << " "
 			 << dateStr << std::setw(20) << sizeStr << "\n";
 	}
 	html << "</pre><hr></body>\n</html>";
@@ -258,8 +259,6 @@ std::string	StaticHandler::_builtinAutoindexHtml() const
 
 std::string StaticHandler::_builtinWelcomePageHtml()
 {
-	std::string html;
-
 	return std::string(
 		"<!DOCTYPE html>"
 		"<html>"
@@ -305,27 +304,28 @@ std::string	StaticHandler::_getMime(const std::string& extension)
 {
 	static MimeTypes types;
 
-	types["html"]	= "text/html";
-	types["htm"]	= "text/html";
-	types["css"]	= "text/css";
-	types["txt"]	= "text/plain";
+	if (types.empty()) {
+		types["html"]	= "text/html";
+		types["htm"]	= "text/html";
+		types["css"]	= "text/css";
+		types["txt"]	= "text/plain";
 
-	types["jpg"]	= "image/jpeg";
-	types["jpeg"]	= "image/jpeg";
-	types["png"]	= "image/png";
-	types["gif"]	= "image/gif";
-	types["ico"]	= "image/x-icon";
+		types["jpg"]	= "image/jpeg";
+		types["jpeg"]	= "image/jpeg";
+		types["png"]	= "image/png";
+		types["gif"]	= "image/gif";
+		types["ico"]	= "image/x-icon";
 
-	types["js"]		= "application/javascript";
-	types["json"]	= "application/json";
-	types["pdf"]	= "application/pdf";
+		types["js"]		= "application/javascript";
+		types["json"]	= "application/json";
+		types["pdf"]	= "application/pdf";
 
-	types["ttf"]	= "font/ttf";
-	types["otf"]	= "font/otf";
-	types["woff"]	= "font/woff";
-	types["woff2"]	= "font/woff2";
-
-	// -- additional types can be added here --
+		types["ttf"]	= "font/ttf";
+		types["otf"]	= "font/otf";
+		types["woff"]	= "font/woff";
+		types["woff2"]	= "font/woff2";
+		// -- additional types can be added here --
+	}
 
 	MimeTypes::const_iterator it = types.find(extension);
 	if (it != types.end())
@@ -342,28 +342,4 @@ std::string	StaticHandler::_getMimeFromPath(const std::string& filePath)
 	if (!extension.empty() && extension[0] == '.')
 		extension = extension.substr(1);
 	return _getMime(extension);
-}
-
-// UTILS
-
-/**
- * // TODO (optionnal): If is CGI file, call CGIHandler instead
- */
-Response	StaticHandler::_serveFile()
-{
-	size_t fileSize = utils::getFileSize(_finalPath);
-	if (fileSize > _FILE_MAX_SIZE)
-		return handleError(HttpStatus("content_too_large"));
-	std::string content = utils::readFile(_finalPath);
-	if (content.empty() && fileSize > 0)
-		return handleError(HttpStatus("internal_server_error"));
-
-	Response resp;
-	resp.setStatus(HttpStatus("ok"));
-	resp.setHeader("Content-Type", _getMimeFromPath(_finalPath));
-	std::string filename = utils::getFileName(_finalPath);
-	resp.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
-	resp.setBody(content);
-	resp.setServedFilePath(_finalPath);
-	return resp;
 }

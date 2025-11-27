@@ -173,7 +173,7 @@ void Network::_readClientRequest(int clientFd)
 		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
 		if (RequestParser::isRequestComplete(currentReq)) {
 			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
-			Log::prod("ok", "Request complete on fd " + Log::hl(clientFd) + ". Switching to Send.");
+			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 		}
 	} else if (bytesReceived == 0) {
 		_disconnectClient(clientFd); // finished reading -> disconnect client
@@ -198,7 +198,7 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		Request request(_pendingRequests[clientFd]);
 		Socket* listeningSocket = _clientServerMap[clientFd];
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
-		Log::prod("event", request.getMethod() + " request received on " + Log::hl(listenDirective) + ".");
+		Log::prod("ok", request.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(clientFd) + ").");
 		Log::dev("debug", "Request:\n" + utils::str(request));
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
 		Log::dev("debug", "Response:\n" + utils::str(response));
@@ -253,7 +253,7 @@ void Network::_continuePendingSend(int clientFd)
 
 	// Check if send if complete
 	if (sendPos >= response.length()) {
-		Log::prod("event", "Response fully sent for fd " + Log::hl(clientFd));
+		Log::prod("ok", "Response sent to client (fd " + Log::hl(clientFd) + ").");
 
 		// Nettoyer les structures d'envoi
 		_pendingResponses.erase(clientFd);

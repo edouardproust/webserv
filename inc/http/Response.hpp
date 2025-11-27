@@ -42,7 +42,7 @@ class Response
 
 		void	setStatus(HttpStatus const&);
 		void	setHeader(std::string const&, std::string const&);
-		void	setBody(std::string const&);
+		void	setBodyAndContentLength(std::string const&);
 		void	setServedFilePath(std::string const&);
 		void	clearBody();
 		void	clearBodyForHead();

@@ -99,14 +99,13 @@ int	Socket::createNewClientSocket()
 {
 	struct sockaddr_storage clientInfos;
 
-	Log::dev("event", "accept() requested.");
 	socklen_t clientInfoSize = sizeof(clientInfos);
 	int newClientSocketFd = accept(_fd, (struct sockaddr*)&clientInfos, &clientInfoSize);
 	if (newClientSocketFd < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
 		return -1;
 	}
-	Log::dev("ok", "accept() successfull");
+	Log::dev("setup", "Socket accept() success.");
 	return (newClientSocketFd);
 }
 

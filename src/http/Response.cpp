@@ -90,7 +90,7 @@ void	Response::setStatus(HttpStatus const& status)
 {
 	_status = status;
 	if (status.getCode() == 204)
-		setBody("");
+		setBodyAndContentLength("");
 }
 
 /**
@@ -112,7 +112,7 @@ void	Response::setHeader(std::string const& name, std::string const& value)
 	_headers[normalizedName] = value;
 }
 
-void	Response::setBody(std::string const& body)
+void	Response::setBodyAndContentLength(std::string const& body)
 {
 	_body = body;
 	_updateContentLength();
@@ -251,7 +251,7 @@ void	Response::_parseRawResponse(std::string const& rawResponse)
 	if (!_hasHeader("content-type"))
 		throw RawException("missing Content-Type header");
 	setStatus(HttpStatus(statusCode));
-	setBody(bodyPart);
+	setBodyAndContentLength(bodyPart);
 }
 
 int	Response::_setHeaders(std::string const& headersPart) {

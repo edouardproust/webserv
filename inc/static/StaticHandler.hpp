@@ -11,43 +11,34 @@
  * Handles serving static files for a HTTP request.
  *
  * Determines final path, MIME type, and generates response content.
- * Resource-type class: not copyable or assignable.
+ * Static service-type class: not instantiable.
  */
 class StaticHandler
 {
-	static size_t const		_FILE_MAX_SIZE;
+	static size_t const	_FILE_MAX_SIZE;
 
-	RoutingDecision const&	_routingDecision;
-	LocationBlock const*	_location;
-	std::string				_finalPath;
-
-	Response			_serveFile();
-	std::string			_builtinAutoindexHtml() const;
-	static Response		_buildErrorResponse(HttpStatus, std::string const&, std::string const&, ErrorPages const&);
+	static Response		_serveFile(std::string const&, RoutingDecision const&);
+	static std::string	_builtinAutoindexHtml(RoutingDecision const&);
 	static std::string	_builtinErrorPageHtml(HttpStatus const&);
 	static std::string	_builtinWelcomePageHtml();
 	static std::string	_getMime(std::string const&);
 	static std::string	_getMimeFromPath(std::string const&);
 
-	// Default and copy constructors, assignation are forbidden
+	// Not instantiable
 	StaticHandler();
+	~StaticHandler();
 	StaticHandler(const StaticHandler&);
 	StaticHandler&	operator=(StaticHandler const&);
 
 	public:
 
-		StaticHandler(RoutingDecision const&);
-		~StaticHandler();
-
-		Response		handleGet();
-		Response		handleDelete();
-		Response		handleHead();
-		Response		handlePut();
-		Response		handlePost();
-		static Response	handleError(std::string const&, RoutingDecision const&);
+		static Response	get(RoutingDecision const&);
+		static Response	del(RoutingDecision const&);
+		static Response	head(RoutingDecision const&);
+		static Response	put(RoutingDecision const&);
+		static Response	post(RoutingDecision const&);
+		static Response	error(std::string const&, RoutingDecision const&);
 		static Response	builtinError(std::string const&, std::string const&);
-
-		std::string const&	getFinalPath() const;
 };
 
 #endif

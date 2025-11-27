@@ -13,7 +13,7 @@
  *   listing page if needed.
  * - It is the role of CgiHandler to check if the script exists and is executable.
  */
-Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
+Response	Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
 {
 	RoutingDecision rd(config, req, listeningOn);
 	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
@@ -22,70 +22,67 @@ Response Router::dispatchRequest(Config const& config, Request const& req, HostP
 	RoutingDecision::Decision decision = rd.getDecision();
 
 	if (req.getStatus().getSlug() != "ok")
-		resp = StaticHandler::handleError(req.getStatus().getSlug(), rd);
-	else if (decision == RoutingDecision::ERROR)
-		resp = StaticHandler::handleError(rd.getErrorSlug(), rd);
-	else if (decision == RoutingDecision::REDIRECTION)
-		_handleRedirectionDecision(resp, rd);
-	else if (decision == RoutingDecision::CGI)
-		_handleCgiDecision(resp, rd, listeningOn);
-	else if (decision == RoutingDecision::STATIC) {
-		_handleStaticDecision(resp, req.getMethod());
-	} else // fallback
-		resp = StaticHandler::handleError("internal_server_error", rd);
-
-	resp.setConnectionFromRequest(req);
-	return resp;
+		return StaticHandler::error(req.getStatus().getSlug(), rd);
+	if (decision == RoutingDecision::ERROR)
+		return StaticHandler::error(rd.getErrorSlug(), rd);
+	if (decision == RoutingDecision::REDIRECTION)
+		return _handleRedirectionDecision(rd);
+	if (decision == RoutingDecision::CGI)
+		return _handleCgiDecision(rd, listeningOn);
+	if (decision == RoutingDecision::STATIC)
+		return _handleStaticDecision(rd);
+	return StaticHandler::error("internal_server_error", rd);
 }
 
-void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& rd)
+Response	Router::_handleRedirectionDecision(RoutingDecision const& rd)
 {
 	std::pair<int, std::string> const& ret = rd.getLocation()->getReturn();
 	RedirectionHandler redirect(rd, ret.first, ret.second);
-	resp = redirect.run();
+	return redirect.run();
 }
 
-void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostPortPair const& listeningOn)
+Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair const& listeningOn)
 {
 	std::string const& scriptName = rd.getFinalPath();
-	if (!utils::fileExists(scriptName)) {
-		resp = StaticHandler::handleError("not_found", rd);
-	} else if (!utils::isReadableFile(scriptName)) {
-		resp = StaticHandler::handleError("forbidden", rd);
-	} else {
-		CgiParams cgiParams(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
-		if (!cgiParams.isValid())
-			resp = StaticHandler::handleError("not_implemented", rd);
-		CgiHandler cgi(rd.getRequest(), cgiParams);
-		try {
-			resp = cgi.execute();
-		} catch (CgiHandler::ExecException& e) {
-			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
-			resp = StaticHandler::handleError("internal_server_error", rd);
-		} catch (Response::RawException& e) {
-			Log::prod("warning", "CGI invalid raw output: " + scriptName + ": " + e.what());
-			resp = StaticHandler::handleError("bad_gateway", rd);
-		} catch (CgiHandler::TimeoutException& e) {
-			Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
-			resp = StaticHandler::handleError("timeout", rd);
-		}
-        Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
+	if (!utils::fileExists(scriptName))
+		return StaticHandler::error("not_found", rd);
+	if (!utils::isReadableFile(scriptName))
+		return StaticHandler::error("forbidden", rd);
+
+	CgiParams cgiParams(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
+	if (!cgiParams.isValid())
+		return StaticHandler::error("not_implemented", rd);
+	CgiHandler cgi(rd.getRequest(), cgiParams);
+	try {
+		Response resp = cgi.execute();
+		Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
+		return resp;
+	} catch (CgiHandler::ExecException& e) {
+		Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
+		return StaticHandler::error("internal_server_error", rd);
+	} catch (Response::RawException& e) {
+		Log::prod("warning", "CGI invalid raw output: " + scriptName + ": " + e.what());
+		return StaticHandler::error("bad_gateway", rd);
+	} catch (CgiHandler::TimeoutException& e) {
+		Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
+		return StaticHandler::error("timeout", rd);
 	}
 }
 
-void	Router::_handleStaticDecision(Response& resp, std::string const& method)
+Response	Router::_handleStaticDecision(RoutingDecision const& rd)
 {
+	std::string const& method = rd.getRequest().getMethod();
+
 	if (method == "GET")
-		resp = statiq.handleGet();
-	else if (method == "DELETE")
-		resp = statiq.handleDelete();
-	else if (method == "HEAD")
-		resp = statiq.handleHead();
-	else if (method == "PUT")
-		resp = statiq.handlePut();
-	else if (method == "POST")
-		resp = statiq.handlePost();
+		return StaticHandler::get(rd);
+	if (method == "DELETE")
+		return StaticHandler::del(rd);
+	if (method == "HEAD")
+		return StaticHandler::head(rd);
+	if (method == "PUT")
+		return StaticHandler::put(rd);
+	if (method == "POST")
+		return StaticHandler::post(rd);
 	// -- additional supported methods can be added here --
-	else
-		resp = StaticHandler::handleError("method_not_allowed", rd);
+	return StaticHandler::error("method_not_allowed", rd);
 }
