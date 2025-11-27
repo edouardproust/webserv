@@ -6,18 +6,19 @@ size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 Network::Network(Config const& config)
 : _config(config)
 , _epollFd(-1)
+//, _cgi() // CGI handler instance
 {
 	_initListeningSockets();
 }
 
 Network::~Network()
 {
+	//_cgi.cleanupAll();
+
 	_cleanupListeningSockets();
 	if (_epollFd != -1)
 		close(_epollFd);
 	Log::dev("close", "Epoll instance stopped.");
-
-	// TODO add cleaning of CGI here
 
 	Log::prod("ok", Const::SERVER_NAME + " closed.");
 	std::cout << std::endl;
@@ -48,8 +49,11 @@ void Network::startServers()
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
 		int readyEventsCount = _waitAndCollectEvents(events);
+
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
+			uint32_t ev = events[n].events;
+
 			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket -> a new client is trying to connect.
 				int newClientFd = _acceptNewClient(eventFd); // create a new client socket and add it to epoll surveillance
 				if (newClientFd > 0) {
@@ -57,24 +61,30 @@ void Network::startServers()
 				} else {
 					Log::prod("error", "Accept failed on listening socket.");
 				}
-			} else { // 2. Existing client fd or CGI pipe
-				uint32_t ev = events[n].events;
-				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) { // error
-					_disconnectClient(eventFd);
-				//} else if (_isCgiEvent(eventFd)) // 2a. eventFd corresponds to a CGI pipe // TODO
-            	//	_handleCgiOutput(eventFd); // TODO
-        		} else if (ev & EPOLLIN) { // 2b. eventFd corresponds to an existing client socket in epoll, and it is ready to send request to webserv
-					_readClientRequest(eventFd); // read by chunks from client socket (non-blocking)
-				} else if (ev & EPOLLOUT) { // 2c. eventFd corresponds to an existing client socket in epoll, and it is available for receiving response from webserv
-					if (_pendingResponses.find(eventFd) != _pendingResponses.end())
-						_continuePendingSend(eventFd); // send by chunks to client socket (non-blocking)
-					else
-						_dispatchAndSendResponse(eventFd); // (also prepares CGI pipes) // TODO
+			//} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
+			//	if (ev & (EPOLLERR | EPOLLHUP)) { // pipe error
+			//		_cgi.handlePipeError(eventFd);
+			//	} else if (ev & EPOLLIN) { // ready for reading CGI output from pipes
+			//		_cgi.handlePipeRead(eventFd);
 				}
-			}
+			//} else { // 2c. eventFd corresponds to an existing client socket in epoll
+				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+					_disconnectClient(eventFd);
+				} else if (ev & EPOLLIN) { // ready for reading raw request from client
+					_readClientRequest(eventFd);
+				} else if (ev & EPOLLOUT) { // ready for sending raw response to client
+					if (_pendingResponses.find(eventFd) != _pendingResponses.end()) {
+						_continuePendingSend(eventFd);
+					} else {
+						_dispatchAndSendResponse(eventFd);
+					}
+				}
+			//}
 		}
+		//_cgi.checkCompletion(); //
 	}
 }
+
 
 /**
  * Reads the configuration and creates one listening socket for each unique port.
@@ -90,20 +100,17 @@ void	Network::_initListeningSockets()
 
 	// Only create socket if port is unique
 	try {
-		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i)
-        {
+		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i) {
             size_t port = listenPorts[i].getPort();
             bool found = false;
-            for (size_t j = 0; j < usedPorts.size(); ++j)
-            {
+            for (size_t j = 0; j < usedPorts.size(); ++j) {
                 if (usedPorts[j] == port)
                 {
                     found = true;
                     break;
                 }
             }
-            if (!found)
-            {
+            if (!found) {
                 usedPorts.push_back(port);
                 _listeningSockets.push_back(new Socket(listenPorts[i]));
             }
@@ -191,12 +198,12 @@ void Network::_dispatchAndSendResponse(int clientFd)
 	try {
 		if (_pendingRequests.find(clientFd) == _pendingRequests.end())
 				throw std::runtime_error("No request data for client.");
-		if (_clientServerMap.find(clientFd) == _clientServerMap.end())
+		if (_socketsByClientFd.find(clientFd) == _socketsByClientFd.end())
 			throw std::runtime_error("Client FD not mapped to any server socket.");
 
-		// 1. Process
+		// 1. Process // TODO make CGI async
 		Request request(_pendingRequests[clientFd]);
-		Socket* listeningSocket = _clientServerMap[clientFd];
+		Socket* listeningSocket = _socketsByClientFd[clientFd];
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", request.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(clientFd) + ").");
 		Log::dev("debug", "Request:\n" + utils::str(request));
@@ -315,7 +322,7 @@ void Network::_epollControl(int fd, int operation, uint32_t events, const std::s
             Log::dev("warning", errorMsg);
             return; // not critical
         }
-        if (_clientServerMap.find(fd) != _clientServerMap.end()) { // fd is a client, not a server
+        if (_socketsByClientFd.find(fd) != _socketsByClientFd.end()) { // fd is a client, not a server
             Log::prod("error", errorMsg);
             return; // not critical
 		}
@@ -381,7 +388,7 @@ int Network::_acceptNewClient(int listeningFd)
         if (listeningFd == _listeningSockets[i]->getFd()) {
             int clientFd =  _listeningSockets[i]->createNewClientSocket();
 			if (clientFd > 0)
-				_clientServerMap[clientFd] = _listeningSockets[i];
+				_socketsByClientFd[clientFd] = _listeningSockets[i];
 			return clientFd;
         }
     }
@@ -409,7 +416,7 @@ void Network::_disconnectClient(int clientFd)
 {
 	Log::prod("event", "Client " + Log::hl(clientFd)
 		+ " disconnected gracefully."); // log before to ensure clientFd is still valid
-	_clientServerMap.erase(clientFd);
+	_socketsByClientFd.erase(clientFd);
 	_pendingRequests.erase(clientFd);
 	_pendingResponses.erase(clientFd);
     _responseSendPos.erase(clientFd);
@@ -436,9 +443,9 @@ std::map<int, std::string> const& Network::getPendingRequests() const
 	return _pendingRequests;
 }
 
-std::map<int, Socket*> const& Network::getClientServerMap() const
+std::map<int, Socket*> const& Network::getSocketsByClientFd() const
 {
-	return _clientServerMap;
+	return _socketsByClientFd;
 }
 
 // PRINT
@@ -453,7 +460,7 @@ std::ostream& operator<<(std::ostream& os, Network const& rhs)
 		os << "  - Socket " << i << " (fd" << sockets[i]->getFd() << ") -> " << sockets[i]->getListenDirective() << "\n";
 
 	os << "- Pending Requests (waiting send): " << rhs.getPendingRequests().size() << "\n";
-	os << "- Active Client Connections: " << rhs.getClientServerMap().size() << "\n";
+	os << "- Active Client Connections: " << rhs.getSocketsByClientFd().size() << "\n";
 
 	return os;
 }

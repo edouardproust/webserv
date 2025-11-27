@@ -1,8 +1,9 @@
 #ifndef RESPONSE_HPP
-# define RESPONSE_HPP
+#define RESPONSE_HPP
 
-# include "http/RequestParser.hpp"
-# include "http/HttpStatus.hpp"
+#include "http/RequestParser.hpp"
+#include "http/HttpStatus.hpp"
+#include "cgi/CgiParams.hpp"
 #include "utils/utils.hpp"
 #include <ctime>
 
@@ -14,17 +15,20 @@
  */
 class Response
 {
-	HttpStatus	_status;
-	UniqHeaders	_headers;
-	std::string	_body;
-	bool		_bodyClearedForHead;
-	std::string	_servedFilePath; // for debug purpose only
+	HttpStatus		_status;
+	UniqHeaders		_headers;
+	std::string		_body;
+	bool			_bodyClearedForHead;
+	std::string		_servedFilePath; // for debug purpose only
+	bool			_needsCgiExecution;
+	CgiParams*		_cgiParams;
+	Request const*	_cgiRequest; // Non-owning to prevent big duplicates (eg. request with a 100MB body)
 
+	void		_initDefaultHeaders();
 	void		_updateContentLength();
 	void		_manageContentType();
 	std::string	_buildStatusLine() const;
 	std::string	_buildHeaders() const;
-	void		_initDefaultHeaders();
 	void		_parseRawResponse(std::string const&);
 	int			_setHeaders(std::string const&);
 	bool		_hasHeader(std::string const&) const;
@@ -39,20 +43,24 @@ class Response
 		~Response();
 
 		std::string stringify() const;
+		void		markForCgiExecution(CgiParams const&, Request const&);
+		void		clearBody();
+		void		clearBodyForHead();
+		bool		isConnectionClose() const;
 
 		void	setStatus(HttpStatus const&);
 		void	setHeader(std::string const&, std::string const&);
 		void	setBodyAndContentLength(std::string const&);
 		void	setServedFilePath(std::string const&);
-		void	clearBody();
-		void	clearBodyForHead();
 		void	setConnectionFromRequest(Request const&);
-		bool	isConnectionClose() const;
 
 		HttpStatus const& 	getStatus() const;
 		UniqHeaders const&	getHeaders() const;
 		std::string const&	getBody() const;
 		std::string const&	getServedFilePath() const;
+		bool				needsCgiExecution() const;
+		CgiParams const&	getCgiParams() const;
+		Request const&		getCgiRequest() const;
 
 		class RawException: public std::runtime_error {
 			public:

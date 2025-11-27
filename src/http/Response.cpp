@@ -3,6 +3,9 @@
 Response::Response()
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
+, _needsCgiExecution(false)
+, _cgiParams(NULL)
+, _cgiRequest(NULL)
 {
 	_initDefaultHeaders();
 }
@@ -13,6 +16,9 @@ Response::Response()
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
+, _needsCgiExecution(false)
+, _cgiParams(NULL)
+, _cgiRequest(NULL)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -24,35 +30,37 @@ Response::Response(Response const& other)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
 , _servedFilePath(other._servedFilePath)
+, _needsCgiExecution(other._needsCgiExecution)
+, _cgiParams(other._cgiParams ? new CgiParams(*other._cgiParams) : NULL)
+, _cgiRequest(other._cgiRequest)
 {}
 
 Response& Response::operator=(Response const& other)
 {
-	if (this != &other)
-	{
+	if (this != &other) {
 		_status = other._status;
 		_headers = other._headers;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
 		_servedFilePath = other._servedFilePath;
+		_needsCgiExecution = other._needsCgiExecution;
+		delete _cgiParams;
+		_cgiParams = other._cgiParams ? new CgiParams(*other._cgiParams) : NULL;
+		_cgiRequest = other._cgiRequest;
 	}
 	return *this;
 }
 
 Response::~Response()
-{}
+{
+	delete _cgiParams;
+}
 
 Response::RawException::RawException(std::string const& msg)
 : std::runtime_error(msg)
 {}
 
-void	Response::_initDefaultHeaders()
-{
-	_headers["server"] = Const::SERVER_SOFTWARE;
-	_headers["date"] = utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT");
-	_headers["connection"] = "keep-alive";
-	_headers["content-length"] = "0";
-}
+// PUBLIC METHODS
 
 std::string	Response::stringify() const
 {
@@ -66,62 +74,11 @@ std::string	Response::stringify() const
 	return response.str();
 }
 
-HttpStatus const&	Response::getStatus() const
+void	Response::markForCgiExecution(CgiParams const& params, Request const& req)
 {
-	return _status;
-}
-
-UniqHeaders const& Response::getHeaders() const
-{
-	return _headers;
-}
-
-std::string const& Response::getBody() const
-{
-	return _body;
-}
-
-std::string const&	Response::getServedFilePath() const
-{
-	return _servedFilePath;
-}
-
-void	Response::setStatus(HttpStatus const& status)
-{
-	_status = status;
-	if (status.getCode() == 204)
-		setBodyAndContentLength("");
-}
-
-/**
- * @param name Not case-sensitive
- */
-void	Response::setHeader(std::string const& name, std::string const& value)
-{
-	std::string normalizedName = utils::toLowerCase(name);
-
-	if (normalizedName == "connection")
-	{
-		std::string normalizedValue = utils::toLowerCase(value);
-		if (normalizedValue == "keep-alive" || normalizedValue == "close")
-			_headers[normalizedName] = normalizedValue;
-		else
-			_headers[normalizedName] = "keep-alive";
-		return ;
-	}
-	_headers[normalizedName] = value;
-}
-
-void	Response::setBodyAndContentLength(std::string const& body)
-{
-	_body = body;
-	_updateContentLength();
-	_manageContentType();
-}
-
-void	Response::setServedFilePath(std::string const& absoluteFilePath)
-{
-	_servedFilePath = absoluteFilePath;
+	_needsCgiExecution = true;
+	_cgiParams = new CgiParams(params);  // CgiParams est petit, copie OK
+	_cgiRequest = &req;  // Juste une référence, pas de copie !
 }
 
 void	Response::clearBody()
@@ -137,22 +94,22 @@ void	Response::clearBodyForHead()
 	_bodyClearedForHead = hadBody;
 }
 
-void	Response::setConnectionFromRequest(Request const& request)
-{
-	UniqHeaders const& headers = request.getUniqHeaders();
-	UniqHeaders::const_iterator it = headers.find("connection");
-	if (it != headers.end())
-		setHeader("Connection", it->second);
-	else
-		setHeader("Connection", "keep-alive");
-}
-
 bool	Response::isConnectionClose() const {
 	UniqHeaders::const_iterator found = _headers.find("connection");
 	if (found == _headers.end())
 		return false;
 	std::string value = utils::toLowerCase(utils::trim(found->second));
 	return value == "close";
+}
+
+// PRIVATE METHODS
+
+void	Response::_initDefaultHeaders()
+{
+	_headers["server"] = Const::SERVER_SOFTWARE;
+	_headers["date"] = utils::formatDate(time(0), "%a, %d %b %Y %H:%M:%S GMT");
+	_headers["connection"] = "keep-alive";
+	_headers["content-length"] = "0";
 }
 
 void	Response::_updateContentLength()
@@ -182,7 +139,6 @@ bool	Response::_hasHeader(std::string const& keyLowcase) const
 std::string Response::_buildStatusLine() const
 {
 	std::stringstream statusLine;
-
 	statusLine << "HTTP/1.1 " << _status.getCode() << " " << _status.getReason() << "\r\n";
 	return statusLine.str();
 }
@@ -214,8 +170,6 @@ std::string Response::_buildHeaders() const
 		}
 	return headerStream.str();
 }
-
-// static utils
 
 /**
  * Construct a Response from a raw CGI output.
@@ -282,6 +236,96 @@ int	Response::_setHeaders(std::string const& headersPart) {
 	}
 	return statusCode;
 }
+
+// SETTERS
+
+
+void	Response::setStatus(HttpStatus const& status)
+{
+	_status = status;
+	if (status.getSlug() == "no_content")
+		setBodyAndContentLength("");
+}
+
+/**
+ * @param name Not case-sensitive
+ */
+void	Response::setHeader(std::string const& name, std::string const& value)
+{
+	std::string normalizedName = utils::toLowerCase(name);
+
+	if (normalizedName == "connection")
+	{
+		std::string normalizedValue = utils::toLowerCase(value);
+		if (normalizedValue == "keep-alive" || normalizedValue == "close")
+			_headers[normalizedName] = normalizedValue;
+		else
+			_headers[normalizedName] = "keep-alive";
+		return ;
+	}
+	_headers[normalizedName] = value;
+}
+
+void	Response::setBodyAndContentLength(std::string const& body)
+{
+	_body = body;
+	_updateContentLength();
+	_manageContentType();
+}
+
+void	Response::setServedFilePath(std::string const& absoluteFilePath)
+{
+	_servedFilePath = absoluteFilePath;
+}
+
+void	Response::setConnectionFromRequest(Request const& request)
+{
+	UniqHeaders const& headers = request.getUniqHeaders();
+	UniqHeaders::const_iterator it = headers.find("connection");
+	if (it != headers.end())
+		setHeader("Connection", it->second);
+	else
+		setHeader("Connection", "keep-alive");
+}
+
+// GETTERS
+
+HttpStatus const&	Response::getStatus() const
+{
+	return _status;
+}
+
+UniqHeaders const&	Response::getHeaders() const
+{
+	return _headers;
+}
+
+std::string const&	Response::getBody() const
+{
+	return _body;
+}
+
+std::string const&	Response::getServedFilePath() const
+{
+	return _servedFilePath;
+}
+
+bool	Response::needsCgiExecution() const
+{
+	return _needsCgiExecution;
+}
+
+CgiParams const&	Response::getCgiParams() const
+{
+	return *_cgiParams;
+}
+
+Request const&	Response::getCgiRequest() const
+{
+	return *_cgiRequest;
+}
+
+// PRINT
 
 std::ostream& operator<<(std::ostream& os, Response const& response)
 {

@@ -19,14 +19,15 @@ class Network
 	static size_t const			_CLIENT_BUFFER_SIZE;
 	static size_t const			_MAX_NB_OF_EVENTS;
 
-	Config const&				_config; // the parsed config file
-	int							_epollFd; // fd of the epoll instance
-	std::vector<Socket*>		_listeningSockets; // There is one Socket per listen directive in the config file
-	std::map<int, Socket*>		_clientServerMap; // Maps client fd with serverSocket
-	std::map<int, std::string>	_pendingRequests; // Maps client fd with the raw request being built
-	std::map<int, std::string>  _pendingResponses; // Maps client fd with the raw response being built
-	std::map<int, size_t>       _responseSendPos; // Maps client fd with the cursor position in the raw response being built
+	Config const&				_config;			// the parsed config file
+	int							_epollFd;			// fd of the epoll instance
+	std::vector<Socket*>		_listeningSockets;	// There is one Socket per listen directive in the config file
+	std::map<int, Socket*>		_socketsByClientFd; // Maps client fd with server socket
+	std::map<int, std::string>	_pendingRequests;	// Maps client fd with the raw request being built
+	std::map<int, std::string>  _pendingResponses;	// Maps client fd with the raw response being built
+	std::map<int, size_t>       _responseSendPos;	// Maps client fd with the cursor position in the raw response being built
 	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
+	//CgiHandler					_cgi; 				// Instance of CgiHandler
 
 	void	_initListeningSockets();
 	void	_cleanupListeningSockets();
@@ -62,7 +63,7 @@ class Network
 		int									getEpollFd() const;
 		std::vector<Socket*> const&			getListeningSockets() const;
 		std::map<int, std::string> const&	getPendingRequests() const;
-		std::map<int, Socket*> const&		getClientServerMap() const;
+		std::map<int, Socket*> const&		getSocketsByClientFd() const;
 };
 
 std::ostream&	operator<<(std::ostream&, Network const&);
