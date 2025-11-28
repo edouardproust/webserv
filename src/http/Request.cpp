@@ -263,10 +263,10 @@ std::ostream& operator<<(std::ostream& os, const Request& request)
 	os << "- Status: " << request.getStatus() << "\n";
 	os << "- Method: " << PrintableString(request.getMethod()) << "\n";
 	os << "- URI: " << PrintableString(request.getUri()) << "\n";
-	os << "  - Path: " << PrintableString(request.getPath()) << "\n";
-	os << "  - Script Name: " << PrintableString(request.getScriptName()) << "\n";
-	os << "  - Path Info: " << PrintableString(request.getPathInfo()) << "\n";
-	os << "  - Query String: " << PrintableString(request.getQueryString()) << "\n";
+	os << "- Path: " << PrintableString(request.getPath()) << "\n";
+	os << "- Script Name: " << PrintableString(request.getScriptName()) << "\n";
+	os << "- Path Info: " << PrintableString(request.getPathInfo()) << "\n";
+	os << "- Query String: " << PrintableString(request.getQueryString()) << "\n";
 	os << "- Version: " << PrintableString(request.getVersion()) << "\n";
 	const std::vector<std::pair<std::string, std::string> >& rawHeaders = request.getAllHeaders();
 	os << "- Raw Headers: " << rawHeaders.size() << "\n";

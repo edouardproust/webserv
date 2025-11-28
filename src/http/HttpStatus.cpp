@@ -7,6 +7,7 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{301, "Moved Permanently", "moved_permanently"},
 	{302, "Found", "found"},
 	{400, "Bad Request", "bad_request"},
+	{401, "Unauthorized", "unauthorized"},
 	{403, "Forbidden", "forbidden"},
 	{404, "Not Found", "not_found"},
 	{405, "Method Not Allowed", "method_not_allowed"},

@@ -1,4 +1,5 @@
 #include "router/Router.hpp"
+#include "session/SessionManager.hpp"
 
 /**
  * Dispatch the request to the corresponding handler by crossing data between Config and Request.
