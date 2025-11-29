@@ -5,7 +5,7 @@ Response::Response()
 , _bodyClearedForHead(false)
 , _needsCgiExecution(false)
 , _cgiParams(NULL)
-, _cgiRequest(NULL)
+, _cgiRoutingDecision(NULL)
 {
 	_initDefaultHeaders();
 }
@@ -18,7 +18,7 @@ Response::Response(std::string const& rawResponse)
 , _bodyClearedForHead(false)
 , _needsCgiExecution(false)
 , _cgiParams(NULL)
-, _cgiRequest(NULL)
+, _cgiRoutingDecision(NULL)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -32,7 +32,7 @@ Response::Response(Response const& other)
 , _servedFilePath(other._servedFilePath)
 , _needsCgiExecution(other._needsCgiExecution)
 , _cgiParams(other._cgiParams ? new CgiParams(*other._cgiParams) : NULL)
-, _cgiRequest(other._cgiRequest)
+, _cgiRoutingDecision(other._cgiRoutingDecision)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -46,7 +46,7 @@ Response& Response::operator=(Response const& other)
 		_needsCgiExecution = other._needsCgiExecution;
 		delete _cgiParams;
 		_cgiParams = other._cgiParams ? new CgiParams(*other._cgiParams) : NULL;
-		_cgiRequest = other._cgiRequest;
+		_cgiRoutingDecision = other._cgiRoutingDecision;
 	}
 	return *this;
 }
@@ -74,13 +74,6 @@ std::string	Response::stringify() const
 	return response.str();
 }
 
-void	Response::markForCgiExecution(CgiParams const& params, Request const& req)
-{
-	_needsCgiExecution = true;
-	_cgiParams = new CgiParams(params);  // CgiParams est petit, copie OK
-	_cgiRequest = &req;  // Juste une référence, pas de copie !
-}
-
 void	Response::clearBody()
 {
 	_body.clear();
@@ -100,6 +93,14 @@ bool	Response::isConnectionClose() const {
 		return false;
 	std::string value = utils::toLowerCase(utils::trim(found->second));
 	return value == "close";
+}
+
+Response	Response::createCgiResponse(CgiParams const& params, RoutingDecision const& rd) {
+	Response resp;
+	resp._needsCgiExecution = true;
+	resp._cgiParams = new CgiParams(params); // owning
+	resp._cgiRoutingDecision = &rd; // reference (non-owning)
+	return resp;
 }
 
 // PRIVATE METHODS
@@ -320,9 +321,9 @@ CgiParams const&	Response::getCgiParams() const
 	return *_cgiParams;
 }
 
-Request const&	Response::getCgiRequest() const
+RoutingDecision const&	Response::getCgiRoutingDecision() const
 {
-	return *_cgiRequest;
+	return *_cgiRoutingDecision;
 }
 
 // PRINT

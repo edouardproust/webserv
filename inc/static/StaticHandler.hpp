@@ -38,6 +38,8 @@ class StaticHandler
 		static Response	put(RoutingDecision const&);
 		static Response	post(RoutingDecision const&);
 		static Response	error(std::string const&, RoutingDecision const&);
+		static Response	error(std::string const&, Request const&, ErrorPages const&);
+
 		static Response	builtinError(std::string const&, std::string const&);
 };
 

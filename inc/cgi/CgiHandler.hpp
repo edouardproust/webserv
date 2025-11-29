@@ -1,77 +1,45 @@
 #ifndef CGI_HANDLER_HPP
 #define CGI_HANDLER_HPP
 
-#include "cgi/CgiParams.hpp"
-#include "http/Request.hpp"
+#include "network/Network.hpp"
+#include "cgi/CgiContext.hpp"
 #include "http/Response.hpp"
-#include "config/LocationBlock.hpp"
-#include "config/HostPortPair.hpp"
-#include "static/StaticHandler.hpp"
-#include "utils/signal.hpp"
-#include "utils/utils.hpp"
-#include "utils/typedefs.hpp"
-#include "utils/Log.hpp"
-#include "fcntl.h"
 #include <sys/wait.h>
 
-/**
- * Handles execution of CGI scripts.
- *
- * Resource-type RAII class: manages pipes and child processes, non-copyable.
- */
+// TODO make canonical ? + class comment
 class CgiHandler
 {
-	static size_t const	_TIMEOUT_MS;
-	static size_t const	_STEP_MS;
-	static size_t const	_READ_BUFFER;
+	static size_t const	_TIMEOUT_SECONDS;
 
-	Request const&		_request;
-	CgiParams const&	_cgiParams;
+	Network*						_network;
+	std::map<int, CgiContext*>		_contextsByPipeFd;
+	std::map<pid_t, CgiContext*>	_contextsByPid;
+	std::set<pid_t>					_zombiesToReap;
 
-	int			_stdinPipe[2];
-	int			_stdoutPipe[2];
-	int			_stderrPipe[2];
-	std::string	_tmpFile;
+	void	_launchProcess(int clientFd, Response const& cgiResponse);
+	void	_finalizeResponse(CgiContext* ctx, int exitStatus);
+	void	_cleanupProcessRessources(pid_t);
+	void	_killAndCleanupProcess(pid_t);
+	void	_addPipeToEpoll(int fd, std::string const& context);
+	void	_reapZombies();
 
-	std::string	_cgiOutput;
-	std::string	_cgiError;
-
-	pid_t		_forkAndExec() const;
-	void		_prepareIo();
-	Response	_handleStatus(int);
-	void		_redirectIoInChild() const;
-	void		_setNonBlocking(int);
-	bool		_waitWithTimeout(pid_t, int&, size_t);
-	void		_readPipes();
-	void		_cleanupPipes();
-
-	// Defaut constructore and copy / assignation are forbidden
-	CgiHandler();
+	// TODO canonical ? + comment
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 
 	public:
 
-		CgiHandler(Request const&, CgiParams const&);
+		CgiHandler();
 		~CgiHandler();
 
-		Response execute();
+		void	init(Network*);
+		void	launchAsync(int, Response const&);
+		void	handlePipeRead(int);
+		void	checkCompletion();
+		void	handleError(CgiContext*, std::string const&, std::string const&);
+		void	fullCleanup();
 
-		CgiParams const&	getCgiParams() const;
-		std::string const&	getCgiOutput() const;
-		std::string const&	getCgiError() const;
-
-		class ExecException: public std::runtime_error {
-			public:
-				ExecException(std::string const&);
-		};
-
-		class TimeoutException: public std::runtime_error {
-			public:
-				TimeoutException(std::string const&);
-		};
+		bool	isCgiPipe(int) const;
 };
-
-std::ostream&	operator<<(std::ostream&, CgiHandler const&);
 
 #endif

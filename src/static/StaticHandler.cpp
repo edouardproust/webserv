@@ -156,10 +156,16 @@ Response	StaticHandler::_serveFile(std::string const& filePath, RoutingDecision 
 
 Response	StaticHandler::error(std::string const& errorSlug, RoutingDecision const& rd)
 {
-	HttpStatus	status(errorSlug);
-	std::string const& method = rd.getRequest().getMethod();
-	ErrorPages const& locErrorPages = rd.getLocation()->getErrorPages();
 	Request const& req = rd.getRequest();
+	ErrorPages const& locErrorPages = rd.getLocation()->getErrorPages();
+
+	return error(errorSlug, req, locErrorPages);
+}
+
+Response	StaticHandler::error(std::string const& errorSlug, Request const& req, ErrorPages const& locErrorPages)
+{
+	HttpStatus	status(errorSlug);
+	std::string const& method = req.getMethod();
 
 	ErrorPages::const_iterator search = locErrorPages.find(status.getCode());
 	if (search != locErrorPages.end()) {

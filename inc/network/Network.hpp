@@ -39,7 +39,6 @@ class Network
 
 	void	_createEpollInstance();
 	void	_registerListeningSocketsToEpoll();
-	void	_epollControl(int, int, uint32_t, const std::string&);
 	int		_waitAndCollectEvents(struct epoll_event*);
 	static std::string	_epollOpToString(int operation);
 
@@ -59,6 +58,8 @@ class Network
 		~Network();
 
 		void	startServers();
+		void	epollControl(int, int, uint32_t, const std::string&);
+
 
 		int									getEpollFd() const;
 		std::vector<Socket*> const&			getListeningSockets() const;

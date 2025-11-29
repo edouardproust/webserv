@@ -1,8 +1,8 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
-#include "http/RequestParser.hpp"
 #include "http/HttpStatus.hpp"
+#include "router/RoutingDecision.hpp"
 #include "cgi/CgiParams.hpp"
 #include "utils/utils.hpp"
 #include <ctime>
@@ -15,14 +15,14 @@
  */
 class Response
 {
-	HttpStatus		_status;
-	UniqHeaders		_headers;
-	std::string		_body;
-	bool			_bodyClearedForHead;
-	std::string		_servedFilePath; // for debug purpose only
-	bool			_needsCgiExecution;
-	CgiParams*		_cgiParams;
-	Request const*	_cgiRequest; // Non-owning to prevent big duplicates (eg. request with a 100MB body)
+	HttpStatus				_status;
+	UniqHeaders				_headers;
+	std::string				_body;
+	bool					_bodyClearedForHead;
+	std::string				_servedFilePath; // for debug purpose only
+	bool					_needsCgiExecution;
+	CgiParams*				_cgiParams; // Owning (deleted in destructor);
+	RoutingDecision const*	_cgiRoutingDecision; // For cgi; non-owning to prevent big duplicates (eg. request with a 100MB body)
 
 	void		_initDefaultHeaders();
 	void		_updateContentLength();
@@ -43,10 +43,11 @@ class Response
 		~Response();
 
 		std::string stringify() const;
-		void		markForCgiExecution(CgiParams const&, Request const&);
 		void		clearBody();
 		void		clearBodyForHead();
 		bool		isConnectionClose() const;
+
+		static Response	createCgiResponse(CgiParams const&, RoutingDecision const&);
 
 		void	setStatus(HttpStatus const&);
 		void	setHeader(std::string const&, std::string const&);
@@ -54,13 +55,13 @@ class Response
 		void	setServedFilePath(std::string const&);
 		void	setConnectionFromRequest(Request const&);
 
-		HttpStatus const& 	getStatus() const;
-		UniqHeaders const&	getHeaders() const;
-		std::string const&	getBody() const;
-		std::string const&	getServedFilePath() const;
-		bool				needsCgiExecution() const;
-		CgiParams const&	getCgiParams() const;
-		Request const&		getCgiRequest() const;
+		HttpStatus const& 		getStatus() const;
+		UniqHeaders const&		getHeaders() const;
+		std::string const&		getBody() const;
+		std::string const&		getServedFilePath() const;
+		bool					needsCgiExecution() const;
+		CgiParams const&		getCgiParams() const;
+		RoutingDecision const&	getCgiRoutingDecision() const;
 
 		class RawException: public std::runtime_error {
 			public:

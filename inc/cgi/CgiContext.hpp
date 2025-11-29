@@ -15,15 +15,16 @@
  */
 class CgiContext
 {
-	pid_t			_pid;
-	int				_clientFd;
-	int				_stdoutPipe;
-	int				_stderrPipe;
-	std::string		_output;
-	std::string		_error;
-	time_t			_startTime;
-	bool			_connectionClose;  // Store connection flag
-	Request const*	_originalRequest; // Reference to the origin Request (non-owning)
+	pid_t				_pid;
+	int					_clientFd;
+	int					_stdoutPipe;
+	int					_stderrPipe;
+	Request	const&		_request; // non-owning
+	ErrorPages const&	_errorPages; // non-owning
+
+	time_t				_startTime;
+	std::string			_output; // owning
+	std::string			_error; // owning
 
 	// Not default-constructible, not copyable, not assignable
 	CgiContext();
@@ -32,13 +33,22 @@ class CgiContext
 
 	public:
 
-		CgiContext(pid_t, int, int, int, bool, Request const*);
+		CgiContext(pid_t, int, int, int, Request const&, ErrorPages const&);
 		~CgiContext();
 
-		pid_t	getPid() const;
-		int		getClientFd() const;
-		int		getStdoutPipe() const;
-		int		getStderrPipe() const;
+		void	appendOutput(const char*, size_t);
+    	void	appendError(const char*, size_t);
+		void	setStartTime();
+
+		pid_t				getPid() const;
+		int					getClientFd() const;
+		int					getStdoutPipe() const;
+		int					getStderrPipe() const;
+		Request const&		getRequest() const;
+		ErrorPages const&	getErrorPages() const;
+		time_t const&		getStartTime() const;
+		std::string	const&	getOutput() const;
+		std::string const&	getError() const;
 };
 
 #endif

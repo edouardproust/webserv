@@ -81,7 +81,7 @@ void Network::startServers()
 				}
 			//}
 		}
-		//_cgi.checkCompletion(); //
+		//_cgi.checkCompletion();
 	}
 }
 
@@ -151,7 +151,7 @@ void	Network::_registerNewClientToEpoll(int clientFd)
 		return;
 	}
 	// Add to epoll
-	_epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup"); // throw
+	epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup"); // throw
 	Log::dev("event", "New client fd " + Log::hl(clientFd) + " configured and added to epoll");
 }
 
@@ -173,13 +173,13 @@ void Network::_readClientRequest(int clientFd)
             Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(currentReq.size()) + " bytes)");
             Response response = StaticHandler::builtinError("content_too_large", "GET");
             std::string rawResponse = response.stringify();
-			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
+			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
 		currentReq.append(buff, bytesReceived);
 		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
 		if (RequestParser::isRequestComplete(currentReq)) {
-			_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
+			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 		}
 	} else if (bytesReceived == 0) {
@@ -302,7 +302,7 @@ void Network::_registerListeningSocketsToEpoll()
 {
 	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 		int socketFd = _listeningSockets[i]->getFd();
-		_epollControl(socketFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
+		epollControl(socketFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
 		Log::dev("setup", "Socket (fd " + Log::hl(socketFd) + ") added to epoll surveillance.");
 		Log::prod("ok", Const::SERVER_NAME + " will listen on " + Log::hl(_listeningSockets[i]->getListenDirective()) + " (socket fd " + Log::hl(socketFd) + ").");
 	}
@@ -311,7 +311,7 @@ void Network::_registerListeningSocketsToEpoll()
 /**
  * Safe wrapper around epoll_ctl. Logs the operation and handles errors depending on the type of action.
  */
-void Network::_epollControl(int fd, int operation, uint32_t events, const std::string& context)
+void Network::epollControl(int fd, int operation, uint32_t events, const std::string& context)
 {
     struct epoll_event event;
     event.data.fd = fd;
@@ -405,7 +405,7 @@ void Network::_prepareClientForNextRequest(int clientFd)
     _responseSendPos.erase(clientFd);
     _shouldCloseAfterResponse.erase(clientFd);
 	Log::dev("event", "Connection: keep-alive -> Resetting fd " + Log::hl(clientFd) + " to 'recv'.");
-	_epollControl(clientFd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
+	epollControl(clientFd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
 }
 
 /**
@@ -421,7 +421,7 @@ void Network::_disconnectClient(int clientFd)
 	_pendingResponses.erase(clientFd);
     _responseSendPos.erase(clientFd);
     _shouldCloseAfterResponse.erase(clientFd);
-	_epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect"); // throw
+	epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect"); // throw
 	close(clientFd);
 }
 

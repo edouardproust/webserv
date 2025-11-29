@@ -18,7 +18,6 @@ Response	Router::dispatchRequest(Config const& config, Request const& req, HostP
 	RoutingDecision rd(config, req, listeningOn);
 	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
 
-	Response resp;
 	RoutingDecision::Decision decision = rd.getDecision();
 
 	if (req.getStatus().getSlug() != "ok")
@@ -52,21 +51,7 @@ Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair cons
 	CgiParams cgiParams(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
 	if (!cgiParams.isValid())
 		return StaticHandler::error("not_implemented", rd);
-	CgiHandler cgi(rd.getRequest(), cgiParams);
-	try {
-		Response resp = cgi.execute();
-		Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
-		return resp;
-	} catch (CgiHandler::ExecException& e) {
-		Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
-		return StaticHandler::error("internal_server_error", rd);
-	} catch (Response::RawException& e) {
-		Log::prod("warning", "CGI invalid raw output: " + scriptName + ": " + e.what());
-		return StaticHandler::error("bad_gateway", rd);
-	} catch (CgiHandler::TimeoutException& e) {
-		Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
-		return StaticHandler::error("timeout", rd);
-	}
+	return Response::createCgiResponse(cgiParams, rd);
 }
 
 Response	Router::_handleStaticDecision(RoutingDecision const& rd)
