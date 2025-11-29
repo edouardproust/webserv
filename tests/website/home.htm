@@ -189,7 +189,7 @@
 				<td colspan="4">🔐 Session Management & Cookies</td>
 			</tr><tr>
 				<td><code>GET</code></td>
-				<td><a href="http://localhost:8080/cgi/login.py" class="test-link">http://localhost:8080/cgi/login.py</a></td>
+				<td><a href="http://localhost:8080/cgi/auth_login.py" class="test-link">http://localhost:8080/cgi/auth_login.py</a></td>
 				<td class="status-ok">200</td>
 				<td class="notes">Login page - creates session cookie after form submission</td>
 			</tr><tr>
@@ -199,12 +199,12 @@
 				<td class="notes">Profile page - requires valid session cookie</td>
 			</tr><tr>
 				<td><code>GET</code></td>
-				<td><a href="http://localhost:8080/cgi/logout.py" class="test-link">http://localhost:8080/cgi/logout.py</a></td>
+				<td><a href="http://localhost:8080/cgi/auth_logout.py" class="test-link">http://localhost:8080/cgi/auth_logout.py</a></td>
 				<td class="status-ok">200</td>
 				<td class="notes">Logout - destroys session cookie</td>
 			</tr><tr>
 				<td><code>POST</code></td>
-				<td><code>curl -X POST http://localhost:8080/cgi/login.py -d "username=testuser" -c cookies.txt -v</code></td>
+				<td><code>curl -X POST http://localhost:8080/cgi/auth_login.py -d "username=testuser" -c cookies.txt -v</code></td>
 				<td class="status-ok">200</td>
 				<td class="notes">Test session creation with curl (check Set-Cookie header)</td>
 			</tr>

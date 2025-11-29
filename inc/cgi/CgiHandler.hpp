@@ -8,7 +8,6 @@
 #include "utils/signal.hpp"
 #include "utils/utils.hpp"
 #include "utils/typedefs.hpp"
-#include "utils/Log.hpp"
 #include "fcntl.h"
 #include <sys/wait.h>
 

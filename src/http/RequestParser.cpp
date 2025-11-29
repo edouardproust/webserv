@@ -228,8 +228,11 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 	if (!_isValidHeaderValue(value))
 		return HttpStatus("bad_request");
 	std::string normalizedName = _normalizeHeaderName(name);
-	if (normalizedName == "cookie")
-		return _parseCookies(request, value);
+	if (normalizedName == "cookie") {
+		HttpStatus cookieStatus = _parseCookies(request, value);
+		if (cookieStatus.getSlug() != "ok")
+			return cookieStatus;
+	}
 	if (normalizedName == "content-length")
 	{
 		if (!_isValidContentLength(value))

@@ -88,8 +88,8 @@ def main():
 
     print("""
         <hr>
-        <p><a href='/cgi/login.py'>Back to Login</a></p>
-        <p><a href='/cgi/logout.py'>Logout</a></p>
+        <p><a href='/cgi/auth_login.py'>Back to Login</a></p>
+        <p><a href='/cgi/auth_logout.py'>Logout</a></p>
     </body>
     </html>
     """)
