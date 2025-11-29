@@ -61,13 +61,13 @@ void Network::startServers()
 				} else {
 					Log::prod("error", "Accept failed on listening socket.");
 				}
-			//} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
-			//	if (ev & (EPOLLERR | EPOLLHUP)) { // pipe error
-			//		_cgi.handlePipeError(eventFd);
-			//	} else if (ev & EPOLLIN) { // ready for reading CGI output from pipes
-			//		_cgi.handlePipeRead(eventFd);
+			} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
+				if (ev & (EPOLLERR | EPOLLHUP)) { // pipe error
+					_cgi.handlePipeError(eventFd);
+				} else if (ev & EPOLLIN) { // ready for reading CGI output from pipes
+					_cgi.handlePipeRead(eventFd);
 				}
-			//} else { // 2c. eventFd corresponds to an existing client socket in epoll
+			} else { // 2c. eventFd corresponds to an existing client socket in epoll
 				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
 					_disconnectClient(eventFd);
 				} else if (ev & EPOLLIN) { // ready for reading raw request from client
@@ -79,9 +79,9 @@ void Network::startServers()
 						_dispatchAndSendResponse(eventFd);
 					}
 				}
-			//}
+			}
 		}
-		//_cgi.checkCompletion();
+		_cgi.checkCompletion();
 	}
 }
 
