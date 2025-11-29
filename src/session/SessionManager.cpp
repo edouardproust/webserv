@@ -1,5 +1,6 @@
 #include "session/SessionManager.hpp"
 #include "utils/utils.hpp"
+#include "utils/Log.hpp"
 #include <sstream>
 
 SessionManager::SessionManager()
@@ -26,8 +27,10 @@ Session&	SessionManager::getSession(const std::string& sessionId)
 {
 	_cleanupExpiredSessions();
 	std::map<std::string, Session>::iterator it = _sessions.find(sessionId);
-	if (it != _sessions.end() && !it->second.isExpired())
+	if (it != _sessions.end() && !it->second.isExpired()) {
+		it->second.updateActivity();
 		return it->second;
+	}
 	static Session emptySession;
 	return emptySession;
 }
@@ -39,10 +42,32 @@ void	SessionManager::setSessionData(const std::string& sessionId, const std::str
 		session.setData(key, value);
 }
 
-bool	SessionManager::isValidSession(const std::string& sessionId)
+bool SessionManager::isValidSession(const std::string& sessionId)
 {
-	Session& session = getSession(sessionId);
-	return !session.isSessionIdEmpty();
+    _cleanupExpiredSessions();
+    
+    // Debug logging
+    Log::dev("debug", "=== Session Validation ===");
+    Log::dev("debug", "Looking for session ID: " + sessionId);
+    Log::dev("debug", "Total sessions in map: " + utils::str(_sessions.size()));
+    
+    // Log all current sessions for debugging
+    for (std::map<std::string, Session>::iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
+        Log::dev("debug", "Session in map: " + it->first + " -> " + it->second.getUsername());
+    }
+    
+    std::map<std::string, Session>::iterator it = _sessions.find(sessionId);
+    bool exists = (it != _sessions.end());
+    bool expired = exists ? it->second.isExpired() : true;
+    
+    Log::dev("debug", "Session exists: " + std::string(exists ? "YES" : "NO"));
+    if (exists) {
+        Log::dev("debug", "Session expired: " + std::string(expired ? "YES" : "NO"));
+        Log::dev("debug", "Session username: " + it->second.getUsername());
+    }
+    Log::dev("debug", "Validation result: " + std::string((exists && !expired) ? "VALID" : "INVALID"));
+    
+    return (exists && !expired);
 }
 
 void	SessionManager::destroySession(const std::string& sessionId)

@@ -1,5 +1,4 @@
 #include "router/Router.hpp"
-#include "session/SessionManager.hpp"
 
 /**
  * Dispatch the request to the corresponding handler by crossing data between Config and Request.
@@ -60,6 +59,7 @@ void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostP
 		CgiHandler cgi;
 		try {
 			resp = cgi.execute(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
+			resp.handleSession(rd.getRequest());
 		} catch (CgiHandler::ExecException& e) {
 			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
 			resp = statiq.handleError(HttpStatus("internal_server_error"));

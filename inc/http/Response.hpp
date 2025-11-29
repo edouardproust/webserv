@@ -19,6 +19,8 @@ class Response
 	std::vector<std::string>			_setCookieHeaders;
 	std::string							_body;
 	bool								_bodyClearedForHead;
+	std::string							_pendingSessionUsername;
+	bool								_expireSession;
 
 	void		_updateContentLength();
 	void		_manageContentType();
@@ -50,11 +52,14 @@ class Response
 		void	addSetCookieHeader(const std::string& name, const std::string& value, 
                    const std::string& options);
 		bool	isConnectionClose() const;
+		bool	shouldExpireSession() const;
+		void	handleSession(const Request& request);
 
 		HttpStatus const& 							getStatus() const;
 		std::map<std::string, std::string> const&	getHeaders() const;
 		const std::vector<std::string>&				getSetCookieHeaders() const;
 		std::string const&							getBody() const;
+		const std::string&							getPendingSessionUsername() const;
 
 		class RawException: public std::runtime_error {
 			public:

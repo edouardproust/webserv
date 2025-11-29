@@ -1,8 +1,11 @@
 #include "http/Response.hpp"
+#include "session/SessionManager.hpp"
 
 Response::Response()
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
+,_pendingSessionUsername("")
+,_expireSession(false)
 {
 	_initDefaultHeaders();
 }
@@ -13,6 +16,8 @@ Response::Response()
 Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
+, _pendingSessionUsername("")
+, _expireSession(false)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -24,6 +29,8 @@ Response::Response(Response const& other)
 , _setCookieHeaders(other._setCookieHeaders)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
+, _pendingSessionUsername(other._pendingSessionUsername)
+, _expireSession(other._expireSession)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -35,6 +42,8 @@ Response& Response::operator=(Response const& other)
 		_setCookieHeaders = other._setCookieHeaders;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
+		_pendingSessionUsername = other._pendingSessionUsername;
+		_expireSession = other._expireSession;
 	}
 	return *this;
 }
@@ -84,6 +93,16 @@ const std::vector<std::string>& Response::getSetCookieHeaders() const
 std::string const& Response::getBody() const
 {
 	return _body;
+}
+
+const std::string&	Response::getPendingSessionUsername() const
+{
+	return _pendingSessionUsername;
+}
+
+bool	Response::shouldExpireSession() const
+{
+	return _expireSession;
 }
 
 void	Response::setStatus(HttpStatus const& status)
@@ -164,6 +183,23 @@ bool	Response::isConnectionClose() const
 		return false;
 	std::string value = utils::toLowerCase(utils::trim(found->second));
 	return value == "close";
+}
+
+void	Response::handleSession(const Request& request)
+{
+	SessionManager& sm = SessionManager::getInstance();
+
+	if (!_pendingSessionUsername.empty()) {
+		std::string sessionId = sm.createSession(_pendingSessionUsername);
+		addSetCookieHeader("session_id", sessionId, "HttpOnly; Path=/; Max-Age=3600");
+    }
+	if (_expireSession) {
+		std::string sessionId = request.getCookie("session_id");
+		if (!sessionId.empty()) {
+			sm.destroySession(sessionId);
+			addSetCookieHeader("session_id", "", "HttpOnly; Path=/; Max-Age=0");
+		}
+	}
 }
 
 void	Response::_updateContentLength()
@@ -287,6 +323,14 @@ int	Response::_setHeaders(std::string const& headersPart) {
 		std::string value = line.substr(colonPos + 1);
 		value = utils::trim(value);
 		std::string lname = utils::toLowerCase(name);
+		if (lname == "x-webserv-create-session") {
+			_pendingSessionUsername = value;
+			continue;
+		}
+		if (lname == "x-webserv-destroy-session") {
+			_expireSession = true;
+			continue;
+		}
 		std::istringstream iss(value);
 		if (lname == "status") { // eg. "Status: 404 Not Found"
 			iss >> statusCode; // if fail: keep default value 200

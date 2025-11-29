@@ -4,7 +4,8 @@ size_t const	CgiHandler::_TIMEOUT_MS = 5000; // milliseconds
 size_t const	CgiHandler::_STEP_MS = 10; // milliseconds
 size_t const	CgiHandler::_READ_BUFFER = 4096;
 
-CgiHandler::CgiHandler() {
+CgiHandler::CgiHandler()
+{
 	_stdinPipe[0] = _stdinPipe[1] = -1;
 	_stdoutPipe[0] = _stdoutPipe[1] = -1;
 	_stderrPipe[0] = _stderrPipe[1] = -1;
@@ -275,8 +276,24 @@ void	CgiHandler::_buildEnvp(Request const& req, std::string const& locRoot, Host
 	tmp["SERVER_PORT"] = utils::str(listeningOn.getPort());
 	// HTTP headers (prefixed with HTTP_)
 	Headers headers = req.getHeaders();
-	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it)
-		tmp[_headerToEnvVar(it->first)] = it->second;
+	for (Headers::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+		std::string headerName = it->first;
+		std::string headerValue = it->second;
+		if (utils::toLowerCase(headerName) == "cookie")
+			tmp["HTTP_COOKIE"] = headerValue;
+		tmp[_headerToEnvVar(headerName)] = headerValue;
+	}
+	if (tmp.find("HTTP_COOKIE") == tmp.end()) {
+		std::map<std::string, std::string> cookies = req.getCookies();
+		if (!cookies.empty()) {
+			std::string cookieHeader;
+			for (std::map<std::string, std::string>::const_iterator it = cookies.begin(); it != cookies.end(); ++it) {
+				if (!cookieHeader.empty()) cookieHeader += "; ";
+				cookieHeader += it->first + "=" + it->second;
+			}
+			tmp["HTTP_COOKIE"] = cookieHeader;
+		}
+	}
 	// PHP specific variables
 	if (_extension == ".php") {
 		tmp["REDIRECT_STATUS"] = HttpStatus("ok").getCodeStr();
