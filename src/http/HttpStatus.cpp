@@ -108,9 +108,9 @@ std::string	HttpStatus::toStr() const
 	return oss.str();
 }
 
-bool	HttpStatus::isError(int code)
+bool	HttpStatus::isError() const
 {
-	return code >= 400;
+	return _code >= 400;
 }
 
 std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs)

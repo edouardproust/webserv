@@ -46,8 +46,10 @@ class HttpStatus
 		std::string const&	getReason() const;
 		std::string const&	getSlug() const;
 
-		std::string			toStr() const;
-		static bool			isError(int);
+		std::string	toStr() const;
+
+		bool	isError() const;
+
 };
 
 std::ostream&	operator<<(std::ostream&, const HttpStatus&);

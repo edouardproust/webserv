@@ -1,7 +1,8 @@
 #ifndef CGI_CONTEXT_HPP
 #define CGI_CONTEXT_HPP
 
-#include "http/Request.hpp"
+#include "cgi/CgiData.hpp"
+#include "cgi/SafePipe.hpp"
 
 /**
  * Holds runtime state for a single CGI execution (PID, pipes, timestamps).
@@ -17,8 +18,9 @@ class CgiContext
 {
 	pid_t				_pid;
 	int					_clientFd;
-	int					_stdoutPipe;
-	int					_stderrPipe;
+	SafePipe&			_stdinPipe; // TODO remove ?
+	SafePipe&			_stdoutPipe;
+	SafePipe&			_stderrPipe;
 	Request	const&		_request; // non-owning
 	ErrorPages const&	_errorPages; // non-owning
 
@@ -33,7 +35,7 @@ class CgiContext
 
 	public:
 
-		CgiContext(pid_t, int, int, int, Request const&, ErrorPages const&);
+		CgiContext(pid_t, int, SafePipe&, SafePipe&, SafePipe&, CgiData const&); // TODO stdin to remove?
 		~CgiContext();
 
 		void	appendOutput(const char*, size_t);
@@ -42,8 +44,9 @@ class CgiContext
 
 		pid_t				getPid() const;
 		int					getClientFd() const;
-		int					getStdoutPipe() const;
-		int					getStderrPipe() const;
+		SafePipe&			getStdinPipe() const; // TODO remove?
+		SafePipe&			getStdoutPipe() const;
+		SafePipe&			getStderrPipe() const;
 		Request const&		getRequest() const;
 		ErrorPages const&	getErrorPages() const;
 		time_t const&		getStartTime() const;

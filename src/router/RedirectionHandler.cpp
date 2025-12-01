@@ -38,6 +38,7 @@ Response	RedirectionHandler::run()
 		response.setHeader("Cache-Control", "no-cache");
 	response.setBodyAndContentLength(_redirectionHtml());
 	response.setHeader("Content-Type", "text/html");
+	response.setConnectionFromRequest(_routingDecision.getRequest());
 	return response;
 }
 

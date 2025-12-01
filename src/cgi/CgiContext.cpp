@@ -1,12 +1,13 @@
 #include "cgi/CgiContext.hpp"
 
-CgiContext::CgiContext(pid_t p, int cfd, int out, int err, Request const& req, ErrorPages const& ep)
+CgiContext::CgiContext(pid_t p, int cfd, SafePipe& in, SafePipe& out, SafePipe& err, CgiData const& d)
 : _pid(p)
 , _clientFd(cfd)
+, _stdinPipe(in)
 , _stdoutPipe(out)
 , _stderrPipe(err)
-, _request(req)
-, _errorPages(ep)
+, _request(d.getRequest())
+, _errorPages(d.getErrorPages())
 , _startTime(time(NULL))
 , _output()
 , _error()
@@ -40,12 +41,17 @@ int	CgiContext::getClientFd() const
 	return _clientFd;
 }
 
-int	CgiContext::getStdoutPipe() const
+SafePipe&	CgiContext::getStdinPipe() const
+{
+	return _stdinPipe;
+}
+
+SafePipe&	CgiContext::getStdoutPipe() const
 {
 	return _stdoutPipe;
 }
 
-int	CgiContext::getStderrPipe() const
+SafePipe&	CgiContext::getStderrPipe() const
 {
 	return _stderrPipe;
 }

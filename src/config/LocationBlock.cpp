@@ -476,7 +476,7 @@ bool	LocationBlock::getClientMaxBodySizeSet() const
 
 std::string const&	LocationBlock::getUploadStore() const
 {
-	if (!_isSetClientMaxBodySize && _server)
+	if (_uploadStore.empty() && _server)
 		return _server->getUploadStore();
 	return _uploadStore;
 }

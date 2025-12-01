@@ -32,16 +32,16 @@ class Log
     static std::string const	_MAGENTA;
     static std::string const	_CYAN;
 
-	struct Entry {
-		std::string const	type;
+	struct Category {
+		std::string const	slug;
 		std::string const	color;
 		std::ostream&		stream;
 	};
 
-	static const Entry	TYPE_TABLE[];
-	static const size_t	TYPE_TABLE_SIZE;
+	static const Category	_CATEGORIES[];
+	static const size_t		_CATEGORIES_SIZE;
 
-	static Entry const*	_findByType(std::string const&);
+	static Category const*	_findBySlug(std::string const&);
 
 	template <typename T>
 	static void	_print(const std::string&, const T&);

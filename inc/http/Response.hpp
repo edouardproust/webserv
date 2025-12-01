@@ -3,7 +3,7 @@
 
 #include "http/HttpStatus.hpp"
 #include "router/RoutingDecision.hpp"
-#include "cgi/CgiParams.hpp"
+#include "cgi/CgiData.hpp"
 #include "utils/utils.hpp"
 #include <ctime>
 
@@ -21,8 +21,7 @@ class Response
 	bool					_bodyClearedForHead;
 	std::string				_servedFilePath; // for debug purpose only
 	bool					_needsCgiExecution;
-	CgiParams*				_cgiParams; // Owning (deleted in destructor);
-	RoutingDecision const*	_cgiRoutingDecision; // For cgi; non-owning to prevent big duplicates (eg. request with a 100MB body)
+	CgiData*				_cgiData; // Owning (deleted in destructor);
 
 	void		_initDefaultHeaders();
 	void		_updateContentLength();
@@ -47,7 +46,7 @@ class Response
 		void		clearBodyForHead();
 		bool		isConnectionClose() const;
 
-		static Response	createCgiResponse(CgiParams const&, RoutingDecision const&);
+		static Response	createCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&);
 
 		void	setStatus(HttpStatus const&);
 		void	setHeader(std::string const&, std::string const&);
@@ -60,8 +59,7 @@ class Response
 		std::string const&		getBody() const;
 		std::string const&		getServedFilePath() const;
 		bool					needsCgiExecution() const;
-		CgiParams const&		getCgiParams() const;
-		RoutingDecision const&	getCgiRoutingDecision() const;
+		CgiData const&			getCgiData() const;
 
 		class RawException: public std::runtime_error {
 			public:

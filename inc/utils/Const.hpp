@@ -9,6 +9,10 @@
 # define DEVMODE 0
 #endif
 
+#ifndef CGI_ENABLED
+# define CGI_ENABLED 1
+#endif
+
 class Const
 {
 	public:

@@ -4,8 +4,7 @@ Response::Response()
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
 , _needsCgiExecution(false)
-, _cgiParams(NULL)
-, _cgiRoutingDecision(NULL)
+, _cgiData(NULL)
 {
 	_initDefaultHeaders();
 }
@@ -17,8 +16,7 @@ Response::Response(std::string const& rawResponse)
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
 , _needsCgiExecution(false)
-, _cgiParams(NULL)
-, _cgiRoutingDecision(NULL)
+, _cgiData(NULL)
 {
 	_initDefaultHeaders();
 	_parseRawResponse(rawResponse); // throw
@@ -31,8 +29,7 @@ Response::Response(Response const& other)
 , _bodyClearedForHead(other._bodyClearedForHead)
 , _servedFilePath(other._servedFilePath)
 , _needsCgiExecution(other._needsCgiExecution)
-, _cgiParams(other._cgiParams ? new CgiParams(*other._cgiParams) : NULL)
-, _cgiRoutingDecision(other._cgiRoutingDecision)
+, _cgiData(other._cgiData ? new CgiData(*other._cgiData) : NULL)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -44,16 +41,15 @@ Response& Response::operator=(Response const& other)
 		_bodyClearedForHead = other._bodyClearedForHead;
 		_servedFilePath = other._servedFilePath;
 		_needsCgiExecution = other._needsCgiExecution;
-		delete _cgiParams;
-		_cgiParams = other._cgiParams ? new CgiParams(*other._cgiParams) : NULL;
-		_cgiRoutingDecision = other._cgiRoutingDecision;
+		delete _cgiData;
+		_cgiData = other._cgiData ? new CgiData(*other._cgiData) : NULL;
 	}
 	return *this;
 }
 
 Response::~Response()
 {
-	delete _cgiParams;
+	delete _cgiData;
 }
 
 Response::RawException::RawException(std::string const& msg)
@@ -95,11 +91,11 @@ bool	Response::isConnectionClose() const {
 	return value == "close";
 }
 
-Response	Response::createCgiResponse(CgiParams const& params, RoutingDecision const& rd) {
+Response	Response::createCgiResponse(RoutingDecision const& rd, std::string const& scriptName, HostPortPair const& listeningOn)
+{
 	Response resp;
 	resp._needsCgiExecution = true;
-	resp._cgiParams = new CgiParams(params); // owning
-	resp._cgiRoutingDecision = &rd; // reference (non-owning)
+	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn);
 	return resp;
 }
 
@@ -316,14 +312,9 @@ bool	Response::needsCgiExecution() const
 	return _needsCgiExecution;
 }
 
-CgiParams const&	Response::getCgiParams() const
+CgiData const&	Response::getCgiData() const
 {
-	return *_cgiParams;
-}
-
-RoutingDecision const&	Response::getCgiRoutingDecision() const
-{
-	return *_cgiRoutingDecision;
+	return *_cgiData;
 }
 
 // PRINT

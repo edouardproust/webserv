@@ -1,37 +1,11 @@
-#include "cgi/CgiParams.hpp"
+#include "cgi/CgiData.hpp"
 
-CgiParams::CgiParams()
-: _isValid(false)
-, _scriptName()
-, _extension()
-, _executor()
-, _inputData()
-{}
-
-CgiParams::CgiParams(Request const& req, LocationBlock const* location, std::string const& scriptName, HostPortPair const& listeningOn)
-: _isValid(false)
-, _scriptName(scriptName)
-, _extension(utils::getFileExtension(_scriptName))
-, _executor(location->getCgiExecutor(_extension))
-, _inputData(req.getBody())
-{
-	if (!location || _extension.empty() || _executor.empty()) {
-		Log::prod("error", "CGI params: failed to initalise");
-		return; // isValid = false
-	}
-	_setEnvStorage(req, location->getRoot(), listeningOn);
-	_setEnvp();
-    _setArgStorage();
-	_setArgv();
-    _isValid = true;
-}
-
-CgiParams::CgiParams(CgiParams const& other)
-: _isValid(other._isValid)
-, _scriptName(other._scriptName)
+CgiData::CgiData(CgiData const& other)
+: _scriptName(other._scriptName)
 , _extension(other._extension)
 , _executor(other._executor)
-, _inputData(other._inputData)
+, _request(other._request)
+, _errorPages(other._errorPages)
 , _envStorage(other._envStorage)
 , _argStorage(other._argStorage)
 {
@@ -39,23 +13,24 @@ CgiParams::CgiParams(CgiParams const& other)
 	_setArgv();
 }
 
-CgiParams&	CgiParams::operator=(CgiParams const& other)
+CgiData::CgiData(Request const& req, LocationBlock const& loc, std::string const& scriptName, HostPortPair const& listeningOn)
+: _scriptName(scriptName)
+, _extension(utils::getFileExtension(_scriptName))
+, _executor(loc.getCgiExecutor(_extension))
+, _request(req)
+, _errorPages(loc.getErrorPages())
 {
-	if (this != &other) {
-		_isValid = other._isValid;
-		_scriptName = other._scriptName;
-		_extension = other._extension;
-		_executor = other._executor;
-		_inputData = other._inputData;
-		_envStorage = other._envStorage;
-		_argStorage = other._argStorage;
-		_setEnvp();
-		_setArgv();
+	if (_extension.empty() || _executor.empty()) {
+		Log::prod("error", "CGI params: failed to initalise");
+		return; // isValid = false
 	}
-	return *this;
+	_setEnvStorage(req, loc.getRoot(), listeningOn);
+	_setEnvp();
+    _setArgStorage();
+	_setArgv();
 }
 
-CgiParams::~CgiParams()
+CgiData::~CgiData()
 {}
 
 /**
@@ -63,7 +38,7 @@ CgiParams::~CgiParams()
  *
  * Stores them in _envp.
  */
-void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, HostPortPair const& listeningOn)
+void	CgiData::_setEnvStorage(Request const& req, std::string const& locRoot, HostPortPair const& listeningOn)
 {
 	_envStorage.clear(); // security
 	UniqHeaders tmp;
@@ -75,7 +50,7 @@ void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, H
 	tmp["PATH_TRANSLATED"] = utils::pathsJoin(locRoot, tmp["PATH_INFO"]);
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();
-	tmp["CONTENT_LENGTH"] = utils::str(_inputData.length());
+	tmp["CONTENT_LENGTH"] = utils::str(getRequest().getBody().size());
 	tmp["DOCUMENT_ROOT"] = locRoot;
 	// Server protocol information
 	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
@@ -108,7 +83,7 @@ void	CgiParams::_setEnvStorage(Request const& req, std::string const& locRoot, H
  *
  * Stores them in _argv.
  */
-void	CgiParams::_setArgStorage()
+void	CgiData::_setArgStorage()
 {
     _argStorage.clear();
 	_argStorage.push_back(_executor); // argv[0] = path of the executable (/usr/bin/php-cgi, /usr/bin/python3, etc.)
@@ -118,7 +93,7 @@ void	CgiParams::_setArgStorage()
 /**
  * Prepare array for execve, containing environement variables for CGI executable
  */
-void	CgiParams::_setEnvp()
+void	CgiData::_setEnvp()
 {
 	_envp.clear();
 	for (size_t i = 0; i < _envStorage.size(); ++i) {
@@ -127,7 +102,7 @@ void	CgiParams::_setEnvp()
 	_envp.push_back(NULL);
 }
 
-void	CgiParams::_setArgv()
+void	CgiData::_setArgv()
 {
 	_argv.clear();
 	for (size_t i = 0; i < _argStorage.size(); ++i) {
@@ -136,49 +111,54 @@ void	CgiParams::_setArgv()
 	_argv.push_back(NULL);
 }
 
-std::string const&	CgiParams::getExecutor() const
-{
-	return _executor;
-}
-
-std::string const&	CgiParams::getScriptName() const
+std::string const&	CgiData::getScriptName() const
 {
 	return _scriptName;
 }
 
-std::string const&	CgiParams::getInputData() const
-{
-	return _inputData;
-}
-
-std::vector<std::string> const&	CgiParams::getEnvStorage() const
-{
-	return _envStorage;
-}
-
-std::vector<char*> const&	CgiParams::getEnvp() const
-{
-	return _envp;
-}
-
-std::vector<std::string> const&	CgiParams::getArgStorage() const
-{
-	return _argStorage;
-}
-
-std::vector<char*> const&	CgiParams::getArgv() const
-{
-	return _argv;
-}
-
-std::string const&	CgiParams::getExtension() const
+std::string const&	CgiData::getExtension() const
 {
 	return _extension;
 }
 
-bool	CgiParams::isValid() const
+std::string const&	CgiData::getExecutor() const
+{
+	return _executor;
+}
+
+Request const&	CgiData::getRequest() const
+{
+	return _request;
+}
+
+ErrorPages const&	CgiData::getErrorPages() const
+{
+	return _errorPages;
+}
+
+bool	CgiData::isValid() const
 {
 	return _isValid;
+}
+
+std::vector<std::string> const&	CgiData::getEnvStorage() const
+{
+	return _envStorage;
+}
+
+std::vector<char*> const&	CgiData::getEnvp() const
+{
+	return _envp;
+}
+
+std::vector<std::string> const&	CgiData::getArgStorage() const
+{
+	return _argStorage;
+}
+
+std::vector<char*> const&	CgiData::getArgv() const
+{
+	return _argv;
 }
 
 // UTILS (static)
@@ -187,7 +167,7 @@ bool	CgiParams::isValid() const
  * Converts a header name (e.g., "Content-Type") into a CGI environment variable format
  * (e.g., "HTTP_CONTENT_TYPE").
  */
-std::string	CgiParams::_headerToEnvVar(std::string const& headerName)
+std::string	CgiData::_headerToEnvVar(std::string const& headerName)
 {
 	std::string result = "HTTP_";
 	for (size_t i = 0; i < headerName.length(); ++i) {
@@ -202,11 +182,11 @@ std::string	CgiParams::_headerToEnvVar(std::string const& headerName)
 
 // PRINT
 
-std::ostream&	operator<<(std::ostream& os, CgiParams const& rhs)
+std::ostream&	operator<<(std::ostream& os, CgiData const& rhs)
 {
 	os << "- script name: " << PrintableString(rhs.getScriptName()) << "\n";
 	os << "- executor: " << PrintableString(rhs.getExecutor()) << "\n";
-	os << "- input data " << PrintableString(rhs.getInputData()) << "\n";
+	os << "- input data size" << utils::str(rhs.getRequest().getBody().size()) << "\n";
 
 	std::vector<std::string> envp = rhs.getEnvStorage();
 	os << "- envp: " << envp.size() << "\n";

@@ -13,7 +13,7 @@ Network::Network(Config const& config)
 
 Network::~Network()
 {
-	//_cgi.cleanupAll();
+	_cgi.fullCleanup();
 
 	_cleanupListeningSockets();
 	if (_epollFd != -1)
@@ -63,7 +63,7 @@ void Network::startServers()
 				}
 			} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
 				if (ev & (EPOLLERR | EPOLLHUP)) { // pipe error
-					_cgi.handlePipeError(eventFd);
+					_cgi.errorFromPipeFd(eventFd, "internal_error", "CGI pipe error");
 				} else if (ev & EPOLLIN) { // ready for reading CGI output from pipes
 					_cgi.handlePipeRead(eventFd);
 				}
@@ -104,8 +104,7 @@ void	Network::_initListeningSockets()
             size_t port = listenPorts[i].getPort();
             bool found = false;
             for (size_t j = 0; j < usedPorts.size(); ++j) {
-                if (usedPorts[j] == port)
-                {
+                if (usedPorts[j] == port) {
                     found = true;
                     break;
                 }
@@ -178,7 +177,7 @@ void Network::_readClientRequest(int clientFd)
         }
 		currentReq.append(buff, bytesReceived);
 		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
-		if (RequestParser::isRequestComplete(currentReq)) {
+		if (RequestParser::isRawRequestComplete(currentReq)) {
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 		}
@@ -201,29 +200,47 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		if (_socketsByClientFd.find(clientFd) == _socketsByClientFd.end())
 			throw std::runtime_error("Client FD not mapped to any server socket.");
 
-		// 1. Process // TODO make CGI async
+		// 1. Process
 		Request request(_pendingRequests[clientFd]);
 		Socket* listeningSocket = _socketsByClientFd[clientFd];
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", request.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(clientFd) + ").");
 		Log::dev("debug", "Request:\n" + utils::str(request));
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
-		Log::dev("debug", "Response:\n" + utils::str(response));
 
-		// 2. Prepare progressive sending
-		std::string rawResponse = response.stringify();
-		_pendingResponses[clientFd] = rawResponse;
-		_responseSendPos[clientFd] = 0;
-		_shouldCloseAfterResponse[clientFd] = request.isConnectionClose() || response.isConnectionClose();
-
-		// 3. Start sending
-		Log::dev("event", "Starting progressive send of " + Log::hl(rawResponse.length()) + " bytes to fd " + Log::hl(clientFd) +".");
-		_continuePendingSend(clientFd);
-
+		// CGI -> async response
+		if (response.needsCgiExecution()) {
+			if (!CGI_ENABLED) {
+				Log::dev("event", "CGI disabled. Sending 501 response...");
+				Response errorResp = StaticHandler::error("not_implemented", request, response.getCgiData().getErrorPages());
+				errorResp.setHeader("Connection", "close"); // force close because config error
+				sendResponse(clientFd, errorResp, false);
+				return;
+			}
+			_cgi.launchAsync(clientFd, response);
+			return;
+		}
+		// Static or redirection -> immediate response
+		sendResponse(clientFd, response, false);
 	}
 	catch (std::exception& e){
 		Log::prod("error", "Problem during send/dispatch: " + utils::str(e.what()));
 		_disconnectClient(clientFd);
+	}
+}
+
+void	Network::sendResponse(int clientFd, Response const& response, bool isCgi)
+{
+	std::string rawResponse = response.stringify();
+	_pendingResponses[clientFd] = rawResponse;
+	_responseSendPos[clientFd] = 0;
+	_shouldCloseAfterResponse[clientFd] = response.isConnectionClose();
+	Log::dev("debug", "Response:\n" + utils::str(response));
+	Log::dev("event", "Starting progressive send of " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd) + "...");
+	if (isCgi) {
+		epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
+	} else {
+		_continuePendingSend(clientFd);
 	}
 }
 
