@@ -116,7 +116,7 @@ std::ostream&	operator<<(std::ostream& os, const Session& session)
 	os << "Session Details" << "\n";
 	os << "- SessionId: " << PrintableString(session.getSessionId()) << "\n";
 	os << "- User: " << PrintableString(session.getUsername()) << "\n";
-	os << "- Session Time: " << PrintableString(session.getSessionAge()) << "\n";
+	os << "- Session Time : " << PrintableString(session.getSessionAge()) << "\n";
 	os << "- Created: " << session.getFirstActivity() << "\n";
 	os << "- Last Active: " << session.getLastActivity() << "\n";
 	os << "- Session Expired: " << (session.isExpired() ? "Yes" : "No") << "\n";

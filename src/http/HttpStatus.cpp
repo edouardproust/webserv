@@ -6,6 +6,8 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{204, "No Content", "no_content"},
 	{301, "Moved Permanently", "moved_permanently"},
 	{302, "Found", "found"},
+	{307, "Temporary Redirect", "temporary_redirect"},
+	{308, "Permanent Redirect", "permanent_redirect"},
 	{400, "Bad Request", "bad_request"},
 	{401, "Unauthorized", "unauthorized"},
 	{403, "Forbidden", "forbidden"},
@@ -35,8 +37,8 @@ HttpStatus::HttpStatus()
 /**
  * Build a `HttpStatus` from a HTTP status code.
  *
- * - Supported codes: `200`, `201`, `204`, `301`, `302`, `400`, `403`,
- * `404`, `405`, `411`, `413`, `500`, `501`, `502`, `505`
+ * - Supported codes: `200`, `201`, `204`, `301`, `302`, `307`, `308`,
+ * `400`, `403`,`404`, `405`, `411`, `413`, `500`, `501`, `502`, `505`
  * - Any other code defaults to `500`
  */
 HttpStatus::HttpStatus(int code)
@@ -112,6 +114,11 @@ std::string	HttpStatus::toStr() const
 bool	HttpStatus::isError(int code)
 {
 	return code >= 400;
+}
+
+bool	HttpStatus::isRedirection(int code)
+{
+	return code >= 300 && code < 400 && code != 304;
 }
 
 std::ostream&	operator<<(std::ostream& os, const HttpStatus& rhs)

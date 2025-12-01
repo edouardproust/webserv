@@ -16,7 +16,7 @@ class RedirectionHandler
 	int						_code;
 	std::string				_path;
 
-	std::string	_generateRedirectionHtml() const;
+	std::string	_RedirectionPageHtml() const;
 
 	// Default and copy constructors, assignation are forbidden
 	RedirectionHandler();

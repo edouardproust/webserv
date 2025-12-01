@@ -48,6 +48,7 @@ class HttpStatus
 
 		std::string			toStr() const;
 		static bool			isError(int);
+		static bool			isRedirection(int);
 };
 
 std::ostream&	operator<<(std::ostream&, const HttpStatus&);

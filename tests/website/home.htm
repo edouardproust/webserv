@@ -118,6 +118,16 @@
 				<td><a href="http://localhost:8080/redirect/tmp" class="test-link">http://localhost:8080/redirect/tmp</a></td>
 				<td class="status-redirection">302 → 200</td>
 				<td class="notes">Temporary redirect</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/redirect/api-perm" class="test-link">http://localhost:8080/redirect/api-perm</a></td>
+				<td class="status-redirection">308 → 200</td>
+				<td class="notes">Permanent redirect with method preservation</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/redirect/api-tmp" class="test-link">http://localhost:8080/redirect/api-tmp</a></td>
+				<td class="status-redirection">307 → 200</td>
+				<td class="notes">Temporary redirect with method preservation</td>
 			</tr>
 
 			<!-- CGI Tests - PHP -->
