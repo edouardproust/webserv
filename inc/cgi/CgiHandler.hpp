@@ -17,7 +17,6 @@ class CgiHandler
 	std::map<pid_t, CgiContext*>	_contextsByPid;
 	std::set<pid_t>					_zombiesToReap;
 
-	void	_addPipeToEpoll(int, std::string const&);
 	void	_setupChildProcess(SafePipe&, SafePipe&, SafePipe&, CgiData const&);
 	void	_setupParentProcess(SafePipe&, SafePipe&, SafePipe&, int, pid_t, CgiData const&);
     void	_writeRequestBody(int, Request const&);
@@ -30,24 +29,28 @@ class CgiHandler
 	void	_killAndCleanupProcess(pid_t);
 	void	_reapZombies();
 
+	void	_sendNotImplementedResponse(int, CgiData const&);
+	void	_sendPlaceholderResponse(int);
+
 	// TODO canonical ? + comment
+	CgiHandler();
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 
 	public:
 
-		CgiHandler();
+		CgiHandler(Network*);
 		~CgiHandler();
 
-		void	init(Network*);
 		void	launchAsync(int, Response const&);
-		void	handlePipeRead(int);
+		void	readAndAccumulateCgiOutput(int);
 		void	checkCompletion();
 		void	errorFromClientFd(int, std::string const&, Request const&, ErrorPages const&, std::string const&);
 		void	errorFromPipeFd(int, std::string const&, std::string const&);
 		void	fullCleanup();
 
 		bool	isCgiPipe(int) const;
+		std::map<pid_t, CgiContext*> const&	getContextsByPid() const;
 };
 
 #endif

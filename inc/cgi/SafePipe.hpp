@@ -19,9 +19,8 @@ class SafePipe
 		int			_writeFd;
 		std::string	_description;
 
-		void	_safeClose(int& fd, std::string const& end);
+		void	_safeClose(int&, std::string const&);
 		void	_create();
-		void	_closeAll();
 		void	_setNonBlocking();
 
 		// Non-copyable and non-movable
@@ -39,5 +38,7 @@ class SafePipe
 		int					writeFd() const;
 		const std::string&	getDescription() const;
 };
+
+std::ostream&	operator<<(std::ostream&, SafePipe const&);
 
 #endif

@@ -477,8 +477,6 @@ bool	ServerBlock::matchesHost(const std::string& hostname) const
 
 std::ostream&	operator<<(std::ostream& os, ServerBlock const& rhs)
 {
-	os << "=== SERVER BLOCK ===" << "\n";
-
 	os << "- root: " << PrintableString(rhs.getRoot()) << "\n";
 
 	std::set<HostPortPair> const& listen = rhs.getListen();

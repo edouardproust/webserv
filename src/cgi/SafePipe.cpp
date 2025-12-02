@@ -13,9 +13,7 @@ SafePipe::SafePipe(std::string const& description)
 }
 
 SafePipe::~SafePipe()
-{
-	_closeAll();
-}
+{}
 
 void	SafePipe::_safeClose(int& fd, std::string const& end)
 {
@@ -40,7 +38,7 @@ void	SafePipe::_create()
 	}
 	_readFd = fds[0];
 	_writeFd = fds[1];
-	Log::dev("setup", "Created " + _description + " (read=" + utils::str(_readFd) + ", write=" + utils::str(_writeFd) + ")");
+	Log::dev("setup", "Created pipe " + utils::str(*this) + ".");
 }
 
 /**
@@ -62,16 +60,7 @@ void	SafePipe::_setNonBlocking()
 	if (!readOk || !writeOk) {
 		throw std::runtime_error("Failed to set non-blocking for " + _description + " (read:" + (readOk ? "OK" : "FAIL") + ", write:" + (writeOk ? "OK" : "FAIL") + ")");
 	}
-	Log::dev("setup", "Set non-blocking for " + _description);
-}
-
-/**
- * Close both ends of the pipe
- */
-void	SafePipe::_closeAll()
-{
-	_safeClose(_readFd, "read end");
-	_safeClose(_writeFd, "write end");
+	Log::dev("setup", "Pipe " + _description + " set to non-blocking mode.");
 }
 
 /**
@@ -104,3 +93,11 @@ const std::string&	SafePipe::getDescription() const
 {
 	return _description;
 }
+
+std::ostream&	operator<<(std::ostream& os, SafePipe const& rhs)
+{
+	os << PrintableString(rhs.getDescription())
+		<< " (" << "readFd=" << rhs.readFd() << ", writeFd=" << rhs.writeFd() << ")";
+	return os;
+}
+

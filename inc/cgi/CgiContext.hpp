@@ -18,9 +18,9 @@ class CgiContext
 {
 	pid_t				_pid;
 	int					_clientFd;
-	SafePipe&			_stdinPipe; // TODO remove ?
-	SafePipe&			_stdoutPipe;
-	SafePipe&			_stderrPipe;
+	int					_stdinWriteFd;
+	int					_stdoutReadFd;
+	int					_stderrReadFd;
 	Request	const&		_request; // non-owning
 	ErrorPages const&	_errorPages; // non-owning
 
@@ -35,7 +35,7 @@ class CgiContext
 
 	public:
 
-		CgiContext(pid_t, int, SafePipe&, SafePipe&, SafePipe&, CgiData const&); // TODO stdin to remove?
+		CgiContext(pid_t, int, int, int, int, CgiData const&);
 		~CgiContext();
 
 		void	appendOutput(const char*, size_t);
@@ -44,14 +44,16 @@ class CgiContext
 
 		pid_t				getPid() const;
 		int					getClientFd() const;
-		SafePipe&			getStdinPipe() const; // TODO remove?
-		SafePipe&			getStdoutPipe() const;
-		SafePipe&			getStderrPipe() const;
+		int					getStdinWriteFd() const;
+		int					getStdoutReadFd() const;
+		int					getStderrReadFd() const;
 		Request const&		getRequest() const;
 		ErrorPages const&	getErrorPages() const;
 		time_t const&		getStartTime() const;
 		std::string	const&	getOutput() const;
 		std::string const&	getError() const;
 };
+
+std::ostream&	operator<<(std::ostream&, CgiContext const&);
 
 #endif

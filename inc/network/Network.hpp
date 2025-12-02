@@ -60,7 +60,7 @@ class Network
 
 		void	startServers();
 		void	epollControl(int, int, uint32_t, const std::string&);
-		void	sendResponse(int, Response const&, bool);
+		void	prepareResponseSend(int, Response const&);
 
 		int									getEpollFd() const;
 		std::vector<Socket*> const&			getListeningSockets() const;

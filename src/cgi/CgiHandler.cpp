@@ -3,8 +3,8 @@
 
 size_t const	CgiHandler::_TIMEOUT_SECONDS = 5;
 
-CgiHandler::CgiHandler()
-: _network(NULL)
+CgiHandler::CgiHandler(Network* network)
+: _network(network)
 {}
 
 CgiHandler::~CgiHandler()
@@ -12,110 +12,183 @@ CgiHandler::~CgiHandler()
 	fullCleanup();
 }
 
-// TODO
-void	CgiHandler::init(Network* network)
-{
-	Log::dev("todo", "CgiHandler::init"); // DEBUG
-	_network = network;
-}
+
+// MAIN LOGIC
 
 // TODO
 void	CgiHandler::launchAsync(int clientFd, Response const& resp)
 {
-	Log::dev("todo", "CgiHandler::launchAsync\n"
-		"clientFd: " + utils::str(clientFd) + "\nResponse: " + utils::str(resp)); // DEBUG
-	/*
-	Log::dev("event", "Launching async CGI for client " + Log::hl(clientFd));
-	CgiData const& data = resp.getCgiData();
-	Request const& request = data.getRequest();
-	ErrorPages const& errorPages = data.getErrorPages();
+	CgiData const& d = resp.getCgiData();
+	if (!CGI_ENABLED) {
+		_sendNotImplementedResponse(clientFd, d);
+		return;
+	}
+	Log::dev("todo", "CgiHandler::launchAsync on client fd " + Log::hl(clientFd) + "."); // DEBUG
 
 	try {
-		// Create pipes
-		SafePipe stdinPipe("CGI stdin"); // non-block
-		SafePipe stdoutPipe("CGI stdout"); // non-blocking
-		SafePipe stderrPipe("CGI stderr"); // non-block
-
-		// Fork
+		// create pipes
+		SafePipe stdinPipe("CGI stdin");
+		SafePipe stdoutPipe("CGI stdout");
+		SafePipe stderrPipe("CGI stderr");
 		pid_t pid = fork();
-		if (pid == -1) {
-			errorFromClientFd(clientFd, "internal_server_error", request, errorPages, "CGI fork failed for client " + utils::str(clientFd));
-			return; // pipes destructors clean automatically
-		}
-		// Execute
-		if (pid == 0) // Child process
-			_setupChildProcess(stdinPipe, stdoutPipe, stderrPipe, data);
-		else // Parent process
-			_setupParentProcess(stdinPipe, stdoutPipe, stderrPipe, clientFd, pid, data);
-	} catch(std::exception& e) {
-		errorFromClientFd(clientFd, "internal_server_error", request, errorPages, e.what());
-		return; // pipes destructors clean automatically
-	}
-	*/
+		if (pid < 0)
+			throw std::runtime_error("Failed to fork CGI process");
+
+		if (pid == 0) // Child
+			_setupChildProcess(stdinPipe, stdoutPipe, stderrPipe, d);
+		else // Parent
+			_setupParentProcess(stdinPipe, stdoutPipe, stderrPipe, clientFd, pid, d);
+	} catch (std::exception& e) {
+        Log::prod("error", "CGI setup for client fd " + Log::hl(clientFd) + ": " + utils::str(e.what())); // TODO log in StaticHandler::error instead?
+		errorFromClientFd(clientFd, "internal_error", d.getRequest(), d.getErrorPages(), "CGI setup failed");
+    }
 }
 
-//TODO
-void CgiHandler::_setupChildProcess(SafePipe& stdinPipe, SafePipe& stdoutPipe, SafePipe& stderrPipe, CgiData const& cgiParams)
+void CgiHandler::_setupChildProcess(SafePipe& stdinPipe, SafePipe& stdoutPipe, SafePipe& stderrPipe, CgiData const& data)
 {
-	// Close manually useless pipe ends in child (SafePipe destructors will not be called)
-    stdoutPipe.closeRead();
-    stderrPipe.closeRead();
-    stdinPipe.closeWrite();
+	// Close unused pipe ends
+	stdinPipe.closeWrite(); // child does not write on stdin
+    stdoutPipe.closeRead(); // child does not read on stdout
+    stderrPipe.closeRead(); // child does not read on stderr
 
-    // Redirect to standard fds
-    if (dup2(stdinPipe.readFd(), STDIN_FILENO) == -1) _exit(1);
-    if (dup2(stdoutPipe.writeFd(), STDOUT_FILENO) == -1) _exit(1);
-    if (dup2(stderrPipe.writeFd(), STDERR_FILENO) == -1) _exit(1);
+	// Redirect pipes
+	if (dup2(stdinPipe.readFd(), STDIN_FILENO) == -1)
+		_exit(1);
+	if (dup2(stdoutPipe.writeFd(), STDOUT_FILENO) == -1)
+		_exit(1);
+	if (dup2(stderrPipe.writeFd(), STDERR_FILENO) == -1)
+		_exit(1);
 
-	// Close manually previous fds after redirection (SafePipe destructors will not be called)
-    stdinPipe.closeRead();
-    stdoutPipe.closeWrite();
-    stderrPipe.closeWrite();
+	// Close original pipes (now redirected)
+	stdinPipe.closeRead();
+	stdoutPipe.closeWrite();
+	stderrPipe.closeWrite();
 
-    // Execute CGI (at this point all fds are closed; only 0, 1, 2 stay open)
-    execve(cgiParams.getExecutor().c_str(), cgiParams.getArgv().data(), cgiParams.getEnvp().data());
-    _exit(1); // execve failed
+	// Launch executable
+	execve(data.getExecutor().c_str(), data.getArgv().data(), data.getEnvp().data());
+	_exit(1); // execve failed if this line is reached
 }
 
 //TODO
 void CgiHandler::_setupParentProcess(SafePipe& stdinPipe, SafePipe& stdoutPipe, SafePipe& stderrPipe, int clientFd, pid_t pid, CgiData const& data)
 {
-    // Écrire le body de la requête
-	Request const& req = data.getRequest();
-    std::string const& method = req.getMethod();
-    if (method == "POST" || method == "PUT") {
-        std::string const& body = req.getBody();
-        if (!body.empty()) {
-            ssize_t written = write(stdinPipe.writeFd(), body.c_str(), body.size());
-            if (written == -1) {
-                Log::prod("warning", "Failed to write request body to CGI stdin");
-            }
-        }
-    }
-    // Fermer stdinWrite car on a fini d'écrire
-    close(stdinPipe.writeFd());
+	Log::dev("setup", "Parent process CGI setup (pid " + Log::hl(pid) + ", client fd " + Log::hl(clientFd) + ").");
 
-    // Créer le contexte avec les fd de lecture seulement
-    CgiContext* ctx = new CgiContext(pid, clientFd, stdinPipe, stdoutPipe, stderrPipe, data);
-    _contextsByPid[pid] = ctx;
-    _contextsByPipeFd[stdoutPipe.readFd()] = ctx;
-    _contextsByPipeFd[stderrPipe.readFd()] = ctx;
+	// Close unused pipe ends
+	stdinPipe.closeRead(); // Parent doesn't read from stdin
+	stdoutPipe.closeWrite(); // Parent doesn't write to stdout
+	stderrPipe.closeWrite(); // Parent doesn't write to stderr
 
-    // Ajouter à epoll
-    if (_network) {
-        _network->epollControl(stdoutPipe.readFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stdout pipe");
-        _network->epollControl(stderrPipe.readFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stderr pipe");
-    }
+	// Create and store CgiContext
+	CgiContext* ctx = new CgiContext(pid, clientFd, stdinPipe.writeFd(), stdoutPipe.readFd(), stderrPipe.readFd(), data);
+	_contextsByPid[pid] = ctx;
+	_contextsByPipeFd[stdoutPipe.readFd()] = ctx;
+	_contextsByPipeFd[stderrPipe.readFd()] = ctx;
+	Log::dev("setup", "Created cgiContext for pid " + Log::hl(pid) + ".");
+	Log::dev("debug", utils::str(*ctx));
 
-    Log::dev("event", "CGI launched async (pid " + utils::str(pid) + ") for client " + Log::hl(clientFd));
+	try {
+		_network->epollControl(stdoutPipe.readFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stdout");
+		_network->epollControl(stderrPipe.readFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stderr");
+		Log::dev("setup", "CGI pipes added to epoll (stdout fd " + Log::hl(stdoutPipe.readFd()) + ", stderr fd " + Log::hl(stderrPipe.readFd()) + ").");
+	} catch (std::exception& e) {
+		_killAndCleanupProcess(pid);
+		throw;
+	}
 }
 
 // TODO
-void	CgiHandler::handlePipeRead(int pipeFd)
+void	CgiHandler::readAndAccumulateCgiOutput(int pipeFd)
 {
-	(void)pipeFd;
-	Log::dev("todo", "CgiHandler::handlePipeRead"); // DEBUG
+	Log::dev("todo", "CgiHandler::handlePipeRead\n"
+		"- pipeFd: " + utils::str(pipeFd)
+	); // DEBUG
+
+	std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
+	if (it == _contextsByPipeFd.end()) return;
+
+	CgiContext* ctx = it->second;
+	char buffer[4096];
+	ssize_t bytes = read(pipeFd, buffer, sizeof(buffer));
+
+	// TODO this is blocking: do a reading by chunks
+	if (bytes > 0) {
+		if (pipeFd == ctx->getStdoutReadFd()) {
+			ctx->appendOutput(buffer, bytes);
+		}
+		// TODO same thing for stderr
+		// No POLLOUT here yet: CGI is still running...
+	}
+	Log::dev("todo", "CGI output: " + ctx->getOutput()); // DEBUG
 }
+
+// TODO
+/**
+ * Check on each epoll_wait loop if any CGI Responses are ready to be finialized.
+ * If so, finilize them.
+ *
+ * @note This method is non-blocking thanks to `WNOHANG`.
+ */
+void	CgiHandler::checkCompletion()
+{
+	time_t now = time(NULL);
+
+	// Make a copy to prevent problesm during iteration
+	std::vector<pid_t> pidsToCheck;
+	for (std::map<pid_t, CgiContext*>::iterator it = _contextsByPid.begin();
+		it != _contextsByPid.end(); ++it) {
+		pidsToCheck.push_back(it->first);
+	}
+
+	// Check and handle completed CGI processes
+	for (size_t i = 0; i < pidsToCheck.size(); ++i) {
+		pid_t pid = pidsToCheck[i];
+		if (_contextsByPid.find(pid) == _contextsByPid.end())
+			continue;
+		CgiContext* ctx = _contextsByPid[pid];
+		int status = 0;
+		pid_t result = waitpid(pid, &status, WNOHANG); // Clean zombie processes (non-blocking)
+
+		if (result == pid) { // Process stopped (reaped by waitpid)
+			_finalizeResponse(ctx, status);
+			_cleanupProcessRessources(pid);
+		} else if (result == 0) { // Process still running
+			size_t elapsedTime = now - ctx->getStartTime();
+			if (elapsedTime > _TIMEOUT_SECONDS) // check timeout
+				_errorFromContext(ctx, "timeout", "Timeout after " + utils::str(elapsedTime) + " seconds.");
+		} else if (result == -1) { // Process already reaped
+			Log::dev("warning", "waitpid returned -1 for pid " + Log::hl(pid) + ".");
+			_killAndCleanupProcess(pid);
+		}
+	}
+	_reapZombies();
+}
+
+bool	CgiHandler::isCgiPipe(int fd) const
+{
+	return _contextsByPipeFd.find(fd) != _contextsByPipeFd.end();
+}
+
+// TODO
+void	CgiHandler::_finalizeResponse(CgiContext* ctx, int exitStatus)
+{
+
+	(void)exitStatus;
+	Log::dev("event", "CGI process completed");
+	// DEBUG: send placeholder response
+	Response resp = StaticHandler::cgiPlaceholder();
+	_network->prepareResponseSend(ctx->getClientFd(), resp);
+	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready"); // TODO catch
+	Log::dev("event", "Switched client to EPOLLOUT for CGI response");
+}
+
+std::map<pid_t, CgiContext*> const&	CgiHandler::getContextsByPid() const
+{
+	return _contextsByPid;
+}
+
+
+// ERRORS & CLEANUP
 
 /**
  * Does not clean up ressources.
@@ -125,8 +198,10 @@ void CgiHandler::errorFromClientFd(int clientFd, std::string const& errorSlug, R
 	Log::prod("error", errorMsg);
 	Response errorResp = StaticHandler::error(errorSlug, request, errorPages);
 	errorResp.setHeader("Connection", "close"); // force close
-	if (_network)
-		_network->sendResponse(clientFd, errorResp, false);
+	if (_network) {
+		_network->prepareResponseSend(clientFd, errorResp);
+		_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after CGI disabled");
+	}
 }
 
 /**
@@ -157,26 +232,38 @@ void	CgiHandler::_cleanupProcessRessources(pid_t pid)
 	if (it == _contextsByPid.end())
 		return;
 	CgiContext* ctx = it->second;
+	_contextsByPid.erase(it);
+	if (!ctx) return;
+	Log::dev("debug", "CONTEXT BEFORE CLEANUP:\n" + utils::str(*ctx));
+
 
 	// Cleanup ressources (pipes, context)
-	_contextsByPid.erase(it);
-	if (!ctx)
-		return;
-	int stdoutReadFd = ctx->getStdoutPipe().readFd();
+	int stdoutReadFd = ctx->getStdoutReadFd();
+	int	stderrReadFd = ctx->getStderrReadFd();
+	int	stdinWriteFd = ctx->getStdinWriteFd();
 	if (stdoutReadFd != -1) {
 		_contextsByPipeFd.erase(stdoutReadFd);
-		if (_network)
-			_network->epollControl(stdoutReadFd, EPOLL_CTL_DEL, 0, "CGI cleanup stdout"); // TODO catch
+		try {
+		_network->epollControl(stdoutReadFd, EPOLL_CTL_DEL, 0, "CGI cleanup stdout"); // TODO catch
+		} catch (...) {
+			Log::dev("warning", "Failed to remove CGI stdout pipe fd " + utils::str(stdoutReadFd) + " from epoll.");
+		}
 		close(stdoutReadFd);
 	}
-	int	stderrReadFd = ctx->getStderrPipe().readFd();
 	if (stderrReadFd != -1) {
 		_contextsByPipeFd.erase(stderrReadFd);
-		if (_network)
+		try {
 			_network->epollControl(stderrReadFd, EPOLL_CTL_DEL, 0, "CGI cleanup stderr"); // TODO catch
+		} catch (...) {
+			Log::dev("warning", "Failed to remove CGI stderr pipe fd " + utils::str(stderrReadFd) + " from epoll.");
+		}
 		close(stderrReadFd);
 	}
+	if (stdinWriteFd != -1) {
+		close(stdinWriteFd);
+	}
 	delete ctx;
+	ctx = NULL;
 }
 
 /**
@@ -215,48 +302,6 @@ void	CgiHandler::fullCleanup()
 	_reapZombies();
 }
 
-// TODO
-/**
- * Check on each epoll_wait loop if any CGI Responses are ready to be finialized.
- * If so, finilize them.
- *
- * @note This method is non-blocking thanks to `WNOHANG`.
- */
-void	CgiHandler::checkCompletion()
-{
-	time_t now = time(NULL);
-
-	// Make a copy to prevent problesm during iteration
-	std::vector<pid_t> pidsToCheck;
-	for (std::map<pid_t, CgiContext*>::iterator it = _contextsByPid.begin();
-		it != _contextsByPid.end(); ++it) {
-		pidsToCheck.push_back(it->first);
-	}
-
-	// Check and handle completed CGI processes
-	for (size_t i = 0; i < pidsToCheck.size(); ++i) {
-		pid_t pid = pidsToCheck[i];
-		if (_contextsByPid.find(pid) == _contextsByPid.end())
-			continue;
-		CgiContext* ctx = _contextsByPid[pid];
-		int status = 0;
-		pid_t result = waitpid(pid, &status, WNOHANG); // Clean zombie processes (non-blocking)
-
-		if (result == pid) { // Process stopped (reaped by witpid)
-			_finalizeResponse(ctx, status);
-			_cleanupProcessRessources(pid);
-		} else if (result == 0) { // Process still running
-			size_t elapsedTime = now - ctx->getStartTime();
-			if (elapsedTime > _TIMEOUT_SECONDS) // check timeout
-				_errorFromContext(ctx, "timeout", "Timeout after " + utils::str(elapsedTime) + " seconds.");
-		} else if (result == -1) { // Process already reaped
-			Log::dev("warning", "waitpid returned -1 for pid " + Log::hl(pid) + ".");
-			_killAndCleanupProcess(pid);
-		}
-	}
-	_reapZombies();
-}
-
 void	CgiHandler::_reapZombies()
 {
 	std::set<pid_t> stillZombies;
@@ -272,20 +317,19 @@ void	CgiHandler::_reapZombies()
 	_zombiesToReap.swap(stillZombies);
 }
 
-bool	CgiHandler::isCgiPipe(int fd) const
+
+// BUILTIN RESPONSES
+
+void CgiHandler::_sendNotImplementedResponse(int clientFd, CgiData const& data)
 {
-	return _contextsByPipeFd.find(fd) != _contextsByPipeFd.end();
+	Response resp = StaticHandler::error("not_implemented", data.getRequest(), data.getErrorPages());
+	_network->prepareResponseSend(clientFd, resp);
+	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI 501 response");
 }
 
-// TODO
-void	CgiHandler::_finalizeResponse(CgiContext* ctx, int exitStatus)
+void	CgiHandler::_sendPlaceholderResponse(int clientFd)
 {
-	(void)ctx, (void)exitStatus;
-	Log::dev("debug", "CgiHandler::_finalizeResponse"); // DEBUG
-}
-
-void	CgiHandler::_addPipeToEpoll(int fd, std::string const& context)
-{
-	if (_network)
-		_network->epollControl(fd, EPOLL_CTL_ADD, EPOLLIN, context); // TODO catch
+	Response resp = StaticHandler::cgiPlaceholder();
+	_network->prepareResponseSend(clientFd, resp);
+	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI placeholder response");
 }

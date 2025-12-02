@@ -96,6 +96,7 @@ Response	Response::createCgiResponse(RoutingDecision const& rd, std::string cons
 	Response resp;
 	resp._needsCgiExecution = true;
 	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn);
+	Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData));
 	return resp;
 }
 
@@ -277,10 +278,8 @@ void	Response::setServedFilePath(std::string const& absoluteFilePath)
 
 void	Response::setConnectionFromRequest(Request const& request)
 {
-	UniqHeaders const& headers = request.getUniqHeaders();
-	UniqHeaders::const_iterator it = headers.find("connection");
-	if (it != headers.end())
-		setHeader("Connection", it->second);
+	if (request.isConnectionClose())
+		setHeader("Connection", "close");
 	else
 		setHeader("Connection", "keep-alive");
 }

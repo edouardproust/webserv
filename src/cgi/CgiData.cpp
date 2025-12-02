@@ -186,17 +186,17 @@ std::ostream&	operator<<(std::ostream& os, CgiData const& rhs)
 {
 	os << "- script name: " << PrintableString(rhs.getScriptName()) << "\n";
 	os << "- executor: " << PrintableString(rhs.getExecutor()) << "\n";
-	os << "- input data size" << utils::str(rhs.getRequest().getBody().size()) << "\n";
-
-	std::vector<std::string> envp = rhs.getEnvStorage();
-	os << "- envp: " << envp.size() << "\n";
-	for (size_t i = 0; i < envp.size(); ++i)
-		os << "  - " << PrintableString(envp[i]) << "\n";
+	os << "- input data size: " << rhs.getRequest().getBody().size() << "\n";
 
 	std::vector<std::string> argv = rhs.getArgStorage();
 	os << "- argv: " << argv.size() << "\n";
 	for (size_t i = 0; i < argv.size(); ++i)
 		os << "  - " << PrintableString(argv[i]) << "\n";
+
+	std::vector<std::string> envp = rhs.getEnvStorage();
+	os << "- envp: " << envp.size() << "\n";
+	for (size_t i = 0; i < envp.size(); ++i)
+		os << "  - " << PrintableString(envp[i]) << "\n";
 
 	return os;
 }

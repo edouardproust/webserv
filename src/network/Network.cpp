@@ -6,7 +6,7 @@ size_t const	Network::_MAX_NB_OF_EVENTS = 100;
 Network::Network(Config const& config)
 : _config(config)
 , _epollFd(-1)
-//, _cgi() // CGI handler instance
+, _cgi(this) // CGI handler instance
 {
 	_initListeningSockets();
 }
@@ -55,9 +55,9 @@ void Network::startServers()
 			uint32_t ev = events[n].events;
 
 			if (_isListeningSocket(eventFd)) { // 1. Event on a listening socket -> a new client is trying to connect.
-				int newClientFd = _acceptNewClient(eventFd); // create a new client socket and add it to epoll surveillance
+				int newClientFd = _acceptNewClient(eventFd); // create a new client socket
 				if (newClientFd > 0) {
-					_registerNewClientToEpoll(newClientFd);
+					_registerNewClientToEpoll(newClientFd); // add the new client to epoll surveillance
 				} else {
 					Log::prod("error", "Accept failed on listening socket.");
 				}
@@ -65,14 +65,14 @@ void Network::startServers()
 				if (ev & (EPOLLERR | EPOLLHUP)) { // pipe error
 					_cgi.errorFromPipeFd(eventFd, "internal_error", "CGI pipe error");
 				} else if (ev & EPOLLIN) { // ready for reading CGI output from pipes
-					_cgi.handlePipeRead(eventFd);
+					_cgi.readAndAccumulateCgiOutput(eventFd);
 				}
 			} else { // 2c. eventFd corresponds to an existing client socket in epoll
 				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
 					_disconnectClient(eventFd);
-				} else if (ev & EPOLLIN) { // ready for reading raw request from client
+				} else if (ev & EPOLLIN) { // ready for reading raw request from client socket
 					_readClientRequest(eventFd);
-				} else if (ev & EPOLLOUT) { // ready for sending raw response to client
+				} else if (ev & EPOLLOUT) { // ready for writing raw response to client socket
 					if (_pendingResponses.find(eventFd) != _pendingResponses.end()) {
 						_continuePendingSend(eventFd);
 					} else {
@@ -81,7 +81,8 @@ void Network::startServers()
 				}
 			}
 		}
-		_cgi.checkCompletion();
+		if (!_cgi.getContextsByPid().empty())
+			_cgi.checkCompletion();
 	}
 }
 
@@ -178,8 +179,8 @@ void Network::_readClientRequest(int clientFd)
 		currentReq.append(buff, bytesReceived);
 		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
 		if (RequestParser::isRawRequestComplete(currentReq)) {
-			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "request completion"); // throw
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
+			_dispatchAndSendResponse(clientFd);
 		}
 	} else if (bytesReceived == 0) {
 		_disconnectClient(clientFd); // finished reading -> disconnect client
@@ -196,7 +197,7 @@ void Network::_dispatchAndSendResponse(int clientFd)
 {
 	try {
 		if (_pendingRequests.find(clientFd) == _pendingRequests.end())
-				throw std::runtime_error("No request data for client.");
+			throw std::runtime_error("No request data for client.");
 		if (_socketsByClientFd.find(clientFd) == _socketsByClientFd.end())
 			throw std::runtime_error("Client FD not mapped to any server socket.");
 
@@ -208,20 +209,14 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		Log::dev("debug", "Request:\n" + utils::str(request));
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
 
-		// CGI -> async response
+		// CGI -> async response (stays in EPOLLIN to wait for CGI output)
 		if (response.needsCgiExecution()) {
-			if (!CGI_ENABLED) {
-				Log::dev("event", "CGI disabled. Sending 501 response...");
-				Response errorResp = StaticHandler::error("not_implemented", request, response.getCgiData().getErrorPages());
-				errorResp.setHeader("Connection", "close"); // force close because config error
-				sendResponse(clientFd, errorResp, false);
-				return;
-			}
 			_cgi.launchAsync(clientFd, response);
-			return;
+			return; // => Stay in EPOLLIN
 		}
-		// Static or redirection -> immediate response
-		sendResponse(clientFd, response, false);
+		// Static or redirection -> immediate response (switch to EPOLLOUT to send response)
+		prepareResponseSend(clientFd, response);
+		epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "static response ready"); // => Switch to EPOLLOUT
 	}
 	catch (std::exception& e){
 		Log::prod("error", "Problem during send/dispatch: " + utils::str(e.what()));
@@ -229,20 +224,18 @@ void Network::_dispatchAndSendResponse(int clientFd)
 	}
 }
 
-void	Network::sendResponse(int clientFd, Response const& response, bool isCgi)
+void	Network::prepareResponseSend(int clientFd, Response const& response)
 {
-	std::string rawResponse = response.stringify();
-	_pendingResponses[clientFd] = rawResponse;
-	_responseSendPos[clientFd] = 0;
-	_shouldCloseAfterResponse[clientFd] = response.isConnectionClose();
-	Log::dev("debug", "Response:\n" + utils::str(response));
-	Log::dev("event", "Starting progressive send of " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd) + "...");
-	if (isCgi) {
-		epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
-	} else {
-		_continuePendingSend(clientFd);
-	}
+    std::string rawResponse = response.stringify();
+    _pendingResponses[clientFd] = rawResponse;
+    _responseSendPos[clientFd] = 0;
+    _shouldCloseAfterResponse[clientFd] = response.isConnectionClose();
+
+    Log::dev("debug", "Response:\n" + utils::str(response));
+    Log::dev("event", "Queued " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd));
 }
+
+
 
 /**
  * Sends the next part of the pending HTTP response.
@@ -276,10 +269,9 @@ void Network::_continuePendingSend(int clientFd)
 	sendPos += bytesSent;
 
 	// Check if send if complete
-	if (sendPos >= response.length()) {
+	if (sendPos >= response.size()) {
 		Log::prod("ok", "Response sent to client (fd " + Log::hl(clientFd) + ").");
-
-		// Nettoyer les structures d'envoi
+		// Cleanup
 		_pendingResponses.erase(clientFd);
 		_responseSendPos.erase(clientFd);
 		// Handle connection
@@ -344,7 +336,7 @@ void Network::epollControl(int fd, int operation, uint32_t events, const std::st
             return; // not critical
 		}
 		Log::prod("error", errorMsg);
-		throw std::runtime_error("Critical epoll_ctl failure on server socket");
+		throw std::runtime_error("epoll_ctl " + _epollOpToString(operation) + " failure on fd " + Log::hl(fd) + ".");
 	}
 }
 

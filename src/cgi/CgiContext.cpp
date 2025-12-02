@@ -1,11 +1,11 @@
 #include "cgi/CgiContext.hpp"
 
-CgiContext::CgiContext(pid_t p, int cfd, SafePipe& in, SafePipe& out, SafePipe& err, CgiData const& d)
+CgiContext::CgiContext(pid_t p, int cfd, int inWriteFd, int outReadFd, int errReadFd, CgiData const& d)
 : _pid(p)
 , _clientFd(cfd)
-, _stdinPipe(in)
-, _stdoutPipe(out)
-, _stderrPipe(err)
+, _stdinWriteFd(inWriteFd)
+, _stdoutReadFd(outReadFd)
+, _stderrReadFd(errReadFd)
 , _request(d.getRequest())
 , _errorPages(d.getErrorPages())
 , _startTime(time(NULL))
@@ -41,19 +41,19 @@ int	CgiContext::getClientFd() const
 	return _clientFd;
 }
 
-SafePipe&	CgiContext::getStdinPipe() const
+int	CgiContext::getStdinWriteFd() const
 {
-	return _stdinPipe;
+	return _stdinWriteFd;
 }
 
-SafePipe&	CgiContext::getStdoutPipe() const
+int	CgiContext::getStdoutReadFd() const
 {
-	return _stdoutPipe;
+	return _stdoutReadFd;
 }
 
-SafePipe&	CgiContext::getStderrPipe() const
+int	CgiContext::getStderrReadFd() const
 {
-	return _stderrPipe;
+	return _stderrReadFd;
 }
 
 Request const&	CgiContext::getRequest() const
@@ -79,4 +79,18 @@ std::string	const&	CgiContext::getOutput() const
 std::string const&	CgiContext::getError() const
 {
 	return _error;
+}
+
+std::ostream&	operator<<(std::ostream& os, CgiContext const& rhs)
+{
+	os << "CgiContext:\n";
+	os << "- pid: " << rhs.getPid() << "\n";
+	os << "- clientFd " << rhs.getClientFd() << "):\n";
+	os << "- stdinPipe: " << utils::str(rhs.getStdinWriteFd()) << "\n";
+	os << "- stdoutPipe: " << utils::str(rhs.getStdoutReadFd()) << "\n";
+	os << "- stderrPipe: " << utils::str(rhs.getStderrReadFd()) << "\n";
+	os << "- start time: " << rhs.getStartTime() << "\n";
+	os << "- output: " << PrintableString(rhs.getOutput()) << "\n";
+	os << "- error: " << PrintableString(rhs.getError()) << "\n";
+	return os;
 }
