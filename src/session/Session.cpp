@@ -86,6 +86,11 @@ std::string	Session::getSessionAge() const
 	return ss.str();
 }
 
+time_t	Session::getTimeout()
+{
+	return _SESSION_TIMEOUT;
+}
+
 void	Session::setData(const std::string& key, const std::string& value)
 {
 	_data[key] = value;

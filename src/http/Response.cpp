@@ -191,7 +191,8 @@ void	Response::handleSession(const Request& request)
 
 	if (!_pendingSessionUsername.empty()) {
 		std::string sessionId = sm.createSession(_pendingSessionUsername);
-		addSetCookieHeader("session_id", sessionId, "HttpOnly; Path=/; Max-Age=3600");
+		std::string maxAge = utils::str(Session::getTimeout());
+		addSetCookieHeader("session_id", sessionId, "HttpOnly; Path=/; Max-Age=" + maxAge);
     }
 	if (_expireSession) {
 		std::string sessionId = request.getCookie("session_id");

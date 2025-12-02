@@ -43,6 +43,7 @@ class Session
 	std::string			getData(const std::string& key) const;
 	size_t				getDataCount() const;
 	std::string			getSessionAge() const;
+	static time_t		getTimeout();
 
 	void	setData(const std::string& key, const std::string& value);
 

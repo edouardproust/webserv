@@ -9,7 +9,6 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{307, "Temporary Redirect", "temporary_redirect"},
 	{308, "Permanent Redirect", "permanent_redirect"},
 	{400, "Bad Request", "bad_request"},
-	{401, "Unauthorized", "unauthorized"},
 	{403, "Forbidden", "forbidden"},
 	{404, "Not Found", "not_found"},
 	{405, "Method Not Allowed", "method_not_allowed"},

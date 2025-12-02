@@ -81,6 +81,7 @@ def main():
             <ul>
                 <li>HTTP_COOKIE environment variable is empty</li>
                 <li>session_id not found in cookies</li>
+                <li>Session Timeout</li>
                 <li>Cookie parsing failed</li>
             </ul>
         </div>
