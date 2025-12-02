@@ -24,6 +24,37 @@ Network::~Network()
 	std::cout << std::endl;
 }
 
+// EPOLL EXPLANATIONS
+
+/**
+ * Convert epoll event (int) as a string.
+ */
+std::string	Network::_epollEventToString(int event)
+{
+	switch (event) {
+		case EPOLLIN: return "EPOLLIN"; // 1 = data to read
+		case EPOLLOUT: return "EPOLLOUT"; // 4 = ready for writing
+		case EPOLLERR: return "EPOLLERR"; // 8 error
+		case EPOLLHUP: return "EPOLLHUP"; // 16 = hang up / closed
+		case EPOLLIN | EPOLLHUP: return "EPOLLIN + EPOLLHUP"; // 17 = data to read + closed
+		default: return "UNKNOWN";
+	}
+}
+
+/**
+ * Convert epoll control operations (int) as a string.
+ */
+std::string	Network::_epollOpToString(int operation)
+{
+	switch (operation) {
+		case EPOLL_CTL_ADD: return "ADD"; // 1 = Add a file descriptor to the epoll instance
+		case EPOLL_CTL_DEL: return "DEL"; // 2 = Remove a file descriptor from the epoll instance
+		case EPOLL_CTL_MOD: return "MOD"; // 3 = Change the settings associated with a file descriptor already registered
+		default: return "UNKNOWN";
+	}
+}
+
+
 // MAIN LOGIC
 
 /**
@@ -62,9 +93,10 @@ void Network::startServers()
 					Log::prod("error", "Accept failed on listening socket.");
 				}
 			} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
-				if (ev & (EPOLLERR | EPOLLHUP)) { // pipe error
+				Log::dev("debug", "CGI pipe event " + Log::hl(_epollEventToString(ev)) + " on fd " + Log::hl(eventFd) + ".");
+				if (ev & EPOLLERR) { // pipe error
 					_cgi.errorFromPipeFd(eventFd, "internal_error", "CGI pipe error");
-				} else if (ev & EPOLLIN) { // ready for reading CGI output from pipes
+				} else if (ev & (EPOLLIN | EPOLLHUP)) { // ready for reading CGI output from pipes (EPOLLHUP means EOF here)
 					_cgi.readAndAccumulateCgiOutput(eventFd);
 				}
 			} else { // 2c. eventFd corresponds to an existing client socket in epoll
@@ -151,7 +183,6 @@ void	Network::_registerNewClientToEpoll(int clientFd)
 	}
 	// Add to epoll
 	epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup"); // throw
-	Log::dev("event", "New client fd " + Log::hl(clientFd) + " configured and added to epoll");
 }
 
 /**
@@ -203,11 +234,11 @@ void Network::_dispatchAndSendResponse(int clientFd)
 			throw std::runtime_error("Client FD not mapped to any server socket.");
 
 		_pendingRequests[clientFd].parse();
-		Request& request = _pendingRequests[clientFd];
+		Request const& request = _pendingRequests[clientFd];
 		Socket* listeningSocket = _socketsByClientFd[clientFd];
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", request.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(clientFd) + ").");
-		Log::dev("debug", "Request:\n" + utils::str(request));
+		//Log::dev("debug", "Request:\n" + utils::str(request)); // DEBUG
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
 
 		if (response.needsCgiExecution()) { // CGI -> async response (stays in EPOLLIN to wait for CGI output)
@@ -311,7 +342,6 @@ void Network::_registerListeningSocketsToEpoll()
 	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 		int socketFd = _listeningSockets[i]->getFd();
 		epollControl(socketFd, EPOLL_CTL_ADD, EPOLLIN | EPOLLOUT, "server setup"); // throw
-		Log::dev("setup", "Socket (fd " + Log::hl(socketFd) + ") added to epoll surveillance.");
 		Log::prod("ok", Const::SERVER_NAME + " will listen on " + Log::hl(_listeningSockets[i]->getListenDirective()) + " (socket fd " + Log::hl(socketFd) + ").");
 	}
 }
@@ -319,13 +349,13 @@ void Network::_registerListeningSocketsToEpoll()
 /**
  * Safe wrapper around epoll_ctl. Logs the operation and handles errors depending on the type of action.
  */
-void Network::epollControl(int fd, int operation, uint32_t events, const std::string& context)
+void Network::epollControl(int fd, int operation, uint32_t events, const std::string& description)
 {
     struct epoll_event event;
     event.data.fd = fd;
     event.events = events;
     if (epoll_ctl(_epollFd, operation, fd, &event) == -1) {
-        std::string errorMsg = "epoll_ctl(" + _epollOpToString(operation) + ") failed during " + context + " for fd " + Log::hl(fd) + ": " + utils::str(strerror(errno));
+        std::string errorMsg = "epoll_ctl(" + _epollOpToString(operation) + ") failed during " + description + " for fd " + Log::hl(fd) + ": " + utils::str(strerror(errno));
 		if (operation == EPOLL_CTL_DEL) {
             Log::dev("warning", errorMsg);
             return; // not critical
@@ -337,6 +367,7 @@ void Network::epollControl(int fd, int operation, uint32_t events, const std::st
 		Log::prod("error", errorMsg);
 		throw std::runtime_error("epoll_ctl " + _epollOpToString(operation) + " failure on fd " + Log::hl(fd) + ".");
 	}
+	Log::dev("setup", "Epoll " + Log::hl(_epollOpToString(operation)) + " (" + description + ") successful for fd " + Log::hl(fd) + ".");
 }
 
 /**
@@ -355,19 +386,6 @@ int Network::_waitAndCollectEvents(struct epoll_event* events)
 		throw std::runtime_error("Can't wait events.");
 	}
 	return (readyEventsCount);
-}
-
-/**
- * Simple helper to convert epoll control operations (int) as a string.
- */
-std::string	Network::_epollOpToString(int operation)
-{
-	switch (operation) {
-		case EPOLL_CTL_ADD: return "ADD";
-		case EPOLL_CTL_MOD: return "MOD";
-		case EPOLL_CTL_DEL: return "DEL";
-		default: return "UNKNOWN";
-	}
 }
 
 

@@ -16,7 +16,7 @@
 Response	Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
 {
 	RoutingDecision rd(config, req, listeningOn);
-	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
+	//Log::dev("debug", "Routing Decision:\n" + utils::str(rd)); // DEBUG
 
 	RoutingDecision::Decision decision = rd.getDecision();
 

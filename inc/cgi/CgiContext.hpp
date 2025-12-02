@@ -2,7 +2,6 @@
 #define CGI_CONTEXT_HPP
 
 #include "cgi/CgiData.hpp"
-#include "cgi/SafePipe.hpp"
 
 /**
  * Holds runtime state for a single CGI execution (PID, pipes, timestamps).
@@ -18,15 +17,21 @@ class CgiContext
 {
 	pid_t				_pid;
 	int					_clientFd;
-	int					_stdinWriteFd;
-	int					_stdoutReadFd;
-	int					_stderrReadFd;
+	CgiData const&		_cgiData; // non-owning
 	Request	const&		_request; // non-owning
 	ErrorPages const&	_errorPages; // non-owning
+	int					_inReadFd;
+	int					_inWriteFd;
+	int					_outReadFd;
+	int					_outWriteFd;
+	int					_errReadFd;
+	int					_errWriteFd;
 
 	time_t				_startTime;
 	std::string			_output; // owning
 	std::string			_error; // owning
+
+	static void	_safeCloseFd(int&);
 
 	// Not default-constructible, not copyable, not assignable
 	CgiContext();
@@ -35,24 +40,33 @@ class CgiContext
 
 	public:
 
-		CgiContext(pid_t, int, int, int, int, CgiData const&);
+		CgiContext(int, CgiData const&, int, int, int, int, int, int);
 		~CgiContext();
 
 		void	appendOutput(const char*, size_t);
     	void	appendError(const char*, size_t);
 		void	setStartTime();
+		void	setPid(int);
 
-		void	closeStdinWriteFd();
-		void	closeStdoutReadFd();
-		void	closeStderrReadFd();
+		void	closeInReadFd();
+		void	closeInWriteFd();
+		void	closeOutReadFd();
+		void	closeOutWriteFd();
+		void	closeErrReadFd();
+		void	closeErrWriteFd();
+		void	closeAllFds();
 
 		pid_t				getPid() const;
 		int					getClientFd() const;
-		int					getStdinWriteFd() const;
-		int					getStdoutReadFd() const;
-		int					getStderrReadFd() const;
+		CgiData const&		getCgiData() const;
 		Request const&		getRequest() const;
 		ErrorPages const&	getErrorPages() const;
+		int					getInReadFd() const;
+		int					getInWriteFd() const;
+		int					getOutReadFd() const;
+		int					getOutWriteFd() const;
+		int					getErrReadFd() const;
+		int					getErrWriteFd() const;
 		time_t const&		getStartTime() const;
 		std::string	const&	getOutput() const;
 		std::string const&	getError() const;

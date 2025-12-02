@@ -44,7 +44,6 @@ BASE_SRC_FILES = \
 	cgi/CgiHandler.cpp \
 	cgi/CgiData.cpp \
 	cgi/CgiContext.cpp \
-	cgi/SafePipe.cpp \
 	utils/Const.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \

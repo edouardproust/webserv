@@ -1,20 +1,27 @@
 #include "cgi/CgiContext.hpp"
 
-CgiContext::CgiContext(pid_t p, int cfd, int inWriteFd, int outReadFd, int errReadFd, CgiData const& d)
-: _pid(p)
+CgiContext::CgiContext(int cfd, CgiData const& d, int inReadFd, int inWriteFd, int outReadFd, int outWriteFd, int errReadFd, int errWriteFd)
+: _pid(-1)
 , _clientFd(cfd)
-, _stdinWriteFd(inWriteFd)
-, _stdoutReadFd(outReadFd)
-, _stderrReadFd(errReadFd)
+, _cgiData(d)
 , _request(d.getRequest())
 , _errorPages(d.getErrorPages())
+, _inReadFd(inReadFd)
+, _inWriteFd(inWriteFd)
+, _outReadFd(outReadFd)
+, _outWriteFd(outWriteFd)
+, _errReadFd(errReadFd)
+, _errWriteFd(errWriteFd)
 , _startTime(time(NULL))
 , _output()
 , _error()
 {}
 
 CgiContext::~CgiContext()
-{}
+{
+	closeAllFds();
+    Log::dev("debug", "CgiContext destroyed for PID " + utils::str(_pid));
+}
 
 void	CgiContext::setStartTime()
 {
@@ -31,28 +38,49 @@ void	CgiContext::appendError(const char* data, size_t len)
 	_error.append(data, len);
 }
 
-void	CgiContext::closeStdinWriteFd()
+void CgiContext::closeInReadFd()
 {
-	if (_stdinWriteFd != -1) {
-		close(_stdinWriteFd);
-		_stdinWriteFd = -1;
-	}
+	_safeCloseFd(_inReadFd);
 }
 
-void	CgiContext::closeStdoutReadFd()
+void	CgiContext::closeInWriteFd()
 {
-	if (_stdoutReadFd != -1) {
-		close(_stdoutReadFd);
-		_stdoutReadFd = -1;
-	}
+	_safeCloseFd(_inWriteFd);
 }
 
-void	CgiContext::closeStderrReadFd()
+void	CgiContext::closeOutReadFd()
 {
-	if (_stderrReadFd != -1) {
-		close(_stderrReadFd);
-		_stderrReadFd = -1;
-	}
+	_safeCloseFd(_outReadFd);
+}
+
+void	CgiContext::closeOutWriteFd()
+{
+	_safeCloseFd(_outWriteFd);
+}
+
+void	CgiContext::closeErrReadFd()
+{
+	_safeCloseFd(_errReadFd);
+}
+
+void	CgiContext::closeErrWriteFd()
+{
+	_safeCloseFd(_errWriteFd);
+}
+
+void	CgiContext::closeAllFds()
+{
+	closeInReadFd();
+	closeInWriteFd();
+	closeOutReadFd();
+	closeOutWriteFd();
+	closeErrReadFd();
+	closeErrWriteFd();
+}
+
+void	CgiContext::setPid(int pid)
+{
+	_pid = pid;
 }
 
 pid_t	CgiContext::getPid() const
@@ -65,19 +93,9 @@ int	CgiContext::getClientFd() const
 	return _clientFd;
 }
 
-int	CgiContext::getStdinWriteFd() const
+CgiData const&	CgiContext::getCgiData() const
 {
-	return _stdinWriteFd;
-}
-
-int	CgiContext::getStdoutReadFd() const
-{
-	return _stdoutReadFd;
-}
-
-int	CgiContext::getStderrReadFd() const
-{
-	return _stderrReadFd;
+	return _cgiData;
 }
 
 Request const&	CgiContext::getRequest() const
@@ -88,6 +106,37 @@ Request const&	CgiContext::getRequest() const
 ErrorPages const&	CgiContext::getErrorPages() const
 {
 	return _errorPages;
+}
+
+
+int	CgiContext::getInReadFd() const
+{
+	return _inReadFd;
+}
+
+int	CgiContext::getInWriteFd() const
+{
+	return _inWriteFd;
+}
+
+int	CgiContext::getOutReadFd() const
+{
+	return _outReadFd;
+}
+
+int	CgiContext::getOutWriteFd() const
+{
+	return _outWriteFd;
+}
+
+int	CgiContext::getErrReadFd() const
+{
+	return _errReadFd;
+}
+
+int	CgiContext::getErrWriteFd() const
+{
+	return _errWriteFd;
 }
 
 time_t const&	CgiContext::getStartTime() const
@@ -105,14 +154,33 @@ std::string const&	CgiContext::getError() const
 	return _error;
 }
 
+// STATIC UTILS
+
+void	CgiContext::_safeCloseFd(int& fd)
+{
+	if (fd != -1) {
+		close(fd);
+		fd = -1;
+	}
+}
+
+// PRINT
+
 std::ostream&	operator<<(std::ostream& os, CgiContext const& rhs)
 {
-	os << "CgiContext:\n";
 	os << "- pid: " << rhs.getPid() << "\n";
-	os << "- clientFd " << rhs.getClientFd() << "):\n";
-	os << "- stdinWriteFd: " << utils::str(rhs.getStdinWriteFd()) << "\n";
-	os << "- stdoutReadFd: " << utils::str(rhs.getStdoutReadFd()) << "\n";
-	os << "- stderrReadFd: " << utils::str(rhs.getStderrReadFd()) << "\n";
+	os << "- clientFd " << rhs.getClientFd() << "\n";
+	os << "- cgiData: [too long to display]\n";
+	os << "- request: [too long to display]\n";
+	os << "- errorPages:\n";
+	for (ErrorPages::const_iterator it = rhs.getErrorPages().begin(); it != rhs.getErrorPages().end(); ++it)
+		os << "  " << it->first << " -> " << it->second << "\n";
+	os << "- inReadFd: " << utils::str(rhs.getInReadFd()) << "\n";
+	os << "- inWriteFd: " << utils::str(rhs.getInWriteFd()) << "\n";
+	os << "- outReadFd: " << utils::str(rhs.getOutReadFd()) << "\n";
+	os << "- outWriteFd: " << utils::str(rhs.getOutWriteFd()) << "\n";
+	os << "- errReadFd: " << utils::str(rhs.getErrReadFd()) << "\n";
+	os << "- errWriteFd: " << utils::str(rhs.getErrWriteFd()) << "\n";
 	os << "- start time: " << rhs.getStartTime() << "\n";
 	os << "- output: " << PrintableString(rhs.getOutput()) << "\n";
 	os << "- error: " << PrintableString(rhs.getError()) << "\n";

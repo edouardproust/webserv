@@ -30,18 +30,20 @@ class Network
 	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
 	CgiHandler					_cgi; 				// Instance of CgiHandler
 
+	static std::string	_epollOpToString(int);
+	static std::string	_epollEventToString(int);
+
 	void	_initListeningSockets();
 	void	_cleanupListeningSockets();
 
 	void 	_registerNewClientToEpoll(int);
 	void	_readClientRequest(int);
 	void	_dispatchAndSendResponse(int);
-	void    _continuePendingSend(int clientFd);
+	void    _continuePendingSend(int);
 
 	void	_createEpollInstance();
 	void	_registerListeningSocketsToEpoll();
 	int		_waitAndCollectEvents(struct epoll_event*);
-	static std::string	_epollOpToString(int operation);
 
 	bool	_isListeningSocket(int);
 	int		_acceptNewClient(int);

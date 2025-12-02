@@ -96,7 +96,7 @@ Response	Response::createCgiResponse(RoutingDecision const& rd, std::string cons
 	Response resp;
 	resp._needsCgiExecution = true;
 	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn);
-	Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData));
+	//Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData)); // DEBUG
 	return resp;
 }
 
