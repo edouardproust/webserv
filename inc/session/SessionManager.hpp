@@ -27,12 +27,14 @@ class SessionManager
 	SessionManager();
 	SessionManager(const SessionManager&);
 	SessionManager& operator=(const SessionManager&);
+	~SessionManager();
 
 	void	_cleanupExpiredSessions();
 
 	public:
 
-	~SessionManager();
+	static const std::string	COOKIE_NAME;
+	static const std::string	COOKIE_PATH;
 
 	static		SessionManager& getInstance();
 	std::string	createSession(const std::string& username);

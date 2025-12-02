@@ -3,6 +3,9 @@
 #include "utils/Log.hpp"
 #include <sstream>
 
+const std::string	SessionManager::COOKIE_NAME = "session_id";
+const std::string	SessionManager::COOKIE_PATH = "/";
+
 SessionManager::SessionManager()
 : _lastCleanup(std::time(0))
 {}

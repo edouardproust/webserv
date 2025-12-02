@@ -13,12 +13,12 @@ def main():
             if cookie.startswith('session_id='):
                 session_id = cookie.split('session_id=')[1].strip()
                 break
-
-    # NOW output headers and content
+                
+    # headers and content
     print("Content-Type: text/html")
     print()
     
-    # Start HTML output
+    # HTML output
     print("""
     <html>
     <head>
@@ -42,7 +42,7 @@ def main():
             <ul>
     """.format(cookies))
     
-    # List all environment variables that contain "COOKIE"
+    # All environment variables that contain "COOKIE"
     cookie_env_vars = []
     for key, value in os.environ.items():
         if 'COOKIE' in key.upper():
@@ -69,6 +69,8 @@ def main():
         <div class="success">
             <h3>Successfully Logged In!</h3>
             <p>Session ID: {}</p>
+            <p><strong>Note:</strong> This browser can only hold one session at a time.</p>
+            <p>Try opening a private/incognito window to test multiple users!</p>
         </div>
         """.format(session_id))
     else:
