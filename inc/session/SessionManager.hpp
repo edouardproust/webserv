@@ -13,7 +13,7 @@
  * - Maintains collection of all active Session objects
  * - Performs automatic cleanup of expired sessions
  *
- * This will ensure only one instance manages all sessions across the application.
+ * Only one instance manages all sessions across the application.
  */
 
 class SessionManager
