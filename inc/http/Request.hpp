@@ -38,15 +38,17 @@ class Request
 
  		// Othodox canonical form
 		Request();
-		Request(std::string  const&);
 		Request(Request const&);
 		Request& operator=(Request const&);
 		~Request();
 
+		void		parse();
 		static std::set<std::string> const& getSupportedMethods();
 		static bool	isSupportedMethod(std::string const&);
 		static bool	isExistingMethod(std::string const&);
 		bool		isConnectionClose() const;
+		void		rawRequestAppend(const char*, size_t);
+
 
 		HttpStatus const&	getStatus() const;
 		std::string const&	getMethod() const;

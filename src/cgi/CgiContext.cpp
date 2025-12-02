@@ -31,6 +31,30 @@ void	CgiContext::appendError(const char* data, size_t len)
 	_error.append(data, len);
 }
 
+void	CgiContext::closeStdinWriteFd()
+{
+	if (_stdinWriteFd != -1) {
+		close(_stdinWriteFd);
+		_stdinWriteFd = -1;
+	}
+}
+
+void	CgiContext::closeStdoutReadFd()
+{
+	if (_stdoutReadFd != -1) {
+		close(_stdoutReadFd);
+		_stdoutReadFd = -1;
+	}
+}
+
+void	CgiContext::closeStderrReadFd()
+{
+	if (_stderrReadFd != -1) {
+		close(_stderrReadFd);
+		_stderrReadFd = -1;
+	}
+}
+
 pid_t	CgiContext::getPid() const
 {
 	return _pid;
@@ -86,9 +110,9 @@ std::ostream&	operator<<(std::ostream& os, CgiContext const& rhs)
 	os << "CgiContext:\n";
 	os << "- pid: " << rhs.getPid() << "\n";
 	os << "- clientFd " << rhs.getClientFd() << "):\n";
-	os << "- stdinPipe: " << utils::str(rhs.getStdinWriteFd()) << "\n";
-	os << "- stdoutPipe: " << utils::str(rhs.getStdoutReadFd()) << "\n";
-	os << "- stderrPipe: " << utils::str(rhs.getStderrReadFd()) << "\n";
+	os << "- stdinWriteFd: " << utils::str(rhs.getStdinWriteFd()) << "\n";
+	os << "- stdoutReadFd: " << utils::str(rhs.getStdoutReadFd()) << "\n";
+	os << "- stderrReadFd: " << utils::str(rhs.getStderrReadFd()) << "\n";
 	os << "- start time: " << rhs.getStartTime() << "\n";
 	os << "- output: " << PrintableString(rhs.getOutput()) << "\n";
 	os << "- error: " << PrintableString(rhs.getError()) << "\n";

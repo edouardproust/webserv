@@ -13,7 +13,7 @@ Network::Network(Config const& config)
 
 Network::~Network()
 {
-	_cgi.fullCleanup();
+	//_cgi.fullCleanup(); // TODO
 
 	_cleanupListeningSockets();
 	if (_epollFd != -1)
@@ -144,8 +144,7 @@ void	Network::_cleanupListeningSockets()
 void	Network::_registerNewClientToEpoll(int clientFd)
 {
 	// Configuration of client's socket
-	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1
-	|| fcntl(clientFd, F_SETFD, FD_CLOEXEC) == -1) {
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1 || fcntl(clientFd, F_SETFD, FD_CLOEXEC) == -1) {
 		Log::prod("error", "fcntl failed for on fd " + utils::str(clientFd) + ": " + strerror(errno));
 		close(clientFd);
 		return;
@@ -166,19 +165,21 @@ void	Network::_registerNewClientToEpoll(int clientFd)
 void Network::_readClientRequest(int clientFd)
 {
 	char buff[_CLIENT_BUFFER_SIZE];
-	std::string& currentReq = _pendingRequests[clientFd];
+	if (_pendingRequests.find(clientFd) == _pendingRequests.end())
+		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
+	Request& req = _pendingRequests[clientFd];
 	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
 	if (bytesReceived > 0) {
-		if (currentReq.size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
-            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(currentReq.size()) + " bytes)");
+		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
+            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
             Response response = StaticHandler::builtinError("content_too_large", "GET");
             std::string rawResponse = response.stringify();
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
-		currentReq.append(buff, bytesReceived);
+		req.rawRequestAppend(buff, bytesReceived);
 		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
-		if (RequestParser::isRawRequestComplete(currentReq)) {
+		if (RequestParser::isRawRequestComplete(req)) {
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 			_dispatchAndSendResponse(clientFd);
 		}
@@ -201,22 +202,20 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		if (_socketsByClientFd.find(clientFd) == _socketsByClientFd.end())
 			throw std::runtime_error("Client FD not mapped to any server socket.");
 
-		// 1. Process
-		Request request(_pendingRequests[clientFd]);
+		_pendingRequests[clientFd].parse();
+		Request& request = _pendingRequests[clientFd];
 		Socket* listeningSocket = _socketsByClientFd[clientFd];
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", request.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(clientFd) + ").");
 		Log::dev("debug", "Request:\n" + utils::str(request));
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
 
-		// CGI -> async response (stays in EPOLLIN to wait for CGI output)
-		if (response.needsCgiExecution()) {
-			_cgi.launchAsync(clientFd, response);
-			return; // => Stay in EPOLLIN
+		if (response.needsCgiExecution()) { // CGI -> async response (stays in EPOLLIN to wait for CGI output)
+			_cgi.launchAsync(clientFd, response); // => Stay in EPOLLIN
+		} else { // Static or redirection -> immediate response (switch to EPOLLOUT to send response)
+			prepareResponseSend(clientFd, response);
+			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "static response ready"); // => Switch to EPOLLOUT
 		}
-		// Static or redirection -> immediate response (switch to EPOLLOUT to send response)
-		prepareResponseSend(clientFd, response);
-		epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "static response ready"); // => Switch to EPOLLOUT
 	}
 	catch (std::exception& e){
 		Log::prod("error", "Problem during send/dispatch: " + utils::str(e.what()));
@@ -447,7 +446,7 @@ std::vector<Socket*> const& Network::getListeningSockets() const
 	return _listeningSockets;
 }
 
-std::map<int, std::string> const& Network::getPendingRequests() const
+std::map<int, Request> const& Network::getPendingRequests() const
 {
 	return _pendingRequests;
 }

@@ -7,12 +7,6 @@ Request::Request()
 : _status(HttpStatus())
 {}
 
-Request::Request(std::string const& rawRequest)
-: _status(HttpStatus())
-{
-	RequestParser::parseRequest(*this, rawRequest);
-}
-
 Request::Request(const Request& other)
 : _status(other._status)
 , _method(other._method)
@@ -52,6 +46,11 @@ Request& Request::operator=(const Request& other)
 Request::~Request()
 {}
 
+void	Request::parse()
+{
+	RequestParser::parseRequest(*this, _rawRequest);
+}
+
 std::set<std::string> const&	Request::getSupportedMethods()
 {
 	if (_supportedMethods.empty()) {
@@ -90,6 +89,11 @@ bool	Request::isConnectionClose() const {
 			return true;
 	}
 	return false;
+}
+
+void	Request::rawRequestAppend(const char* data, size_t size)
+{
+	 _rawRequest.append(data, size);
 }
 
 HttpStatus const& Request::getStatus() const

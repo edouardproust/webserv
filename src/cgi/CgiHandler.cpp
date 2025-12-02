@@ -25,44 +25,55 @@ void	CgiHandler::launchAsync(int clientFd, Response const& resp)
 	}
 	Log::dev("todo", "CgiHandler::launchAsync on client fd " + Log::hl(clientFd) + "."); // DEBUG
 
-	try {
-		// create pipes
-		SafePipe stdinPipe("CGI stdin");
-		SafePipe stdoutPipe("CGI stdout");
-		SafePipe stderrPipe("CGI stderr");
+	try
+	{
+		// create pipes and set them as non-blocking
+		int stdinPipe[2];
+		int stdoutPipe[2];
+		int stderrPipe[2];
+		pipe(stdinPipe); // todo failure
+		pipe(stdoutPipe); // todo failure
+		pipe(stderrPipe); // todo failure
+		fcntl(stdinPipe[0],  F_SETFL, O_NONBLOCK); // todo failure
+		fcntl(stdinPipe[1],  F_SETFL, O_NONBLOCK); // todo failure
+		fcntl(stdoutPipe[0], F_SETFL, O_NONBLOCK); // todo failure
+		fcntl(stdoutPipe[1], F_SETFL, O_NONBLOCK); // todo failure
+		fcntl(stderrPipe[0], F_SETFL, O_NONBLOCK); // todo failure
+		fcntl(stderrPipe[1], F_SETFL, O_NONBLOCK); // todo failure
+
 		pid_t pid = fork();
 		if (pid < 0)
 			throw std::runtime_error("Failed to fork CGI process");
-
 		if (pid == 0) // Child
-			_setupChildProcess(stdinPipe, stdoutPipe, stderrPipe, d);
+			_setupChildProcess(d, stdinPipe[0], stdinPipe[1], stdoutPipe[0], stdoutPipe[1], stderrPipe[0], stderrPipe[1]);
 		else // Parent
-			_setupParentProcess(stdinPipe, stdoutPipe, stderrPipe, clientFd, pid, d);
-	} catch (std::exception& e) {
+			_setupParentProcess(clientFd, pid, d, stdinPipe[0], stdinPipe[1], stdoutPipe[0], stdoutPipe[1], stderrPipe[0], stderrPipe[1]);
+	}
+	catch (std::exception& e) {
         Log::prod("error", "CGI setup for client fd " + Log::hl(clientFd) + ": " + utils::str(e.what())); // TODO log in StaticHandler::error instead?
 		errorFromClientFd(clientFd, "internal_error", d.getRequest(), d.getErrorPages(), "CGI setup failed");
     }
 }
 
-void CgiHandler::_setupChildProcess(SafePipe& stdinPipe, SafePipe& stdoutPipe, SafePipe& stderrPipe, CgiData const& data)
+void CgiHandler::_setupChildProcess(CgiData const& data, int inReadFd, int inWriteFd, int outReadFd, int outWriteFd, int errReadFd, int errWriteFd)
 {
 	// Close unused pipe ends
-	stdinPipe.closeWrite(); // child does not write on stdin
-    stdoutPipe.closeRead(); // child does not read on stdout
-    stderrPipe.closeRead(); // child does not read on stderr
+	close(inWriteFd); // child does not write on stdin
+	close(outReadFd); // child does not read on stdout
+	close(errReadFd); // child does not read on stderr
 
 	// Redirect pipes
-	if (dup2(stdinPipe.readFd(), STDIN_FILENO) == -1)
+	if (dup2(inReadFd, STDIN_FILENO) == -1)
 		_exit(1);
-	if (dup2(stdoutPipe.writeFd(), STDOUT_FILENO) == -1)
+	if (dup2(outWriteFd, STDOUT_FILENO) == -1)
 		_exit(1);
-	if (dup2(stderrPipe.writeFd(), STDERR_FILENO) == -1)
+	if (dup2(errWriteFd, STDERR_FILENO) == -1)
 		_exit(1);
 
 	// Close original pipes (now redirected)
-	stdinPipe.closeRead();
-	stdoutPipe.closeWrite();
-	stderrPipe.closeWrite();
+	close(inReadFd);
+	close(outWriteFd);
+	close(errWriteFd);
 
 	// Launch executable
 	execve(data.getExecutor().c_str(), data.getArgv().data(), data.getEnvp().data());
@@ -70,56 +81,31 @@ void CgiHandler::_setupChildProcess(SafePipe& stdinPipe, SafePipe& stdoutPipe, S
 }
 
 //TODO
-void CgiHandler::_setupParentProcess(SafePipe& stdinPipe, SafePipe& stdoutPipe, SafePipe& stderrPipe, int clientFd, pid_t pid, CgiData const& data)
+void CgiHandler::_setupParentProcess(int clientFd, pid_t pid, CgiData const& data, int inReadFd, int inWriteFd, int outReadFd, int outWriteFd, int errReadFd, int errWriteFd)
 {
 	Log::dev("setup", "Parent process CGI setup (pid " + Log::hl(pid) + ", client fd " + Log::hl(clientFd) + ").");
 
 	// Close unused pipe ends
-	stdinPipe.closeRead(); // Parent doesn't read from stdin
-	stdoutPipe.closeWrite(); // Parent doesn't write to stdout
-	stderrPipe.closeWrite(); // Parent doesn't write to stderr
+	close(inReadFd); // Parent doesn't read from stdin
+	close(outWriteFd); // Parent doesn't write to stdout
+	close(errWriteFd); // Parent doesn't write to stderr
 
 	// Create and store CgiContext
-	CgiContext* ctx = new CgiContext(pid, clientFd, stdinPipe.writeFd(), stdoutPipe.readFd(), stderrPipe.readFd(), data);
+	CgiContext* ctx = new CgiContext(pid, clientFd, inWriteFd, outReadFd, errReadFd, data);
 	_contextsByPid[pid] = ctx;
-	_contextsByPipeFd[stdoutPipe.readFd()] = ctx;
-	_contextsByPipeFd[stderrPipe.readFd()] = ctx;
+	_contextsByPipeFd[outReadFd] = ctx;
+	_contextsByPipeFd[errReadFd] = ctx;
 	Log::dev("setup", "Created cgiContext for pid " + Log::hl(pid) + ".");
 	Log::dev("debug", utils::str(*ctx));
 
-	try {
-		_network->epollControl(stdoutPipe.readFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stdout");
-		_network->epollControl(stderrPipe.readFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stderr");
-		Log::dev("setup", "CGI pipes added to epoll (stdout fd " + Log::hl(stdoutPipe.readFd()) + ", stderr fd " + Log::hl(stderrPipe.readFd()) + ").");
-	} catch (std::exception& e) {
-		_killAndCleanupProcess(pid);
-		throw;
-	}
+	_network->epollControl(outReadFd, EPOLL_CTL_ADD, EPOLLIN, "CGI stdout"); // todo failure
+	_network->epollControl(errReadFd, EPOLL_CTL_ADD, EPOLLIN, "CGI stderr"); // todo failure
 }
 
 // TODO
 void	CgiHandler::readAndAccumulateCgiOutput(int pipeFd)
 {
-	Log::dev("todo", "CgiHandler::handlePipeRead\n"
-		"- pipeFd: " + utils::str(pipeFd)
-	); // DEBUG
-
-	std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
-	if (it == _contextsByPipeFd.end()) return;
-
-	CgiContext* ctx = it->second;
-	char buffer[4096];
-	ssize_t bytes = read(pipeFd, buffer, sizeof(buffer));
-
-	// TODO this is blocking: do a reading by chunks
-	if (bytes > 0) {
-		if (pipeFd == ctx->getStdoutReadFd()) {
-			ctx->appendOutput(buffer, bytes);
-		}
-		// TODO same thing for stderr
-		// No POLLOUT here yet: CGI is still running...
-	}
-	Log::dev("todo", "CGI output: " + ctx->getOutput()); // DEBUG
+	(void)pipeFd;
 }
 
 // TODO
@@ -131,37 +117,7 @@ void	CgiHandler::readAndAccumulateCgiOutput(int pipeFd)
  */
 void	CgiHandler::checkCompletion()
 {
-	time_t now = time(NULL);
 
-	// Make a copy to prevent problesm during iteration
-	std::vector<pid_t> pidsToCheck;
-	for (std::map<pid_t, CgiContext*>::iterator it = _contextsByPid.begin();
-		it != _contextsByPid.end(); ++it) {
-		pidsToCheck.push_back(it->first);
-	}
-
-	// Check and handle completed CGI processes
-	for (size_t i = 0; i < pidsToCheck.size(); ++i) {
-		pid_t pid = pidsToCheck[i];
-		if (_contextsByPid.find(pid) == _contextsByPid.end())
-			continue;
-		CgiContext* ctx = _contextsByPid[pid];
-		int status = 0;
-		pid_t result = waitpid(pid, &status, WNOHANG); // Clean zombie processes (non-blocking)
-
-		if (result == pid) { // Process stopped (reaped by waitpid)
-			_finalizeResponse(ctx, status);
-			_cleanupProcessRessources(pid);
-		} else if (result == 0) { // Process still running
-			size_t elapsedTime = now - ctx->getStartTime();
-			if (elapsedTime > _TIMEOUT_SECONDS) // check timeout
-				_errorFromContext(ctx, "timeout", "Timeout after " + utils::str(elapsedTime) + " seconds.");
-		} else if (result == -1) { // Process already reaped
-			Log::dev("warning", "waitpid returned -1 for pid " + Log::hl(pid) + ".");
-			_killAndCleanupProcess(pid);
-		}
-	}
-	_reapZombies();
 }
 
 bool	CgiHandler::isCgiPipe(int fd) const
@@ -172,20 +128,42 @@ bool	CgiHandler::isCgiPipe(int fd) const
 // TODO
 void	CgiHandler::_finalizeResponse(CgiContext* ctx, int exitStatus)
 {
-
+	(void)ctx;
 	(void)exitStatus;
-	Log::dev("event", "CGI process completed");
-	// DEBUG: send placeholder response
-	Response resp = StaticHandler::cgiPlaceholder();
-	_network->prepareResponseSend(ctx->getClientFd(), resp);
-	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready"); // TODO catch
-	Log::dev("event", "Switched client to EPOLLOUT for CGI response");
 }
 
 std::map<pid_t, CgiContext*> const&	CgiHandler::getContextsByPid() const
 {
 	return _contextsByPid;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // ERRORS & CLEANUP
@@ -210,7 +188,7 @@ void CgiHandler::errorFromClientFd(int clientFd, std::string const& errorSlug, R
 void	CgiHandler::_errorFromContext(CgiContext* ctx, std::string const& errorSlug, std::string const& errorMsg)
 {
 	errorFromClientFd(ctx->getClientFd(), errorSlug, ctx->getRequest(), ctx->getErrorPages(), errorMsg);
-	_killAndCleanupProcess(ctx->getPid());
+	//_killAndCleanupProcess(ctx->getPid()); // TODO
 }
 
 /**

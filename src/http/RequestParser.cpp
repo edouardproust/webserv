@@ -41,8 +41,9 @@ void	RequestParser::parseRequest(Request& request, std::string const& rawRequest
 	request.setStatus(HttpStatus("ok"));
 }
 
-bool	RequestParser::isRawRequestComplete(std::string const& rawRequest)
+bool	RequestParser::isRawRequestComplete(Request const& req)
 {
+	std::string const& rawRequest = req.getRawRequest();
 	// Check headers
 	std::string headersEndStr = "\r\n\r\n";
 	size_t headerEndPos = rawRequest.find(headersEndStr);

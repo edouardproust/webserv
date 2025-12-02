@@ -42,6 +42,10 @@ class CgiContext
     	void	appendError(const char*, size_t);
 		void	setStartTime();
 
+		void	closeStdinWriteFd();
+		void	closeStdoutReadFd();
+		void	closeStderrReadFd();
+
 		pid_t				getPid() const;
 		int					getClientFd() const;
 		int					getStdinWriteFd() const;

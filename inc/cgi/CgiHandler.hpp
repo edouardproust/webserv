@@ -17,8 +17,8 @@ class CgiHandler
 	std::map<pid_t, CgiContext*>	_contextsByPid;
 	std::set<pid_t>					_zombiesToReap;
 
-	void	_setupChildProcess(SafePipe&, SafePipe&, SafePipe&, CgiData const&);
-	void	_setupParentProcess(SafePipe&, SafePipe&, SafePipe&, int, pid_t, CgiData const&);
+	void	_setupChildProcess(CgiData const&, int, int, int, int, int, int);
+	void	_setupParentProcess(int, pid_t, CgiData const&, int, int, int, int, int, int);
     void	_writeRequestBody(int, Request const&);
     void	_registerPipesToEpoll(int, int);
     void	_createCgiContext(int, pid_t, int, int, Request const&); // TODO passer CgiData plutot que Request ?
