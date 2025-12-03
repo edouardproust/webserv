@@ -23,6 +23,8 @@ class CgiHandler
 	void	_sendPlaceholderResponse(int);
 	void	_startStreamingResponse(CgiContext*);
 	void	_continueStreamingResponse(CgiContext*);
+	void	_handleTimeout(CgiContext*, time_t);
+	void	_cleanupPipes(CgiContext*);
 
 	// TODO canonical ? + comment
 	CgiHandler();

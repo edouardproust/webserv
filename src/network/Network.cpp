@@ -13,9 +13,14 @@ Network::Network(Config const& config)
 
 Network::~Network()
 {
-	//_cgi.fullCleanup(); // TODO
+	for (std::map<int, Socket*>::iterator it = _socketsByClientFd.begin(); it != _socketsByClientFd.end(); ++it) {
+		Log::dev("close", "Closing client fd " + Log::hl(it->first) + " on shutdown.");
+		close(it->first); // Fermer le fd du client
+	}
+	_socketsByClientFd.clear();
 
 	_cleanupListeningSockets();
+
 	if (_epollFd != -1)
 		close(_epollFd);
 	Log::dev("close", "Epoll instance stopped.");
@@ -79,7 +84,7 @@ void Network::startServers()
 
 	struct epoll_event events[_MAX_NB_OF_EVENTS];
 	while (sig::keepRunning()) {
-		int readyEventsCount = _waitAndCollectEvents(events);
+		int readyEventsCount = _waitAndCollectEvents(events, 1000); // 1000 (ms) -> Check every second maximum
 
 		for (int n = 0; n < readyEventsCount && sig::keepRunning(); n++) {
 			int eventFd = events[n].data.fd;
@@ -130,25 +135,16 @@ void Network::startServers()
 void	Network::_initListeningSockets()
 {
 	// Get all unique ports only
-    std::vector<size_t> usedPorts;
+    std::set<size_t> usedPorts;
 	std::vector<HostPortPair> listenPorts = _config.getAllListenPorts();
 
 	// Only create socket if port is unique
 	try {
 		for (size_t i = 0; i < listenPorts.size() && sig::keepRunning(); ++i) {
-            size_t port = listenPorts[i].getPort();
-            bool found = false;
-            for (size_t j = 0; j < usedPorts.size(); ++j) {
-                if (usedPorts[j] == port) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                usedPorts.push_back(port);
-                _listeningSockets.push_back(new Socket(listenPorts[i]));
-            }
-        }
+			size_t port = listenPorts[i].getPort();
+			if (usedPorts.insert(port).second)
+				_listeningSockets.push_back(new Socket(listenPorts[i]));
+		}
 		//  Bind and listen to each socket created
 		for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 			_listeningSockets[i]->safeBind();
@@ -376,17 +372,12 @@ void Network::epollControl(int fd, int operation, uint32_t events, const std::st
 /**
  * Waits until epoll reports activity. Fills the event array with ready descriptors and returns their count.
  */
-int Network::_waitAndCollectEvents(struct epoll_event* events)
+int Network::_waitAndCollectEvents(struct epoll_event* events, int timeout_ms)
 {
-	int readyEventsCount = epoll_wait(_epollFd, events, _MAX_NB_OF_EVENTS, -1);
+	int readyEventsCount = epoll_wait(_epollFd, events, _MAX_NB_OF_EVENTS, timeout_ms);
 	if (readyEventsCount == -1) {
-		if (errno == EINTR) { // signal received (not an error).
-			//!\ errno is not checked after a read or write here -> ok with subject
-			return 0; // main loop in startServers will verify sig::keepRunning() and stop webserv
-		}
-		// else: reel error
 		Log::prod("status", "Epoll Wait status: " + utils::str(strerror(errno)));
-		throw std::runtime_error("Can't wait events.");
+		return 0; // main loop in startServers will verify sig::keepRunning() and stop webserv
 	}
 	return (readyEventsCount);
 }

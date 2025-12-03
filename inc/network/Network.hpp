@@ -43,7 +43,7 @@ class Network
 
 	void	_createEpollInstance();
 	void	_registerListeningSocketsToEpoll();
-	int		_waitAndCollectEvents(struct epoll_event*);
+	int		_waitAndCollectEvents(struct epoll_event*, int);
 
 	bool	_isListeningSocket(int);
 	int		_acceptNewClient(int);

@@ -5,6 +5,8 @@ CXX = c++
 
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
+VALGRIND = valgrind --leak-check=full --track-fds=yes
+
 # ------- CONFIG --------
 
 CONFIG_SRC_DIR = tests/config
@@ -124,12 +126,12 @@ test_prod: all
 test_dev: dev
 	@clear
 	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE) $(CONFIG_DST_DIR)
-	valgrind ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE)
+	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE)
 
 test_42: dev
 	@clear
 	bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE_42) $(CONFIG_DST_DIR)
-	valgrind ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
+	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
 
 test_welcome: all
 	@clear
