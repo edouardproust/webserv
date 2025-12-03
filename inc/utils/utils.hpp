@@ -43,7 +43,6 @@ namespace utils {
 	char	hexToChar(std::string const&);
 	std::string	toUpper(std::string const& s);
 
-
 	std::string	readFile(std::string const&);
 	std::string	getFileName(std::string const&);
 	std::string	getFileExtension(std::string const&);
@@ -52,14 +51,12 @@ namespace utils {
 
 	std::string	pathsJoin(std::string const&, std::string const&);
 	std::string securedPathsJoin(std::string const&, std::string const&);
-
 	std::string	normalizePath(std::string const&);
-
 	std::string	trim(std::string const&);
-	std::string	excerpt(size_t, std::string const&);
 	std::string	formatDate(time_t, const std::string&);
-
 	std::string extractHostname(UniqHeaders const&);
+	std::pair<size_t, size_t>	headersBodySeparatorPos(std::string const&);
+
 }
 
 #include "../src/utils/utils.tpp"

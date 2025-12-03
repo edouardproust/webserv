@@ -93,11 +93,13 @@ void Network::startServers()
 					Log::prod("error", "Accept failed on listening socket.");
 				}
 			} else if (_cgi.isCgiPipe(eventFd)) { // 2a. eventFd corresponds to an existing CGI pipe
-				Log::dev("debug", "CGI pipe event " + Log::hl(_epollEventToString(ev)) + " on fd " + Log::hl(eventFd) + ".");
+				//Log::dev("debug", "CGI pipe event " + Log::hl(_epollEventToString(ev)) + " on fd " + Log::hl(eventFd) + ".");
 				if (ev & EPOLLERR) { // pipe error
 					_cgi.errorFromPipeFd(eventFd, "internal_error", "CGI pipe error");
 				} else if (ev & (EPOLLIN | EPOLLHUP)) { // ready for reading CGI output from pipes (EPOLLHUP means EOF here)
-					_cgi.readAndAccumulateCgiOutput(eventFd);
+					_cgi.readCgiOutput(eventFd);
+				} else if (ev & EPOLLOUT) { // ready for writing to CGI stdin
+					_cgi.writeCgiInput(eventFd);
 				}
 			} else { // 2c. eventFd corresponds to an existing client socket in epoll
 				if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
@@ -355,7 +357,7 @@ void Network::epollControl(int fd, int operation, uint32_t events, const std::st
     event.data.fd = fd;
     event.events = events;
     if (epoll_ctl(_epollFd, operation, fd, &event) == -1) {
-        std::string errorMsg = "epoll_ctl(" + _epollOpToString(operation) + ") failed during " + description + " for fd " + Log::hl(fd) + ": " + utils::str(strerror(errno));
+        std::string errorMsg = "epoll_ctl " + Log::hl(_epollOpToString(operation)) + " (" + description + ") failed on fd " + Log::hl(fd) + ": " + utils::str(strerror(errno));
 		if (operation == EPOLL_CTL_DEL) {
             Log::dev("warning", errorMsg);
             return; // not critical
@@ -364,8 +366,9 @@ void Network::epollControl(int fd, int operation, uint32_t events, const std::st
             Log::prod("error", errorMsg);
             return; // not critical
 		}
+		// critical error
 		Log::prod("error", errorMsg);
-		throw std::runtime_error("epoll_ctl " + _epollOpToString(operation) + " failure on fd " + Log::hl(fd) + ".");
+		throw std::runtime_error("Critical epoll_ctl failure on fd " + utils::str(fd));
 	}
 	Log::dev("setup", "Epoll " + Log::hl(_epollOpToString(operation)) + " (" + description + ") successful for fd " + Log::hl(fd) + ".");
 }

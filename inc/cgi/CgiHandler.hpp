@@ -21,6 +21,8 @@ class CgiHandler
 
 	void	_sendNotImplementedResponse(int, CgiData const&);
 	void	_sendPlaceholderResponse(int);
+	void	_startStreamingResponse(CgiContext*);
+	void	_continueStreamingResponse(CgiContext*);
 
 	// TODO canonical ? + comment
 	CgiHandler();
@@ -33,8 +35,9 @@ class CgiHandler
 		~CgiHandler();
 
 		void	launchAsync(int, Response const&);
+		void	writeCgiInput(int);
+		void	readCgiOutput(int);
 		void	checkCompletion();
-		void	readAndAccumulateCgiOutput(int);
 		bool	isCgiPipe(int) const;
 
 		std::map<pid_t, CgiContext*> const&	getContextsByPid() const;

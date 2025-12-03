@@ -48,30 +48,47 @@ void	CgiHandler::launchAsync(int clientFd, Response const& resp)
 	// CHILD PROCESS =========================
 
 	if (pid == 0) {
-		Log::dev("debug", "Child process started");
-		// Close ends that child doesn't use (parent uses them)
+		Log::dev("cgi", "Child process started.");
+
+		// Close parent's ends of pipes
 		close(pipeIn[1]); // parent writes here
-        close(pipeOut[0]); // parent reads here
-        close(pipeErr[0]); // parent reads here
-		sleep(1); // DEBUG
-		_exit(42); // for now, just exit with 42 // TODO
+		close(pipeOut[0]); // parent reads here
+		close(pipeErr[0]); // parent reads here
+
+		// Redirect stdin/stdout/stderr to pipes
+		dup2(pipeIn[0], STDIN_FILENO);
+		dup2(pipeOut[1], STDOUT_FILENO);
+		dup2(pipeErr[1], STDERR_FILENO);
+
+		// Close now-useless pipe fds
+		close(pipeIn[0]);
+		close(pipeOut[1]);
+		close(pipeErr[1]);
+
+		// Execute CGI
+		execve(d.getExecutor().data(), d.getArgv().data(), d.getEnvp().data());
+
+		// Si on arrive ici, execve a échoué
+		perror("execve failed");
+		_exit(1);
 	}
 
 	// PARENT PROCESS ========================
 
 	ctx->setPid(pid);
-	Log::dev("debug", "Parent process: child pid = " + utils::str(ctx->getPid()));
+	Log::dev("cgi", "Parent process (child process pid: " + Log::hl(ctx->getPid()) + ").");
 
-	// Close ends that parent doesn't use (child uses them)
+	// Close child's ends of pipes
 	close(pipeIn[0]); // child reads here
 	close(pipeOut[1]); // child writes here
 	close(pipeErr[1]); // child writes here
 
 	// Set pipes non-blocking
+	fcntl(pipeIn[1], F_SETFL, O_NONBLOCK);
 	fcntl(pipeOut[0], F_SETFL, O_NONBLOCK);
 	fcntl(pipeErr[0], F_SETFL, O_NONBLOCK);
 
-	// Register pipes in epoll
+	// Register outPipe and errPipe in epoll
 	_network->epollControl(pipeOut[0], EPOLL_CTL_ADD, EPOLLIN, "CGI stdout pipe");
 	_network->epollControl(pipeErr[0], EPOLL_CTL_ADD, EPOLLIN, "CGI stderr pipe");
 
@@ -79,13 +96,162 @@ void	CgiHandler::launchAsync(int clientFd, Response const& resp)
 	_contextsByPid[pid] = ctx;
 	_contextsByPipeFd[pipeOut[0]] = ctx;
 	_contextsByPipeFd[pipeErr[0]] = ctx;
-	Log::dev("debug", "Context stored, pipes ready on fds " + utils::str(pipeOut[0]) + " and " + utils::str(pipeErr[0]));
 
-	// For now close stdin pipe (not used yet)
-    close(pipeIn[1]); // TODO: used to send body to cgi
+	// Send request body to CGI stdin (if any)
+	std::string const& body = d.getRequest().getBody();
+	if (!body.empty()) {
+		Log::dev("cgi", "Will send " + Log::hl(body.size()) + " bytes to CGI stdin");
+		// Register inPipe pipe in epoll
+		_network->epollControl(pipeIn[1], EPOLL_CTL_ADD, EPOLLOUT, "CGI stdin pipe");
+		// Store context
+    	_contextsByPipeFd[pipeIn[1]] = ctx;
+	} else { // No data to read: close read end of stdin pipe
+		close(pipeIn[1]);
+	}
+
+	Log::dev("cgi", "Context stored, pipes ready.");
 }
 
-// TODO
+
+void	CgiHandler::writeCgiInput(int pipeFd)
+{
+	std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
+	if (it == _contextsByPipeFd.end()) {
+		Log::dev("warning", "writeCgiInput: unknown pipeFd " + utils::str(pipeFd));
+		return;
+	}
+
+	CgiContext* ctx = it->second;
+	std::string const& body = ctx->getRequest().getBody();
+	size_t sent = ctx->getInputBytesSent();
+	size_t remaining = body.size() - sent;
+
+	if (remaining == 0) { // All input already sent (should not happen)
+		Log::dev("cgi", "All input already sent, closing stdin pipe");
+		_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI stdin done");
+		close(pipeFd);
+		_contextsByPipeFd.erase(pipeFd);
+		return;
+	}
+
+	// Write the remaining input
+	ssize_t written = write(pipeFd, body.data() + sent, remaining);
+	if (written > 0) {
+		ctx->addInputBytesSent(written);
+		//Log::dev("cgi", "Wrote " + Log::hl(written) + " bytes to CGI stdin (" + Log::hl(ctx->getInputBytesSent()) + "/" + utils::str(body.size()) + ")");
+
+		// Check if all input has been sent
+		if (ctx->getInputBytesSent() >= body.size()) {
+			Log::dev("cgi", "All input sent, closing stdin pipe");
+			_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI stdin done");
+			close(pipeFd);
+			_contextsByPipeFd.erase(pipeFd);
+		}
+		// Else, wait for next EPOLLOUT to send more
+	} else {
+		// written <= 0: wait for next EPOLLOUT or we have an error
+		Log::dev("cgi", "write() returned " + utils::str(written) + ", waiting for next EPOLLOUT");
+	}
+}
+
+void CgiHandler::readCgiOutput(int pipeFd)
+{
+	std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
+	if (it == _contextsByPipeFd.end()) {
+		Log::dev("warning", "readAndAccumulateCgiOutput: unknown pipeFd " + utils::str(pipeFd));
+		return;
+	}
+
+	CgiContext* ctx = it->second;
+	char buffer[_READ_BUFFER_SIZE];
+	ssize_t bytesRead = read(pipeFd, buffer, _READ_BUFFER_SIZE);
+
+	if (bytesRead > 0) { // data received
+		if (pipeFd == ctx->getOutReadFd()) {
+			ctx->appendOutput(buffer, bytesRead);
+			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stdout");
+
+			// If headers not yet completely received, check for completion // TODO Reactivate once the rest is ready
+			/*if (!ctx->headersReceived()) {
+				std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(ctx->getOutput());
+				if (sep.first != std::string::npos) { // Complete headers received
+					ctx->setHeadersReceived(true);
+					Log::dev("cgi", "CGI headers complete, preparing to stream response");
+					_startStreamingResponse(ctx);
+				}
+			} else {
+				// Headers already received: continue sending response
+				_continueStreamingResponse(ctx);
+			}
+			*/
+		} else if (pipeFd == ctx->getErrReadFd()) {
+			ctx->appendError(buffer, bytesRead);
+			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
+			Log::prod("error", "CGI stderr content: " + std::string(buffer, bytesRead));
+		}
+	} else if (bytesRead == 0) { // EOF (pipe closed)
+		Log::dev("debug", "EOF on pipe fd " + utils::str(pipeFd));
+		_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI pipe EOF");
+		close(pipeFd);
+		_contextsByPipeFd.erase(pipeFd);
+	} else { // bytesRead == -1: error
+		Log::dev("debug", "read() returned -1 on pipe fd " + utils::str(pipeFd) + ": " + utils::str(strerror(errno)));
+	}
+}
+
+void CgiHandler::_startStreamingResponse(CgiContext* ctx)
+{
+	if (ctx->headersSent())
+		return;
+
+	// Parse CGI headers
+	std::string const& output = ctx->getOutput();
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
+	if (sep.first == std::string::npos)
+		return; // Headers not complete yet
+	std::string headersPart = output.substr(0, sep.first);
+	Response response;
+	try {
+		response.parseHeadersFromCgiOutput(headersPart);
+		response.setHeader("Transfer-Encoding", "chunked"); // For streaming
+	} catch (std::exception& e) {
+		Log::prod("error", "Failed to parse CGI headers: " + utils::str(e.what()));
+		return;
+	}
+	std::string httpResponse = response.stringify(true); // Built a raw headers string (without body)
+
+	// Send to client
+	_network->prepareResponseSend(ctx->getClientFd(), response);
+	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI streaming start");
+	ctx->setHeadersSent(true);
+	Log::dev("cgi", "Streaming: HTTP headers sent to client");
+}
+
+void CgiHandler::_continueStreamingResponse(CgiContext* ctx)
+{
+	if (!ctx->headersSent())
+		return; // Headers shoudl be sent first
+
+	// Get chunk of the body that is already available
+	std::string const& output = ctx->getOutput();
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
+	if (sep.first == std::string::npos)
+		return;
+	size_t bodyStart = sep.first + sep.second;
+	std::string bodyChunk = output.substr(bodyStart);
+	if (bodyChunk.empty())
+		return; // No more to be send yet
+
+	Log::dev("cgi", "Streaming: sending " + utils::str(bodyChunk.size()) + " bytes of body to client");
+	// TODO: Envoyer le chunk au client
+	// Pour l'instant, on va juste clear l'output après les headers
+	// pour ne pas re-envoyer les mêmes données
+
+	// On garde juste les headers dans output (pour pas les perdre)
+	// et on vide le body déjà envoyé
+	// ctx->clearOutputAfterHeaders(); // Nouvelle méthode à créer
+}
+
 /**
  * Check on each epoll_wait loop if any CGI Responses are ready to be finialized.
  * If so, finilize them.
@@ -105,7 +271,19 @@ void CgiHandler::checkCompletion()
 			// Process terminé
 			int exitStatus = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 			Log::dev("debug", "CGI process " + utils::str(pid) + " finished with exit code " + utils::str(exitStatus));
-			// TODO: _finalizeResponse(ctx, exitStatus);
+
+			// Send response to client
+			Response resp;
+			try {
+				//Log::dev("debug", "CGI output:\n" + Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput()));
+				resp.parseFromCgiOutput(ctx->getOutput());
+			} catch (std::exception& e) {
+				Log::prod("error", "Failed to parse CGI output: " + utils::str(e.what()));
+				resp = StaticHandler::error("internal_error", ctx->getRequest(), ctx->getErrorPages());
+			}
+			_network->prepareResponseSend(ctx->getClientFd(), resp);
+			_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
+
 			// Cleanup and remove context
 			delete ctx;
 			_contextsByPid.erase(it++);
@@ -115,40 +293,10 @@ void CgiHandler::checkCompletion()
 	}
 }
 
-void CgiHandler::readAndAccumulateCgiOutput(int pipeFd)
-{
-	std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
-	if (it == _contextsByPipeFd.end()) {
-		Log::dev("warning", "readAndAccumulateCgiOutput: unknown pipeFd " + utils::str(pipeFd));
-		return;
-	}
-
-	CgiContext* ctx = it->second;
-	char buffer[_READ_BUFFER_SIZE];
-	ssize_t bytesRead = read(pipeFd, buffer, _READ_BUFFER_SIZE);
-
-	if (bytesRead > 0) { // data received
-		if (pipeFd == ctx->getOutReadFd()) {
-			ctx->appendOutput(buffer, bytesRead);
-			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stdout");
-		} else if (pipeFd == ctx->getErrReadFd()) {
-			ctx->appendError(buffer, bytesRead);
-			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
-		}
-	} else if (bytesRead == 0) { // EOF (pipe closed)
-		Log::dev("debug", "EOF on pipe fd " + utils::str(pipeFd));
-		_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI pipe EOF");
-		close(pipeFd);
-		_contextsByPipeFd.erase(pipeFd);
-	} else { // bytesRead == -1: error
-		Log::dev("debug", "read() returned -1 on pipe fd " + utils::str(pipeFd) + ": " + utils::str(strerror(errno)));
-	}
-}
-
 bool	CgiHandler::isCgiPipe(int fd) const
 {
 	bool result = _contextsByPipeFd.find(fd) != _contextsByPipeFd.end();
-	Log::dev("debug", "Fd " + Log::hl(fd) + " " + (result ? "is" : "is not") + " a CGI pipe.");
+	//Log::dev("debug", "Fd " + Log::hl(fd) + " " + (result ? "is" : "is not") + " a CGI pipe.");
 	return result;
 }
 

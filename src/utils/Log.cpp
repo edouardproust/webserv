@@ -9,23 +9,25 @@ std::string const	Log::_BOLD			= "\033[1m";
 std::string const	Log::_NORMAL		= "\033[0m";
 
 std::string const	Log::_RED			= "\033[31m";
-std::string const	Log::_BRIGHT_RED	= "\033[91m";
+std::string const	Log::_LIGHT_RED		= "\033[91m";
 std::string const	Log::_GREEN			= "\033[32m";
 std::string const	Log::_YELLOW		= "\033[33m";
 std::string const	Log::_BLUE			= "\033[34m";
 std::string const	Log::_MAGENTA		= "\033[35m";
+std::string const	Log::_LIGHT_MAGENTA	= "\033[95m";
 std::string const	Log::_CYAN			= "\033[36m";
 
-size_t const		Log::EXCERPT_CHARS	= 500;
+size_t const		Log::EXCERPT_SIZE	= 500;
 
 const Log::Category Log::_CATEGORIES[] = {
 	{"ok", _BOLD + _GREEN, _ACCESS_STREAM}, // Succeeded requests
 	{"event", _BLUE, _ACCESS_STREAM}, // Request event
 	{"status", _CYAN, _ACCESS_STREAM}, // Status, metrics
 	{"info", _BOLD + _YELLOW, _ACCESS_STREAM}, // General acitivity informations
+	{"cgi", _LIGHT_MAGENTA, _ACCESS_STREAM}, // CGI-related logs
 
 	{"error", _BOLD + _RED, _ERROR_STREAM}, // Critical errors
-	{"warning", _BOLD + _BRIGHT_RED, _ERROR_STREAM},	// Warnings
+	{"warning", _BOLD + _LIGHT_RED, _ERROR_STREAM},	// Warnings
 	{"close", _RED, _ERROR_STREAM}, // Uncommon exits
 
 	{"setup", _MAGENTA, _DEBUG_STREAM},

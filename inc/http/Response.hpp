@@ -15,22 +15,21 @@
  */
 class Response
 {
-	HttpStatus				_status;
-	UniqHeaders				_headers;
-	std::string				_body;
-	bool					_bodyClearedForHead;
-	std::string				_servedFilePath; // for debug purpose only
-	bool					_needsCgiExecution;
-	CgiData*				_cgiData; // Owning (deleted in destructor);
+	HttpStatus	_status;
+	UniqHeaders	_headers;
+	std::string	_body;
+	bool		_bodyClearedForHead;
+	std::string	_servedFilePath; // for debug purpose only
+	bool		_needsCgiExecution;
+	CgiData*	_cgiData; // Owning (deleted in destructor);
 
 	void		_initDefaultHeaders();
 	void		_updateContentLength();
 	void		_manageContentType();
 	std::string	_buildStatusLine() const;
-	std::string	_buildHeaders() const;
 	void		_parseRawResponse(std::string const&);
-	int			_setHeaders(std::string const&);
 	bool		_hasHeader(std::string const&) const;
+	std::string	_buildHeaders() const;
 
 	public:
 
@@ -41,12 +40,14 @@ class Response
 		Response& operator=(Response const&);
 		~Response();
 
-		std::string stringify() const;
+		std::string stringify(bool = false) const;
 		void		clearBody();
 		void		clearBodyForHead();
 		bool		isConnectionClose() const;
 
-		static Response	createCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&);
+		static Response	initCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&);
+		void			parseFromCgiOutput(std::string const&);
+		void			parseHeadersFromCgiOutput(std::string const&);
 
 		void	setStatus(HttpStatus const&);
 		void	setHeader(std::string const&, std::string const&);

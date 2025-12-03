@@ -27,9 +27,13 @@ class CgiContext
 	int					_errReadFd;
 	int					_errWriteFd;
 
-	time_t				_startTime;
 	std::string			_output; // owning
 	std::string			_error; // owning
+	time_t				_startTime;
+	size_t				_inputBytesSent;
+	bool				_headersReceived;
+	bool				_headersSent;
+
 
 	static void	_safeCloseFd(int&);
 
@@ -43,10 +47,11 @@ class CgiContext
 		CgiContext(int, CgiData const&, int, int, int, int, int, int);
 		~CgiContext();
 
+		void	setPid(int);
 		void	appendOutput(const char*, size_t);
     	void	appendError(const char*, size_t);
 		void	setStartTime();
-		void	setPid(int);
+		void	addInputBytesSent(size_t);
 
 		void	closeInReadFd();
 		void	closeInWriteFd();
@@ -67,9 +72,14 @@ class CgiContext
 		int					getOutWriteFd() const;
 		int					getErrReadFd() const;
 		int					getErrWriteFd() const;
-		time_t const&		getStartTime() const;
 		std::string	const&	getOutput() const;
 		std::string const&	getError() const;
+		time_t const&		getStartTime() const;
+		size_t				getInputBytesSent() const;
+		bool				headersReceived() const;
+		void				setHeadersReceived(bool);
+		bool				headersSent() const;
+		void				setHeadersSent(bool);
 };
 
 std::ostream&	operator<<(std::ostream&, CgiContext const&);

@@ -321,3 +321,20 @@ std::string	utils::extractHostname(UniqHeaders const& headers)
 	size_t colon_pos = host_value.find(':');
 	return (colon_pos != std::string::npos) ? host_value.substr(0, colon_pos) : host_value;
 }
+
+/**
+ * Get the position and the with of the headers-body seperator in a raw request or in a raw response.
+ * returns a pair: `[size_t position_of_separator, size_t width_of_seperator]`.
+ */
+std::pair<size_t, size_t> utils::headersBodySeparatorPos(std::string const& rawResponse)
+{
+	size_t pos = rawResponse.find("\r\n\r\n");
+	if (pos != std::string::npos)
+		return std::make_pair(pos, 4);
+
+	pos = rawResponse.find("\n\n");
+	if (pos != std::string::npos)
+		return std::make_pair(pos, 2);
+
+	return std::make_pair(std::string::npos, 0);
+}

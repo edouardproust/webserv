@@ -248,8 +248,8 @@ std::ostream& operator<<(std::ostream& os, Request const& request)
 	for (UniqHeaders::const_iterator it = combinedHeaders.begin();
 		it != combinedHeaders.end(); ++it)
 		os << "  - " << it->first << ": " << PrintableString(it->second) << "\n";
-	os << "- Body: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getBody())) << "\n";
+	os << "- Body: " << PrintableString(Log::excerpt(Log::EXCERPT_SIZE, request.getBody())) << "\n";
 	os << "- Body Length: " << request.getBody().length() << "\n";
-	os << "- raw request: " << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, request.getRawRequest())) << "\n";
+	os << "- raw request: " << PrintableString(Log::excerpt(Log::EXCERPT_SIZE, request.getRawRequest())) << "\n";
     return os;
 }

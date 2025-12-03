@@ -12,9 +12,12 @@ CgiContext::CgiContext(int cfd, CgiData const& d, int inReadFd, int inWriteFd, i
 , _outWriteFd(outWriteFd)
 , _errReadFd(errReadFd)
 , _errWriteFd(errWriteFd)
-, _startTime(time(NULL))
 , _output()
 , _error()
+, _startTime(time(NULL))
+, _inputBytesSent(0)
+, _headersReceived(false)
+, _headersSent(false)
 {}
 
 CgiContext::~CgiContext()
@@ -23,9 +26,9 @@ CgiContext::~CgiContext()
     Log::dev("debug", "CgiContext destroyed for PID " + utils::str(_pid));
 }
 
-void	CgiContext::setStartTime()
+void	CgiContext::setPid(int pid)
 {
-	_startTime = time(NULL);
+	_pid = pid;
 }
 
 void	CgiContext::appendOutput(const char* data, size_t len)
@@ -36,6 +39,16 @@ void	CgiContext::appendOutput(const char* data, size_t len)
 void	CgiContext::appendError(const char* data, size_t len)
 {
 	_error.append(data, len);
+}
+
+void	CgiContext::setStartTime()
+{
+	_startTime = time(NULL);
+}
+
+void	CgiContext::addInputBytesSent(size_t bytes)
+{
+	_inputBytesSent += bytes;
 }
 
 void CgiContext::closeInReadFd()
@@ -78,11 +91,6 @@ void	CgiContext::closeAllFds()
 	closeErrWriteFd();
 }
 
-void	CgiContext::setPid(int pid)
-{
-	_pid = pid;
-}
-
 pid_t	CgiContext::getPid() const
 {
 	return _pid;
@@ -107,7 +115,6 @@ ErrorPages const&	CgiContext::getErrorPages() const
 {
 	return _errorPages;
 }
-
 
 int	CgiContext::getInReadFd() const
 {
@@ -139,11 +146,6 @@ int	CgiContext::getErrWriteFd() const
 	return _errWriteFd;
 }
 
-time_t const&	CgiContext::getStartTime() const
-{
-	return _startTime;
-}
-
 std::string	const&	CgiContext::getOutput() const
 {
 	return _output;
@@ -152,6 +154,36 @@ std::string	const&	CgiContext::getOutput() const
 std::string const&	CgiContext::getError() const
 {
 	return _error;
+}
+
+time_t const&	CgiContext::getStartTime() const
+{
+	return _startTime;
+}
+
+size_t	CgiContext::getInputBytesSent() const
+{
+	return _inputBytesSent;
+}
+
+bool CgiContext::headersReceived() const
+{
+	return _headersReceived;
+}
+
+void CgiContext::setHeadersReceived(bool val)
+{
+	_headersReceived = val;
+}
+
+bool CgiContext::headersSent() const
+{
+	return _headersSent;
+}
+
+void CgiContext::setHeadersSent(bool val)
+{
+	_headersSent = val;
 }
 
 // STATIC UTILS

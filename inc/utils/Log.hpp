@@ -25,12 +25,14 @@ class Log
     static std::string const	_NORMAL;
 
     static std::string const	_RED;
-    static std::string const	_BRIGHT_RED;
+    static std::string const	_LIGHT_RED;
     static std::string const	_GREEN;
     static std::string const	_YELLOW;
     static std::string const	_BLUE;
     static std::string const	_MAGENTA;
+	static std::string const	_LIGHT_MAGENTA;
     static std::string const	_CYAN;
+
 
 	struct Category {
 		std::string const	slug;
@@ -55,7 +57,7 @@ class Log
 
 	public:
 
-		static size_t const	EXCERPT_CHARS;
+		static size_t const	EXCERPT_SIZE;
 
 		template <typename T>
 		static void	dev(std::string const&, T const&);

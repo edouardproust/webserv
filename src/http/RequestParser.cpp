@@ -45,13 +45,12 @@ bool	RequestParser::isRawRequestComplete(Request const& req)
 {
 	std::string const& rawRequest = req.getRawRequest();
 	// Check headers
-	std::string headersEndStr = "\r\n\r\n";
-	size_t headerEndPos = rawRequest.find(headersEndStr);
-	if (headerEndPos == std::string::npos)
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(rawRequest);
+	if (sep.first == std::string::npos)
 		return false; // incomplete
-	std::string headersLower = rawRequest.substr(0, std::min(headerEndPos, RequestParser::_HEADER_MAX_LEN));
+	std::string headersLower = rawRequest.substr(0, std::min(sep.first, RequestParser::_HEADER_MAX_LEN));
 	headersLower = utils::toLowerCase(headersLower);
-	size_t bodyStartPos = headerEndPos + headersEndStr.size();
+	size_t bodyStartPos = sep.first + sep.second;
 	// Check transfer-encoding chunked
 	std::string teStr = "transfer-encoding:";
 	size_t tePos = headersLower.find(teStr);

@@ -47,7 +47,7 @@ Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair cons
 		return StaticHandler::error("not_found", rd);
 	if (!utils::isReadableFile(scriptName))
 		return StaticHandler::error("forbidden", rd);
-	return Response::createCgiResponse(rd, scriptName, listeningOn);
+	return Response::initCgiResponse(rd, scriptName, listeningOn);
 }
 
 Response	Router::_handleStaticDecision(RoutingDecision const& rd)

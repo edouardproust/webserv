@@ -26,6 +26,7 @@ README.md
 .gitkeep
 log*
 /*.config
+*100mb*
 
 # Development files
 dev.*

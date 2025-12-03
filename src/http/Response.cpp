@@ -9,19 +9,6 @@ Response::Response()
 	_initDefaultHeaders();
 }
 
-/**
- * May throw a RawException.
- */
-Response::Response(std::string const& rawResponse)
-: _status(HttpStatus())
-, _bodyClearedForHead(false)
-, _needsCgiExecution(false)
-, _cgiData(NULL)
-{
-	_initDefaultHeaders();
-	_parseRawResponse(rawResponse); // throw
-}
-
 Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
@@ -58,14 +45,13 @@ Response::RawException::RawException(std::string const& msg)
 
 // PUBLIC METHODS
 
-std::string	Response::stringify() const
+std::string	Response::stringify(bool onlyHeaders) const
 {
 	std::stringstream response;
-
 	response << _buildStatusLine();
 	response << _buildHeaders();
 	response << "\r\n";
-	if (!_body.empty())
+	if (!_body.empty() && !onlyHeaders)
 		response << _body;
 	return response.str();
 }
@@ -91,13 +77,94 @@ bool	Response::isConnectionClose() const {
 	return value == "close";
 }
 
-Response	Response::createCgiResponse(RoutingDecision const& rd, std::string const& scriptName, HostPortPair const& listeningOn)
+
+// CGI
+
+Response	Response::initCgiResponse(RoutingDecision const& rd, std::string const& scriptName, HostPortPair const& listeningOn)
 {
 	Response resp;
 	resp._needsCgiExecution = true;
 	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn);
 	//Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData)); // DEBUG
 	return resp;
+}
+
+/**
+ * Construct a Response from a raw CGI output.
+ *
+ * Expected format:
+ * 	`Status: 200 OK\r\n`
+ * 	`Content-Type: text/html\r\n`
+ * 	`Other-Header: value\r\n`
+ * 	`\r\n`
+ * 	`<body>`
+ *
+ * Throws Response::RawException if headers are malformed or missing Content-Type.
+ */
+void Response::parseFromCgiOutput(std::string const& cgiOutput)
+{
+	if (cgiOutput.empty())
+		throw RawException("CGI output is empty");
+
+	// Split headers and body
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(cgiOutput);
+	if (sep.first == std::string::npos)
+		throw RawException("malformed CGI output: missing header/body separator");
+
+	std::string headersPart = cgiOutput.substr(0, sep.first);
+	std::string bodyPart = cgiOutput.substr(sep.first + sep.second);
+
+	// Parse headers
+	parseHeadersFromCgiOutput(headersPart);
+
+	// Set body
+	setBodyAndContentLength(bodyPart);
+}
+
+void Response::parseHeadersFromCgiOutput(std::string const& headersOnly)
+{
+	if (headersOnly.empty())
+		throw RawException("CGI headers empty");
+
+	std::istringstream headerStream(headersOnly);
+	std::string line;
+	int statusCode = 200; // Default
+
+	while (std::getline(headerStream, line)) {
+		// Remove \r if present
+		if (!line.empty() && line[line.size() - 1] == '\r')
+			line = line.substr(0, line.size() - 1);
+
+		if (line.empty())
+			continue;
+
+		size_t colonPos = line.find(':');
+		if (colonPos == std::string::npos)
+			continue;
+
+		std::string key = line.substr(0, colonPos);
+		std::string value = line.substr(colonPos + 1);
+
+		// Trim leading spaces from value
+		size_t start = value.find_first_not_of(' ');
+		if (start != std::string::npos)
+			value = value.substr(start);
+
+		// Check if it's the Status header
+		if (utils::toLowerCase(key) == "status") {
+			std::istringstream statusStream(value);
+			statusStream >> statusCode;
+		} else {
+			setHeader(key, value);
+		}
+	}
+
+	// Vérifier qu'on a bien Content-Type
+	if (!_hasHeader("content-type"))
+		throw RawException("missing Content-Type header in CGI output");
+
+	// Set status
+	setStatus(HttpStatus(statusCode));
 }
 
 // PRIVATE METHODS
@@ -169,71 +236,6 @@ std::string Response::_buildHeaders() const
 	return headerStream.str();
 }
 
-/**
- * Construct a Response from a raw CGI output.
- *
- * Expected format:
- * 	`Status: 200 OK\r\n`
- * 	`Content-Type: text/html\r\n`
- * 	`Other-Header: value\r\n`
- * 	`\r\n`
- * 	`<body>`
- *
- * Throws Response::RawException if headers are malformed or missing Content-Type.
- */
-void	Response::_parseRawResponse(std::string const& rawResponse)
-{
-	if (rawResponse.empty())
-		throw RawException("raw response is empty");
-
-	// Split headers and body
-	size_t headerEnd = rawResponse.find("\r\n\r\n");
-	size_t skip = 4;
-	if (headerEnd == std::string::npos) {
-		headerEnd = rawResponse.find("\n\n");
-		skip = 2;
-	}
-	if (headerEnd == std::string::npos)
-		throw RawException("malformed raw response: missing header/body separator");
-	std::string headersPart = rawResponse.substr(0, headerEnd);
-	std::string bodyPart = rawResponse.substr(headerEnd + skip);
-
-	// Set Response attributes
-	int statusCode = _setHeaders(headersPart);
-	if (!_hasHeader("content-type"))
-		throw RawException("missing Content-Type header");
-	setStatus(HttpStatus(statusCode));
-	setBodyAndContentLength(bodyPart);
-}
-
-int	Response::_setHeaders(std::string const& headersPart) {
-	std::istringstream headersStream(headersPart);
-	std::string line;
-	int statusCode = HttpStatus("ok").getCode(); // default if no Status header found
-
-	while (std::getline(headersStream, line)) {
-		if (!line.empty() && line[line.size() - 1] == '\r')
-			line.erase(line.size() - 1);
-		if (line.empty())
-			continue;
-
-		size_t colonPos = line.find(':');
-		if (colonPos == std::string::npos)
-			throw RawException("invalid header line: " + line);
-
-		std::string name = line.substr(0, colonPos);
-		std::string value = line.substr(colonPos + 1);
-		value = utils::trim(value);
-		std::string lname = utils::toLowerCase(name);
-		std::istringstream iss(value);
-		if (lname == "status") { // eg. "Status: 404 Not Found"
-			iss >> statusCode; // if fail: keep default value 200
-			continue;
-		}
-		setHeader(name, value);
-	}
-	return statusCode;
-}
 
 // SETTERS
 
@@ -329,6 +331,6 @@ std::ostream& operator<<(std::ostream& os, Response const& response)
 			os << "  - " << PrintableString(it->first) << ": " << PrintableString(it->second) << "\n";
 	os << "- Body: " << (response.getBody().empty() ? "no" : "yes") << "\n";
 	os << "- Body Length: " << response.getBody().length() << "\n";
-	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(Log::EXCERPT_CHARS, response.stringify())) << "\n";
+	os << "- Raw HTTP Response Preview:\n" << PrintableString(Log::excerpt(Log::EXCERPT_SIZE, response.stringify())) << "\n";
 	return os;
 }
