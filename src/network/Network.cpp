@@ -434,8 +434,11 @@ void Network::_prepareClientForNextRequest(int clientFd)
  */
 void Network::_disconnectClient(int clientFd)
 {
-	Log::prod("event", "Client " + Log::hl(clientFd)
-		+ " disconnected gracefully."); // log before to ensure clientFd is still valid
+	if (_cgi.hasActiveCgi(clientFd)) {
+		Log::dev("warning", "Client " + utils::str(clientFd) + " disconnected but CGI still running, marking for cleanup");
+		return;
+	}
+	Log::prod("event", "Client " + Log::hl(clientFd) + " disconnected gracefully."); // log before to ensure clientFd is still valid
 	_socketsByClientFd.erase(clientFd);
 	_pendingRequests.erase(clientFd);
 	_pendingResponses.erase(clientFd);

@@ -188,7 +188,6 @@ void CgiHandler::readCgiOutput(int pipeFd)
 		} else if (pipeFd == ctx->getErrReadFd()) {
 			ctx->appendError(buffer, bytesRead);
 			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
-			Log::prod("warning", "CGI executable returned an error: " + std::string(buffer, bytesRead));
 		}
 	} else if (bytesRead == 0) { // EOF (pipe closed)
 		Log::dev("debug", "EOF on pipe fd " + utils::str(pipeFd));
@@ -287,13 +286,15 @@ void CgiHandler::checkCompletion()
 			Response resp;
 			if (exitStatus != 0) { // CGI failed (exit != 0) -> we send a "internal_server" error builtin page
 				resp = StaticHandler::error("internal_error", ctx->getRequest(), ctx->getErrorPages());
+				if (!ctx->getError().empty())
+						Log::prod("warning", "CGI executable returned an error: " + ctx->getError());
 			} else {
 				try {
 					Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput())));
 					resp.parseFromCgiOutput(ctx->getOutput());
 				} catch (std::exception& e) {
-					Log::prod("error", "Failed to parse CGI output: " + utils::str(e.what()));
-					resp = StaticHandler::error("internal_error", ctx->getRequest(), ctx->getErrorPages());
+					Log::prod("todo", "Failed to parse CGI output: " + utils::str(e.what()) + ". Will try again on the next epoll_wait.");
+					return;
 				}
 			}
 			_network->prepareResponseSend(ctx->getClientFd(), resp);
@@ -331,6 +332,16 @@ bool	CgiHandler::isCgiPipe(int fd) const
 	bool result = _contextsByPipeFd.find(fd) != _contextsByPipeFd.end();
 	//Log::dev("debug", "Fd " + Log::hl(fd) + " " + (result ? "is" : "is not") + " a CGI pipe.");
 	return result;
+}
+
+bool	CgiHandler::hasActiveCgi(int clientFd) const
+{
+	for (std::map<pid_t, CgiContext*>::const_iterator it = _contextsByPid.begin();
+			it != _contextsByPid.end(); ++it) {
+		if (it->second->getClientFd() == clientFd)
+			return true;
+	}
+	return false;
 }
 
 // TODO

@@ -41,6 +41,7 @@ class CgiHandler
 		void	readCgiOutput(int);
 		void	checkCompletion();
 		bool	isCgiPipe(int) const;
+		bool	hasActiveCgi(int) const;
 
 		std::map<pid_t, CgiContext*> const&	getContextsByPid() const;
 
