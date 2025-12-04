@@ -13,8 +13,8 @@ Network::Network(Config const& config)
 
 Network::~Network()
 {
-		// Cleanup CGI processes (must be done before closing client fds)
-	_cgi.fullCleanup();
+	// Cleanup CGI processes (must be done before closing client fds)
+	//_cgi.fullCleanup();
 
 	// Close client sockets
 	for (std::map<int, Socket*>::iterator it = _socketsByClientFd.begin(); it != _socketsByClientFd.end(); ++it) {

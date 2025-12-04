@@ -369,7 +369,7 @@ void	CgiHandler::_cleanupPipes(CgiContext* ctx)
 
 void CgiHandler::fullCleanup()
 {
-	if (_contextsByPid.empty())  // ← Protection contre double appel
+	if (_contextsByPid.empty())  // Protection against double call
 		return;
 
 	Log::dev("close", "Cleaning up " + utils::str(_contextsByPid.size()) + " CGI processes...");
@@ -393,7 +393,7 @@ void CgiHandler::fullCleanup()
 	_contextsByPid.clear();
 	_contextsByPipeFd.clear();
 
-	Log::dev("close", "All CGI processes cleaned up.");
+	Log::prod("close", "All CGI processes cleaned up.");
 }
 
 
