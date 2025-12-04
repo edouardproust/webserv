@@ -1,7 +1,7 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 5;
+size_t const	CgiHandler::_TIMEOUT_SECONDS = 30; // for big uploads
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
 
 CgiHandler::CgiHandler(Network* network)
