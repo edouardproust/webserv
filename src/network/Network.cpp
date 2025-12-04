@@ -13,18 +13,24 @@ Network::Network(Config const& config)
 
 Network::~Network()
 {
+		// Cleanup CGI processes (must be done before closing client fds)
+	_cgi.fullCleanup();
+
+	// Close client sockets
 	for (std::map<int, Socket*>::iterator it = _socketsByClientFd.begin(); it != _socketsByClientFd.end(); ++it) {
 		Log::dev("close", "Closing client fd " + Log::hl(it->first) + " on shutdown.");
 		close(it->first); // Fermer le fd du client
 	}
 	_socketsByClientFd.clear();
 
+	// Cleanup listening sockets
 	_cleanupListeningSockets();
 
+	// CLose epoll
 	if (_epollFd != -1)
 		close(_epollFd);
-	Log::dev("close", "Epoll instance stopped.");
 
+	Log::dev("close", "Epoll instance stopped.");
 	Log::prod("ok", Const::SERVER_NAME + " closed.");
 	std::cout << std::endl;
 }

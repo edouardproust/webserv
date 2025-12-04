@@ -17,12 +17,15 @@ class CgiHandler
 	std::map<pid_t, CgiContext*>	_contextsByPid;
 	std::set<pid_t>					_zombiesToReap;
 
+	CgiContext*	_createCgiContext(int, CgiData const&);
+	void		_executeChildProcess(CgiContext*, CgiData const&);
+	void		_setupParentProcess(pid_t, CgiContext*);
+	void		_setupStdinPipe(CgiContext*);
+	void		_handleTimeout(CgiContext*, time_t);
+	void		_cleanupPipes(CgiContext*);
+
 	void	_sendNotImplementedResponse(int, CgiData const&);
 	void	_sendPlaceholderResponse(int);
-	void	_startStreamingResponse(CgiContext*); // TODO remove?
-	void	_continueStreamingResponse(CgiContext*); // TODO remove?
-	void	_handleTimeout(CgiContext*, time_t);
-	void	_cleanupPipes(CgiContext*);
 
 	// TODO canonical ? + comment
 	CgiHandler();
@@ -40,9 +43,8 @@ class CgiHandler
 		void	checkCompletion();
 		bool	isCgiPipe(int) const;
 		bool	hasActiveCgi(int) const;
-
+		void	fullCleanup();
 		std::map<pid_t, CgiContext*> const&	getContextsByPid() const;
-
 		void	errorFromPipeFd(int, std::string const&, std::string const&);
 };
 

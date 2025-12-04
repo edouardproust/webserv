@@ -9,13 +9,13 @@ CgiHandler::CgiHandler(Network* network)
 {}
 
 CgiHandler::~CgiHandler()
-{}
+{
+	fullCleanup();
+}
 
-// TODO
-void	CgiHandler::launchAsync(int clientFd, Response const& resp)
+void CgiHandler::launchAsync(int clientFd, Response const& resp)
 {
 	CgiData const& d = resp.getCgiData();
-
 	if (!CGI_ENABLED) {
 		_sendNotImplementedResponse(clientFd, d);
 		return;
@@ -23,63 +23,81 @@ void	CgiHandler::launchAsync(int clientFd, Response const& resp)
 
 	Log::dev("debug", "Starting CGI for client fd " + Log::hl(clientFd));
 
+	// Create pipes and context
+	CgiContext* ctx = _createCgiContext(clientFd, d);
+
+	// Fork and execute
+	pid_t pid = fork();
+
+	if (pid == 0) {
+		_executeChildProcess(ctx, d);
+		// Never returns
+	}
+
+	// Parent process
+	_setupParentProcess(pid, ctx);
+}
+
+CgiContext* CgiHandler::_createCgiContext(int clientFd, CgiData const& d)
+{
 	// Create pipes
-	int pipeIn[2];
-	int pipeOut[2];
-	int pipeErr[2];
+	int pipeIn[2], pipeOut[2], pipeErr[2];
 
-	pipe(pipeIn); // TODO failure
-	pipe(pipeOut);
-	pipe(pipeErr);
+	if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1 || pipe(pipeErr) == -1) {
+		Log::prod("error", "Failed to create CGI pipes: " + std::string(strerror(errno)));
+		// TODO: cleanup partial pipes
+		return NULL;
+	}
 
-	// Create CgiContext
+	// Create context
 	CgiContext* ctx = new CgiContext(
 		clientFd, d,
 		pipeIn[0], pipeIn[1],
 		pipeOut[0], pipeOut[1],
 		pipeErr[0], pipeErr[1]
 	);
+
 	ctx->setStartTime();
 	Log::dev("debug", "Created CgiContext:\n" + utils::str(*ctx));
 
-	// Fork
-	pid_t pid = fork();
+	return ctx;
+}
 
-	// CHILD PROCESS =========================
+void	CgiHandler::_executeChildProcess(CgiContext* ctx, CgiData const& d)
+{
+	// Close parent's ends of pipes
+	close(ctx->getInWriteFd());  // parent writes here
+	close(ctx->getOutReadFd());  // parent reads here
+	close(ctx->getErrReadFd());  // parent reads here
 
-	if (pid == 0) {
-		Log::dev("cgi", "Child process started.");
-
-		// Close parent's ends of pipes
-		close(pipeIn[1]); // parent writes here
-		close(pipeOut[0]); // parent reads here
-		close(pipeErr[0]); // parent reads here
-
-		// Redirect stdin/stdout/stderr to pipes
-		dup2(pipeIn[0], STDIN_FILENO); // TODO failure
-		dup2(pipeOut[1], STDOUT_FILENO);
-		dup2(pipeErr[1], STDERR_FILENO);
-
-		// Close now-useless pipe fds
-		close(pipeIn[0]);
-		close(pipeOut[1]);
-		close(pipeErr[1]);
-
-		// Execute CGI
-		execve(d.getExecutor().data(), d.getArgv().data(), d.getEnvp().data());
-
-		// Si on arrive ici, execve a échoué
-		perror("execve failed");
+	// Redirect stdin/stdout/stderr to pipes
+	if (dup2(ctx->getInReadFd(), STDIN_FILENO) == -1 ||
+		dup2(ctx->getOutWriteFd(), STDOUT_FILENO) == -1 ||
+		dup2(ctx->getErrWriteFd(), STDERR_FILENO) == -1) {
+		perror("dup2 failed");
 		_exit(1);
 	}
 
-	// PARENT PROCESS ========================
+	// Close now-useless pipe fds
+	close(ctx->getInReadFd());
+	close(ctx->getOutWriteFd());
+	close(ctx->getErrWriteFd());
 
+	// Execute CGI
+	execve(d.getExecutor().data(), d.getArgv().data(), d.getEnvp().data());
+
+	// If we reach here, execve failed
+	perror("execve failed");
+	_exit(1);
+}
+
+void	CgiHandler::_setupParentProcess(pid_t pid, CgiContext* ctx)
+{
 	ctx->setPid(pid);
 	Log::dev("cgi", "Parent process (child process pid: " + Log::hl(ctx->getPid()) + ").");
 
 	// Close child's ends of pipes
-	ctx->closeInReadFd(); // child reads here
+	ctx->closeInReadFd();   // child reads here
 	ctx->closeOutWriteFd(); // child writes here
 	ctx->closeErrWriteFd(); // child writes here
 
@@ -88,30 +106,36 @@ void	CgiHandler::launchAsync(int clientFd, Response const& resp)
 	fcntl(ctx->getOutReadFd(), F_SETFL, O_NONBLOCK);
 	fcntl(ctx->getErrReadFd(), F_SETFL, O_NONBLOCK);
 
-	// Register outPipe and errPipe in epoll
+	// Register stdout and stderr pipes in epoll
 	_network->epollControl(ctx->getOutReadFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stdout pipe");
 	_network->epollControl(ctx->getErrReadFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stderr pipe");
 
-	// Store context
+	// Store context in maps
 	_contextsByPid[pid] = ctx;
 	_contextsByPipeFd[ctx->getOutReadFd()] = ctx;
 	_contextsByPipeFd[ctx->getErrReadFd()] = ctx;
 
-	// Send request body to CGI stdin (if any)
-	std::string const& body = d.getRequest().getBody();
-	if (!body.empty()) {
-		Log::dev("cgi", "Will send " + Log::hl(body.size()) + " bytes to CGI stdin");
-		// Register inPipe pipe in epoll
-		_network->epollControl(ctx->getInWriteFd(), EPOLL_CTL_ADD, EPOLLOUT, "CGI stdin pipe");
-		// Store context
-    	_contextsByPipeFd[ctx->getInWriteFd()] = ctx;
-	} else { // No data to read: close read end of stdin pipe
-		ctx->closeInWriteFd();
-	}
+	// Setup stdin pipe if there's a body to send
+	_setupStdinPipe(ctx);
 
 	Log::dev("cgi", "Context stored, pipes ready.");
 }
 
+void	CgiHandler::_setupStdinPipe(CgiContext* ctx)
+{
+	std::string const& body = ctx->getRequest().getBody();
+
+	if (!body.empty()) {
+		Log::dev("cgi", "Will send " + Log::hl(body.size()) + " bytes to CGI stdin");
+
+		// Register stdin pipe in epoll for writing
+		_network->epollControl(ctx->getInWriteFd(), EPOLL_CTL_ADD, EPOLLOUT, "CGI stdin pipe");
+		_contextsByPipeFd[ctx->getInWriteFd()] = ctx;
+	} else {
+		// No body: close stdin immediately
+		ctx->closeInWriteFd();
+	}
+}
 
 void	CgiHandler::writeCgiInput(int pipeFd)
 {
@@ -342,6 +366,36 @@ void	CgiHandler::_cleanupPipes(CgiContext* ctx)
 
 	Log::dev("close", "Cleaned up pipes for CGI process " + utils::str(ctx->getPid()));
 }
+
+void CgiHandler::fullCleanup()
+{
+	if (_contextsByPid.empty())  // ← Protection contre double appel
+		return;
+
+	Log::dev("close", "Cleaning up " + utils::str(_contextsByPid.size()) + " CGI processes...");
+
+	std::map<pid_t, CgiContext*>::iterator it = _contextsByPid.begin();
+	while (it != _contextsByPid.end()) {
+		pid_t pid = it->first;
+		CgiContext* ctx = it->second;
+
+		if (!ctx->hasProcessExited()) {
+			Log::dev("close", "Killing CGI process " + utils::str(pid));
+			kill(pid, SIGKILL);
+			waitpid(pid, NULL, 0);
+		}
+
+		_cleanupPipes(ctx);
+		delete ctx;
+		++it;
+	}
+
+	_contextsByPid.clear();
+	_contextsByPipeFd.clear();
+
+	Log::dev("close", "All CGI processes cleaned up.");
+}
+
 
 // BUILTIN RESPONSES
 
