@@ -1,7 +1,7 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 30; // for big uploads
+size_t const	CgiHandler::_TIMEOUT_SECONDS = 60; // for big uploads
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
 
 CgiHandler::CgiHandler(Network* network)
@@ -138,11 +138,11 @@ void	CgiHandler::writeCgiInput(int pipeFd)
 	ssize_t written = write(pipeFd, body.data() + sent, remaining);
 	if (written > 0) {
 		ctx->addInputBytesSent(written);
-		//Log::dev("cgi", "Wrote " + Log::hl(written) + " bytes to CGI stdin (" + Log::hl(ctx->getInputBytesSent()) + "/" + utils::str(body.size()) + ")");
+		Log::dev("cgi", "Wrote " + Log::hl(written) + " bytes to CGI stdin (" + Log::hl(ctx->getInputBytesSent()) + "/" + utils::str(body.size()) + ")");
 
 		// Check if all input has been sent
 		if (ctx->getInputBytesSent() >= body.size()) {
-			Log::dev("cgi", "All input sent, closing stdin pipe");
+			Log::dev("ok", "All input sent to CGI exectutable, closing stdin pipe");
 			_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI stdin done");
 			close(pipeFd);
 			_contextsByPipeFd.erase(pipeFd);
@@ -166,7 +166,8 @@ void CgiHandler::readCgiOutput(int pipeFd)
 	char buffer[_READ_BUFFER_SIZE];
 	ssize_t bytesRead = read(pipeFd, buffer, _READ_BUFFER_SIZE);
 
-	if (bytesRead > 0) { // data received
+	// If we received some data
+	if (bytesRead > 0) {
 		if (pipeFd == ctx->getOutReadFd()) {
 			ctx->appendOutput(buffer, bytesRead);
 			Log::dev("cgi", "Read " + Log::hl(bytesRead) + " bytes from stdout (pipe fd " + Log::hl(pipeFd) + ")");
@@ -189,71 +190,26 @@ void CgiHandler::readCgiOutput(int pipeFd)
 			ctx->appendError(buffer, bytesRead);
 			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
 		}
-	} else if (bytesRead == 0) { // EOF (pipe closed)
-		Log::dev("debug", "EOF on pipe fd " + utils::str(pipeFd));
+	}
+
+	// If we get EOF (pipe was closed)
+	else if (bytesRead == 0) {
+		Log::dev("cgi", "EOF on pipe fd " + utils::str(pipeFd));
 		_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI pipe EOF"); // remove fd from epoll
 		_contextsByPipeFd.erase(pipeFd); // remove from map BEFORE fd becomes -1 (below)
 		// mark which fd was closed to prevent race condition in checkCompletion()
 		if (pipeFd == ctx->getOutReadFd()) // fd of stdout was closed
 			ctx->closeOutReadFd();
-		else if (pipeFd == ctx->getErrReadFd()) // fd of stderr was closed
+		else if (pipeFd == ctx->getErrReadFd()) { // fd of stderr was closed
+			// Log error if not empty
+			if (!ctx->getError().empty()) {
+            	Log::prod("warning", "CGI stderr (" + utils::str(ctx->getError().size()) + " bytes):\n" + ctx->getError());
+			}
 			ctx->closeErrReadFd();
+    	}
 	} else { // bytesRead == -1: error
 		Log::dev("debug", "read() returned -1 on pipe fd " + utils::str(pipeFd) + ": " + utils::str(strerror(errno)));
 	}
-}
-
-void CgiHandler::_startStreamingResponse(CgiContext* ctx)
-{
-	if (ctx->headersSent())
-		return;
-
-	// Parse CGI headers
-	std::string const& output = ctx->getOutput();
-	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
-	if (sep.first == std::string::npos)
-		return; // Headers not complete yet
-	std::string headersPart = output.substr(0, sep.first);
-	Response response;
-	try {
-		response.parseHeadersFromCgiOutput(headersPart);
-		response.setHeader("Transfer-Encoding", "chunked"); // For streaming
-	} catch (std::exception& e) {
-		Log::prod("error", "Failed to parse CGI headers: " + utils::str(e.what()));
-		return;
-	}
-	std::string httpResponse = response.stringify(true); // Built a raw headers string (without body)
-
-	// Send to client
-	_network->prepareResponseSend(ctx->getClientFd(), response);
-	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI streaming start");
-	ctx->setHeadersSent(true);
-	Log::dev("cgi", "Streaming: HTTP headers sent to client");
-}
-
-void CgiHandler::_continueStreamingResponse(CgiContext* ctx)
-{
-	if (!ctx->headersSent())
-		return; // Headers shoudl be sent first
-
-	// Get chunk of the body that is already available
-	std::string const& output = ctx->getOutput();
-	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
-	if (sep.first == std::string::npos)
-		return;
-	size_t bodyStart = sep.first + sep.second;
-	std::string bodyChunk = output.substr(bodyStart);
-	if (bodyChunk.empty())
-		return; // No more to be send yet
-
-	Log::dev("cgi", "Streaming: sending " + utils::str(bodyChunk.size()) + " bytes of body to client");
-	// TODO: Envoyer le chunk au client
-	// Pour l'instant, on va juste clear l'output après les headers
-	// pour ne pas re-envoyer les mêmes données
-
-	// On garde juste les headers dans output (pour pas les perdre)
-	// et on vide le body déjà envoyé
-	// ctx->clearOutputAfterHeaders(); // Nouvelle méthode à créer
 }
 
 /**
@@ -307,8 +263,6 @@ void CgiHandler::checkCompletion()
 			Response resp;
 			if (ctx->getExitStatus() != 0) { // CGI failed -> send corresponding error
 				resp = StaticHandler::error("internal_error", ctx->getRequest(), ctx->getErrorPages());
-				if (!ctx->getError().empty())
-					Log::prod("warning", "CGI executable returned an error: " + ctx->getError());
 			} else { // CGI succeeded -> parse output
 				try {
 					//Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput()))); // DEBUG
@@ -337,7 +291,7 @@ void CgiHandler::checkCompletion()
 
 void	CgiHandler::_handleTimeout(CgiContext* ctx, time_t elapsedTime)
 {
-	Log::prod("warning", "CGI timeout: process " + Log::hl(ctx->getPid()) + " exceeded " + Log::hl(_TIMEOUT_SECONDS) + " seconds (" + Log::hl(elapsedTime) + "sec).");
+	Log::prod("warning", "CGI timeout: process " + Log::hl(ctx->getPid()) + " exceeded " + Log::hl(_TIMEOUT_SECONDS) + " seconds (closed after " + Log::hl(elapsedTime) + " sec).");
 
 	// Kill process
 	kill(ctx->getPid(), SIGKILL);
@@ -370,13 +324,6 @@ bool	CgiHandler::hasActiveCgi(int clientFd) const
 	return false;
 }
 
-// TODO
-void	CgiHandler::_finalizeResponse(CgiContext* ctx, int exitStatus)
-{
-	(void)ctx;
-	(void)exitStatus;
-}
-
 std::map<pid_t, CgiContext*> const&	CgiHandler::getContextsByPid() const
 {
 	return _contextsByPid;
@@ -389,30 +336,23 @@ std::map<pid_t, CgiContext*> const&	CgiHandler::getContextsByPid() const
  */
 void	CgiHandler::_cleanupPipes(CgiContext* ctx)
 {
-	Log::dev("todo", "Cleaning pipes for PID " + utils::str(ctx->getPid())
-		+ ": stdout=" + utils::str(ctx->getOutReadFd())
-		+ " stderr=" + utils::str(ctx->getErrReadFd())); //DEBUG
-
 	// stdout pipe
 	if (_contextsByPipeFd.find(ctx->getOutReadFd()) != _contextsByPipeFd.end()) {
 		_network->epollControl(ctx->getOutReadFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
 		ctx->closeOutReadFd();
 		_contextsByPipeFd.erase(ctx->getOutReadFd());
 	}
-
 	// stderr pipe
 	if (_contextsByPipeFd.find(ctx->getErrReadFd()) != _contextsByPipeFd.end()) {
 		_network->epollControl(ctx->getErrReadFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
 		ctx->closeErrReadFd();
 		_contextsByPipeFd.erase(ctx->getErrReadFd());
 	}
-
 	// stdin pipe (si encore ouvert)
 	if (_contextsByPipeFd.find(ctx->getInWriteFd()) != _contextsByPipeFd.end()) {
 		_network->epollControl(ctx->getInWriteFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
 		ctx->closeInWriteFd();
 		_contextsByPipeFd.erase(ctx->getInWriteFd());
-
 	}
 
 	Log::dev("close", "Cleaned up pipes for CGI process " + utils::str(ctx->getPid()));
@@ -447,3 +387,66 @@ void	CgiHandler::_sendPlaceholderResponse(int clientFd)
 	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI placeholder response");
 }
 
+
+
+
+
+
+
+
+
+
+// RESPONSE STREAMING
+
+void CgiHandler::_startStreamingResponse(CgiContext* ctx)
+{
+	if (ctx->headersSent())
+		return;
+
+	// Parse CGI headers
+	std::string const& output = ctx->getOutput();
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
+	if (sep.first == std::string::npos)
+		return; // Headers not complete yet
+	std::string headersPart = output.substr(0, sep.first);
+	Response response;
+	try {
+		response.parseHeadersFromCgiOutput(headersPart);
+		response.setHeader("Transfer-Encoding", "chunked"); // For streaming
+	} catch (std::exception& e) {
+		Log::prod("error", "Failed to parse CGI headers: " + utils::str(e.what()));
+		return;
+	}
+	std::string httpResponse = response.stringify(true); // Built a raw headers string (without body)
+
+	// Send to client
+	_network->prepareResponseSend(ctx->getClientFd(), response);
+	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI streaming start");
+	ctx->setHeadersSent(true);
+	Log::dev("cgi", "Streaming: HTTP headers sent to client");
+}
+
+void CgiHandler::_continueStreamingResponse(CgiContext* ctx)
+{
+	if (!ctx->headersSent())
+		return; // Headers shoudl be sent first
+
+	// Get chunk of the body that is already available
+	std::string const& output = ctx->getOutput();
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
+	if (sep.first == std::string::npos)
+		return;
+	size_t bodyStart = sep.first + sep.second;
+	std::string bodyChunk = output.substr(bodyStart);
+	if (bodyChunk.empty())
+		return; // No more to be send yet
+
+	Log::dev("cgi", "Streaming: sending " + utils::str(bodyChunk.size()) + " bytes of body to client");
+	// TODO: Envoyer le chunk au client
+	// Pour l'instant, on va juste clear l'output après les headers
+	// pour ne pas re-envoyer les mêmes données
+
+	// On garde juste les headers dans output (pour pas les perdre)
+	// et on vide le body déjà envoyé
+	// ctx->clearOutputAfterHeaders(); // Nouvelle méthode à créer
+}

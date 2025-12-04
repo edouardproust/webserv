@@ -1,6 +1,5 @@
 <?php
-// Pour lire le raw body, pas les POST data parsées
-$input = file_get_contents('php://input'); // <-- 'php://input' au lieu de 'php://stdin'
+$input = file_get_contents('php://input');
 $size = strlen($input);
 
 echo "Content-type: text/html\r\n\r\n";

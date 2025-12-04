@@ -17,12 +17,10 @@ class CgiHandler
 	std::map<pid_t, CgiContext*>	_contextsByPid;
 	std::set<pid_t>					_zombiesToReap;
 
-	void	_finalizeResponse(CgiContext*, int);
-
 	void	_sendNotImplementedResponse(int, CgiData const&);
 	void	_sendPlaceholderResponse(int);
-	void	_startStreamingResponse(CgiContext*);
-	void	_continueStreamingResponse(CgiContext*);
+	void	_startStreamingResponse(CgiContext*); // TODO remove?
+	void	_continueStreamingResponse(CgiContext*); // TODO remove?
 	void	_handleTimeout(CgiContext*, time_t);
 	void	_cleanupPipes(CgiContext*);
 

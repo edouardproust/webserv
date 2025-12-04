@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <ctime>
 
-/**
+/*
  * Utility class for logging and formatting messages.
  *
  * Provides dev/prod logging streams, colored output, and string utilities.
@@ -19,6 +19,7 @@ class Log
     static std::ostream&		_DEBUG_STREAM;
     static std::ostream&		_ACCESS_STREAM;
     static std::ostream&		_ERROR_STREAM;
+	static std::string const	_DEBUG_SLUG;
 
     static std::string const	_RESET;
     static std::string const	_BOLD;

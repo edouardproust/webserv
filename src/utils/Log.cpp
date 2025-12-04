@@ -3,6 +3,7 @@
 std::ostream&		Log::_DEBUG_STREAM	= std::cerr;
 std::ostream&		Log::_ACCESS_STREAM	= std::cout;
 std::ostream&		Log::_ERROR_STREAM	= std::cerr;
+std::string const	Log::_DEBUG_SLUG	= "debug";
 
 std::string const	Log::_RESET			= "\033[0m";
 std::string const	Log::_BOLD			= "\033[1m";
@@ -31,7 +32,7 @@ const Log::Category Log::_CATEGORIES[] = {
 	{"close", _RED, _ERROR_STREAM}, // Uncommon exits
 
 	{"setup", _MAGENTA, _DEBUG_STREAM},
-	{"debug", _BLUE, _DEBUG_STREAM},
+	{_DEBUG_SLUG, _BLUE, _DEBUG_STREAM},
 	{"todo", _BOLD + _YELLOW, _DEBUG_STREAM},
 };
 

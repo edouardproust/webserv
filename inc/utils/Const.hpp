@@ -9,9 +9,8 @@
 # define DEVMODE 0
 #endif
 
-#ifndef CGI_ENABLED
-# define CGI_ENABLED 1
-#endif
+#define CGI_ENABLED 1
+#define PRINT_DEBUG 0
 
 class Const
 {

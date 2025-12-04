@@ -236,7 +236,7 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		Socket* listeningSocket = _socketsByClientFd[clientFd];
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", request.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(clientFd) + ").");
-		//Log::dev("debug", "Request:\n" + utils::str(request)); // DEBUG
+		//Log::dev("debug", "Request:\n" + utils::str(request));
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
 
 		if (response.needsCgiExecution()) { // CGI -> async response (stays in EPOLLIN to wait for CGI output)
@@ -259,8 +259,8 @@ void	Network::prepareResponseSend(int clientFd, Response const& response)
     _responseSendPos[clientFd] = 0;
     _shouldCloseAfterResponse[clientFd] = response.isConnectionClose();
 
-    //Log::dev("debug", "Response:\n" + utils::str(response)); // DEBUG
-    Log::dev("event", "Queued " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd));
+    Log::dev("debug", "Response:\n" + utils::str(response));
+    Log::dev("cgi", "Queued " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd));
 }
 
 
