@@ -171,21 +171,6 @@ void CgiHandler::readCgiOutput(int pipeFd)
 		if (pipeFd == ctx->getOutReadFd()) {
 			ctx->appendOutput(buffer, bytesRead);
 			Log::dev("cgi", "Read " + Log::hl(bytesRead) + " bytes from stdout (pipe fd " + Log::hl(pipeFd) + ")");
-
-			// TODO stream response (chunked)
-			// If headers not yet completely received, check for completion
-			/*if (!ctx->headersReceived()) {
-				std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(ctx->getOutput());
-				if (sep.first != std::string::npos) { // Complete headers received
-					ctx->setHeadersReceived(true);
-					Log::dev("cgi", "CGI headers complete, preparing to stream response");
-					_startStreamingResponse(ctx);
-				}
-			} else {
-				// Headers already received: continue sending response
-				_continueStreamingResponse(ctx);
-			}
-			*/
 		} else if (pipeFd == ctx->getErrReadFd()) {
 			ctx->appendError(buffer, bytesRead);
 			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
@@ -385,68 +370,4 @@ void	CgiHandler::_sendPlaceholderResponse(int clientFd)
 	Response resp = StaticHandler::cgiPlaceholder();
 	_network->prepareResponseSend(clientFd, resp);
 	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI placeholder response");
-}
-
-
-
-
-
-
-
-
-
-
-// RESPONSE STREAMING
-
-void CgiHandler::_startStreamingResponse(CgiContext* ctx)
-{
-	if (ctx->headersSent())
-		return;
-
-	// Parse CGI headers
-	std::string const& output = ctx->getOutput();
-	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
-	if (sep.first == std::string::npos)
-		return; // Headers not complete yet
-	std::string headersPart = output.substr(0, sep.first);
-	Response response;
-	try {
-		response.parseHeadersFromCgiOutput(headersPart);
-		response.setHeader("Transfer-Encoding", "chunked"); // For streaming
-	} catch (std::exception& e) {
-		Log::prod("error", "Failed to parse CGI headers: " + utils::str(e.what()));
-		return;
-	}
-	std::string httpResponse = response.stringify(true); // Built a raw headers string (without body)
-
-	// Send to client
-	_network->prepareResponseSend(ctx->getClientFd(), response);
-	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI streaming start");
-	ctx->setHeadersSent(true);
-	Log::dev("cgi", "Streaming: HTTP headers sent to client");
-}
-
-void CgiHandler::_continueStreamingResponse(CgiContext* ctx)
-{
-	if (!ctx->headersSent())
-		return; // Headers shoudl be sent first
-
-	// Get chunk of the body that is already available
-	std::string const& output = ctx->getOutput();
-	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(output);
-	if (sep.first == std::string::npos)
-		return;
-	size_t bodyStart = sep.first + sep.second;
-	std::string bodyChunk = output.substr(bodyStart);
-	if (bodyChunk.empty())
-		return; // No more to be send yet
-
-	Log::dev("cgi", "Streaming: sending " + utils::str(bodyChunk.size()) + " bytes of body to client");
-	// TODO: Envoyer le chunk au client
-	// Pour l'instant, on va juste clear l'output après les headers
-	// pour ne pas re-envoyer les mêmes données
-
-	// On garde juste les headers dans output (pour pas les perdre)
-	// et on vide le body déjà envoyé
-	// ctx->clearOutputAfterHeaders(); // Nouvelle méthode à créer
 }
