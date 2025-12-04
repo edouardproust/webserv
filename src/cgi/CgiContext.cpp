@@ -76,6 +76,7 @@ void	CgiContext::closeInWriteFd()
 void	CgiContext::closeOutReadFd()
 {
 	_safeCloseFd(_outReadFd);
+	_setStdoutClosed(true);
 }
 
 void	CgiContext::closeOutWriteFd()
@@ -86,6 +87,7 @@ void	CgiContext::closeOutWriteFd()
 void	CgiContext::closeErrReadFd()
 {
 	_safeCloseFd(_errReadFd);
+	_setStderrClosed(true);
 }
 
 void	CgiContext::closeErrWriteFd()
@@ -228,12 +230,12 @@ void	CgiContext::setExitStatus(int status)
 	_exitStatus = status;
 }
 
-void	CgiContext::setStdoutClosed(bool isClosed)
+void	CgiContext::_setStdoutClosed(bool isClosed)
 {
 	_stdoutClosed = isClosed;
 }
 
-void	CgiContext::setStderrClosed(bool isClosed)
+void	CgiContext::_setStderrClosed(bool isClosed)
 {
 	_stderrClosed = isClosed;
 }

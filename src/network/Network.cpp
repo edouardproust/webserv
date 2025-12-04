@@ -259,7 +259,7 @@ void	Network::prepareResponseSend(int clientFd, Response const& response)
     _responseSendPos[clientFd] = 0;
     _shouldCloseAfterResponse[clientFd] = response.isConnectionClose();
 
-    Log::dev("debug", "Response:\n" + utils::str(response));
+    //Log::dev("debug", "Response:\n" + utils::str(response)); // DEBUG
     Log::dev("event", "Queued " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd));
 }
 

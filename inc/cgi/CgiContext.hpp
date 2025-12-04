@@ -45,6 +45,9 @@ class CgiContext
 
 	static void	_safeCloseFd(int&);
 
+	void	_setStdoutClosed(bool);
+	void	_setStderrClosed(bool);
+
 	// Not default-constructible, not copyable, not assignable
 	CgiContext();
 	CgiContext(CgiContext const&);
@@ -95,8 +98,6 @@ class CgiContext
 		void	setHeadersSent(bool);
 		void	setProcessExited(bool);
 		void	setExitStatus(int);
-		void	setStdoutClosed(bool);
-		void	setStderrClosed(bool);
 };
 
 std::ostream&	operator<<(std::ostream&, CgiContext const&);

@@ -191,14 +191,13 @@ void CgiHandler::readCgiOutput(int pipeFd)
 		}
 	} else if (bytesRead == 0) { // EOF (pipe closed)
 		Log::dev("debug", "EOF on pipe fd " + utils::str(pipeFd));
+		_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI pipe EOF"); // remove fd from epoll
+		_contextsByPipeFd.erase(pipeFd); // remove from map BEFORE fd becomes -1 (below)
 		// mark which fd was closed to prevent race condition in checkCompletion()
 		if (pipeFd == ctx->getOutReadFd()) // fd of stdout was closed
-			ctx->setStdoutClosed(true);
+			ctx->closeOutReadFd();
 		else if (pipeFd == ctx->getErrReadFd()) // fd of stderr was closed
-			ctx->setStderrClosed(true);
-		_network->epollControl(pipeFd, EPOLL_CTL_DEL, 0, "CGI pipe EOF");
-		close(pipeFd);
-		_contextsByPipeFd.erase(pipeFd);
+			ctx->closeErrReadFd();
 	} else { // bytesRead == -1: error
 		Log::dev("debug", "read() returned -1 on pipe fd " + utils::str(pipeFd) + ": " + utils::str(strerror(errno)));
 	}
@@ -286,9 +285,9 @@ void CgiHandler::checkCompletion()
 			pid_t result = waitpid(pid, &status, WNOHANG);
 			if (result > 0) { // CGI execution finished
 				ctx->setProcessExited(true);
-				int exitStatus = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
-				ctx->setExitStatus(exitStatus);
-				Log::dev("cgi", "CGI process (pid " + Log::hl(pid) + ") exited with code " + Log::hl(exitStatus) + ".");
+				ctx->setExitStatus(WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+				Log::dev("cgi", "CGI process (pid " + Log::hl(pid) + ") exited with code " + Log::hl(ctx->getExitStatus()) + ".");
+				// We keep pipes open and in epoll for reading CGI output
 			}
 		}
 
@@ -312,7 +311,7 @@ void CgiHandler::checkCompletion()
 					Log::prod("warning", "CGI executable returned an error: " + ctx->getError());
 			} else { // CGI succeeded -> parse output
 				try {
-					Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput())));
+					//Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput()))); // DEBUG
 					resp.parseFromCgiOutput(ctx->getOutput());
 				} catch (std::exception& e) {
 					Log::prod("error", "Failed to parse CGI output: " + utils::str(e.what()));
@@ -397,22 +396,23 @@ void	CgiHandler::_cleanupPipes(CgiContext* ctx)
 	// stdout pipe
 	if (_contextsByPipeFd.find(ctx->getOutReadFd()) != _contextsByPipeFd.end()) {
 		_network->epollControl(ctx->getOutReadFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
-		close(ctx->getOutReadFd());
+		ctx->closeOutReadFd();
 		_contextsByPipeFd.erase(ctx->getOutReadFd());
 	}
 
 	// stderr pipe
 	if (_contextsByPipeFd.find(ctx->getErrReadFd()) != _contextsByPipeFd.end()) {
 		_network->epollControl(ctx->getErrReadFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
-		close(ctx->getErrReadFd());
+		ctx->closeErrReadFd();
 		_contextsByPipeFd.erase(ctx->getErrReadFd());
 	}
 
 	// stdin pipe (si encore ouvert)
 	if (_contextsByPipeFd.find(ctx->getInWriteFd()) != _contextsByPipeFd.end()) {
 		_network->epollControl(ctx->getInWriteFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
-		close(ctx->getInWriteFd());
+		ctx->closeInWriteFd();
 		_contextsByPipeFd.erase(ctx->getInWriteFd());
+
 	}
 
 	Log::dev("close", "Cleaned up pipes for CGI process " + utils::str(ctx->getPid()));
