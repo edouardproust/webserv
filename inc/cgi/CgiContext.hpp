@@ -15,6 +15,7 @@
  */
 class CgiContext
 {
+	// params
 	pid_t				_pid;
 	int					_clientFd;
 	CgiData const&		_cgiData; // non-owning
@@ -27,12 +28,19 @@ class CgiContext
 	int					_errReadFd;
 	int					_errWriteFd;
 
+	// cgi output
 	std::string			_output; // owning
 	std::string			_error; // owning
+
+	// state
 	time_t				_startTime;
 	size_t				_inputBytesSent;
 	bool				_headersReceived;
 	bool				_headersSent;
+	bool				_processExited;
+	int					_exitStatus;
+	bool				_stdoutClosed;
+	bool				_stderrClosed;
 
 
 	static void	_safeCloseFd(int&);
@@ -77,9 +85,18 @@ class CgiContext
 		time_t const&		getStartTime() const;
 		size_t				getInputBytesSent() const;
 		bool				headersReceived() const;
-		void				setHeadersReceived(bool);
 		bool				headersSent() const;
-		void				setHeadersSent(bool);
+		bool				hasProcessExited() const;
+		int					getExitStatus() const;
+		bool				isStdoutClosed() const;
+		bool				isStderrClosed() const;
+
+		void	setHeadersReceived(bool);
+		void	setHeadersSent(bool);
+		void	setProcessExited(bool);
+		void	setExitStatus(int);
+		void	setStdoutClosed(bool);
+		void	setStderrClosed(bool);
 };
 
 std::ostream&	operator<<(std::ostream&, CgiContext const&);

@@ -471,6 +471,12 @@ std::map<int, Socket*> const& Network::getSocketsByClientFd() const
 	return _socketsByClientFd;
 }
 
+bool	Network::isClientConnected(int clientFd) const
+{
+	return _socketsByClientFd.find(clientFd) != _socketsByClientFd.end();
+}
+
+
 // PRINT
 
 std::ostream& operator<<(std::ostream& os, Network const& rhs)

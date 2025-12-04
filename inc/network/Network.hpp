@@ -68,6 +68,7 @@ class Network
 		std::vector<Socket*> const&			getListeningSockets() const;
 		std::map<int, Request> const&		getPendingRequests() const;
 		std::map<int, Socket*> const&		getSocketsByClientFd() const;
+		bool								isClientConnected(int) const;
 };
 
 std::ostream&	operator<<(std::ostream&, Network const&);

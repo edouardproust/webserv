@@ -18,6 +18,10 @@ CgiContext::CgiContext(int cfd, CgiData const& d, int inReadFd, int inWriteFd, i
 , _inputBytesSent(0)
 , _headersReceived(false)
 , _headersSent(false)
+, _processExited(false)
+, _exitStatus(-1)
+, _stdoutClosed(false)
+, _stderrClosed(false)
 {}
 
 CgiContext::~CgiContext()
@@ -49,6 +53,14 @@ void	CgiContext::setStartTime()
 void	CgiContext::addInputBytesSent(size_t bytes)
 {
 	_inputBytesSent += bytes;
+}
+
+void	CgiContext::_safeCloseFd(int& fd)
+{
+	if (fd != -1) {
+		close(fd);
+		fd = -1;
+	}
 }
 
 void CgiContext::closeInReadFd()
@@ -166,35 +178,66 @@ size_t	CgiContext::getInputBytesSent() const
 	return _inputBytesSent;
 }
 
-bool CgiContext::headersReceived() const
+bool	CgiContext::headersReceived() const
 {
 	return _headersReceived;
 }
 
-void CgiContext::setHeadersReceived(bool val)
-{
-	_headersReceived = val;
-}
-
-bool CgiContext::headersSent() const
+bool	CgiContext::headersSent() const
 {
 	return _headersSent;
 }
 
-void CgiContext::setHeadersSent(bool val)
+bool	CgiContext::hasProcessExited() const
 {
-	_headersSent = val;
+	return _processExited;
 }
 
-// STATIC UTILS
-
-void	CgiContext::_safeCloseFd(int& fd)
+int	CgiContext::getExitStatus() const
 {
-	if (fd != -1) {
-		close(fd);
-		fd = -1;
-	}
+	return _exitStatus;
 }
+
+bool	CgiContext::isStdoutClosed() const
+{
+	return _stdoutClosed;
+}
+
+bool	CgiContext::isStderrClosed() const
+{
+	return _stderrClosed;
+}
+
+void	CgiContext::setHeadersReceived(bool headersReceived)
+{
+	_headersReceived = headersReceived;
+}
+
+void	CgiContext::setHeadersSent(bool headersSent)
+{
+	_headersSent = headersSent;
+}
+
+void	CgiContext::setProcessExited(bool processExited)
+{
+	_processExited = processExited;
+}
+
+void	CgiContext::setExitStatus(int status)
+{
+	_exitStatus = status;
+}
+
+void	CgiContext::setStdoutClosed(bool isClosed)
+{
+	_stdoutClosed = isClosed;
+}
+
+void	CgiContext::setStderrClosed(bool isClosed)
+{
+	_stderrClosed = isClosed;
+}
+
 
 // PRINT
 
@@ -214,7 +257,14 @@ std::ostream&	operator<<(std::ostream& os, CgiContext const& rhs)
 	os << "- errReadFd: " << utils::str(rhs.getErrReadFd()) << "\n";
 	os << "- errWriteFd: " << utils::str(rhs.getErrWriteFd()) << "\n";
 	os << "- start time: " << rhs.getStartTime() << "\n";
+	os << "- input bytes sent: " << rhs.getInputBytesSent() << "\n";
+	os << "- headers received: " << (rhs.headersReceived() ? "true" : "false") << "\n";
+	os << "- headers sent: " << (rhs.headersSent() ? "true" : "false") << "\n";
+	os << "- process exited: " << (rhs.hasProcessExited() ? "true" : "false") << "\n";
+	os << "- stdout closed: " << (rhs.isStdoutClosed() ? "true" : "false") << "\n";
+	os << "- stderr closed: " << (rhs.isStderrClosed() ? "true" : "false") << "\n";
 	os << "- output: " << PrintableString(rhs.getOutput()) << "\n";
 	os << "- error: " << PrintableString(rhs.getError()) << "\n";
+
 	return os;
 }
