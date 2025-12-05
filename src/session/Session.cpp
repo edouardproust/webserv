@@ -2,7 +2,7 @@
 #include "utils/PrintableString.hpp"
 #include <sstream>
 
-const time_t	Session::_SESSION_TIMEOUT = 60; // 1 minute to demonstrate, can be changed
+const time_t	Session::_SESSION_TIMEOUT = 600; // 10 minutes to demonstrate, can be changed for testing
 
 Session::Session()
 : _firstActivity(0)

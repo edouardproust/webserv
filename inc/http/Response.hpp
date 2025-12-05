@@ -69,7 +69,7 @@ class Response
 		std::string const&				getServedFilePath() const;
 		bool							needsCgiExecution() const;
 		CgiData const*					getCgiData() const;
-		bool							shouldExpireSession() const;
+
 		void							handleSession(const Request& request);
 
 		class RawException: public std::runtime_error {

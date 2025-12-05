@@ -197,11 +197,6 @@ CgiData*	Response::transferCgiDataOwnership()
 
 //SESSION MANAGEMENT
 
-bool	Response::shouldExpireSession() const
-{
-	return _expireSession;
-}
-
 void	Response::handleSession(const Request& request)
 {
 	SessionManager& sm = SessionManager::getInstance();
