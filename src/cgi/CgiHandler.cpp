@@ -315,7 +315,6 @@ void	CgiHandler::_handleTimeout(CgiContext* ctx, time_t elapsedTime)
 	// Cleanup
 	_cleanupPipes(ctx);
 	delete ctx;
-	_contextsByPid.erase(pid);
 }
 
 bool	CgiHandler::isCgiPipe(int fd) const
