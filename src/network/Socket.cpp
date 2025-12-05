@@ -15,7 +15,7 @@ Socket::~Socket()
 		freeaddrinfo(_servinfo);
 		_servinfo = NULL;
 	}
-	Log::prod("close", "Socket " + Log::hl(_listenDirective) + " closed.");
+	Log::prod("close", "Socket closed (fd " + Log::hl(_fd) + " on " + Log::hl(_listenDirective) + ").");
 }
 
 void	Socket::_setAddrStruct()
@@ -51,12 +51,12 @@ void	Socket::_createSocket()
 	_fd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 	//Log::dev("setup", "Creating Socket...");
 	if (_fd < 0) {
-		throw std::runtime_error("Can't create Socket.");
+		throw std::runtime_error("Can't create new socket.");
 	}
 	//Log::dev("setup", "Configuring Socket...");
 	int yes = 1;
 	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-		throw std::runtime_error("Can't configure Socket.");
+		throw std::runtime_error("Can't configure socket (fd " + Log::hl(_fd) + ").");
 	}
 	//Log::dev("setup", "Setting Socket to non-blocking mode...");
 	int flags = fcntl(_fd, F_GETFL);
@@ -64,7 +64,7 @@ void	Socket::_createSocket()
     if (flags == -1 || fdflags == -1
 		|| fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1
 		|| fcntl(_fd, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
-		throw std::runtime_error("Can't set Socket to non blocking mode.");
+		throw std::runtime_error("Can't set socket (fd " + Log::hl(_fd) + ") to non blocking mode.");
     }
 }
 
@@ -77,8 +77,7 @@ void	Socket::safeBind()
 {
 	int status = bind(_fd, _servinfo->ai_addr, _servinfo->ai_addrlen);
 	if (status < 0) {
-		Log::prod("status",  "Bind error (fd " + Log::hl(_fd) + " on " + Log::hl(_listenDirective) + "): " + utils::str(strerror(errno)));
-		throw std::runtime_error("Can't bind socket with IP and port.");
+		throw std::runtime_error("Couldn't bind socket (fd " + Log::hl(_fd) + ") with address " + Log::hl(_listenDirective) + ": " + utils::str(strerror(errno)) + ".");
 	}
 }
 
@@ -100,14 +99,13 @@ int	Socket::createNewClientSocket()
 {
 	struct sockaddr_storage clientInfos;
 
-	Log::dev("event", "accept() requested.");
 	socklen_t clientInfoSize = sizeof(clientInfos);
 	int newClientSocketFd = accept(_fd, (struct sockaddr*)&clientInfos, &clientInfoSize);
 	if (newClientSocketFd < 0) {
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
 		return -1;
 	}
-	Log::dev("ok", "accept() successfull");
+	Log::dev("setup", "Socket accept() success.");
 	return (newClientSocketFd);
 }
 

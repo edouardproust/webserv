@@ -24,12 +24,11 @@ RedirectionHandler::~RedirectionHandler()
  */
 Response	RedirectionHandler::run()
 {
-	if (_path.empty())
-	{
-		StaticHandler static_(_routingDecision);
-		return static_.handleError(HttpStatus("internal_server_error"));
+	if (_path.empty()) {
+		return StaticHandler::error("internal_server_error", _routingDecision);
 	}
 	Response response;
+	response.setServedFilePath("redirecting..."); // for debug
 	response.setStatus(HttpStatus(_code));
 	if (_code >= 300 && _code < 400)
 		response.setHeader("Location", _path);
@@ -37,8 +36,9 @@ Response	RedirectionHandler::run()
 		response.setHeader("Cache-Control", "max-age=31536000");
 	else if (_code == 302)
 		response.setHeader("Cache-Control", "no-cache");
-	response.setBody(_generateRedirectionHtml());
-	response.setContentType("text/html");
+	response.setBodyAndContentLength(_redirectionHtml());
+	response.setHeader("Content-Type", "text/html");
+	response.setConnectionFromRequest(_routingDecision.getRequest());
 	return response;
 }
 
@@ -62,33 +62,32 @@ std::string const&	RedirectionHandler::getPath() const
 	return _path;
 }
 
-std::string	RedirectionHandler::_generateRedirectionHtml() const
+std::string	RedirectionHandler::_redirectionHtml() const
 {
-	std::stringstream html;
-
-	html << "<!DOCTYPE html>"
-		 << "<html>"
-		 << "<head>"
-		 << "<title>" << _code << " " << HttpStatus(_code).getReason() << "</title>"
-		 << "</head>"
-		 << "<body>"
-		 << "<center><h1>" << _code << " " << HttpStatus(_code).getReason() << "</h1></center>";
-	if (_code >= 300 && _code < 400)
-	{
-		html << "<p>The document has moved <a href=\"" << _path << "\">here</a>.</p>"
-			 << "<p>If you are not redirected automatically, follow the <a href=\"" << _path << "\">link</a>.</p>";
-	}
-	html << "<hr><center>" << Const::SERVER_SOFTWARE << "</center>"
-		 << "</body>"
-		 << "</html>";
-	return html.str();
+	std::string html =
+		"<!DOCTYPE html>"
+		"<html>"
+		"<head>"
+		" <title>" + HttpStatus(_code).toStr() + "</title>"
+		"</head>"
+		"<body>"
+		" <center><h1>" + HttpStatus(_code).toStr() + "</h1></center>";
+	if	(_code >= 300 && _code < 400)
+		html +=
+			"<p>The document has moved <a href=\"" + _path + "\">here</a>.</p>"
+			"<p>If you are not redirected automatically, follow the <a href=\"" + _path + "\">link</a>.</p>";
+	html +=
+		" <hr><center>" + Const::SERVER_SOFTWARE + "</center>"
+		"</body>"
+		"</html>";
+	return html;
 }
 
 std::ostream& operator<<(std::ostream& os, RedirectionHandler const& rhs)
 {
-	os << "RedirectionHandler:\n"
-		<< "- code: " << HttpStatus(rhs.getCode()) << "\n"
-		<< "- path: " << PrintableString(rhs.getPath()) << "\n"
-		<< "- type: " << (rhs.getCode() >= 300 && rhs.getCode() < 400 ? "HTTP Redirection" : "Return Code");
+	os << "RedirectionHandler:\n";
+	os << "- code: " << HttpStatus(rhs.getCode()) << "\n";
+	os << "- path: " << PrintableString(rhs.getPath()) << "\n";
+	os << "- type: " << (rhs.getCode() >= 300 && rhs.getCode() < 400 ? "HTTP Redirection" : "Return Code");
 	return os;
 }

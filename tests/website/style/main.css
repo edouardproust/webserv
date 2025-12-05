@@ -52,6 +52,32 @@ code {
     font-weight: bold;
 }
 
+.flex-50-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 20px;
+	width: 100%;
+	margin: 0 auto;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+.flex-50-container > div {
+	flex: 0 0 48%;
+	box-sizing: border-box;
+}
+
+.highlight-box {
+	padding: 20px;
+	border-radius: 10px;
+	background-color: #E1EDF9;
+}
+
+.highlight-box > h2 {
+	margin-top: 0;
+}
+
 .test-table {
 	width: 100%;
 	border-collapse: collapse;

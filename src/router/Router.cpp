@@ -13,79 +13,57 @@
  *   listing page if needed.
  * - It is the role of CgiHandler to check if the script exists and is executable.
  */
-Response Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
+Response	Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
 {
 	RoutingDecision rd(config, req, listeningOn);
-	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
+	//Log::dev("debug", "Routing Decision:\n" + utils::str(rd)); // DEBUG
 
-	Response resp;
-	StaticHandler statiq(rd);
 	RoutingDecision::Decision decision = rd.getDecision();
 
 	if (req.getStatus().getSlug() != "ok")
-		resp = statiq.handleError(HttpStatus(req.getStatus()));
-	else if (decision == RoutingDecision::ERROR)
-		resp = statiq.handleError(HttpStatus(rd.getErrorSlug()));
-	else if (decision == RoutingDecision::REDIRECTION)
-		_handleRedirectionDecision(resp, rd);
-	else if (decision == RoutingDecision::CGI)
-		_handleCgiDecision(resp, rd, listeningOn, statiq);
-	else if (decision == RoutingDecision::STATIC) {
-		_handleStaticDecision(resp, req.getMethod(), statiq);
-	} else // fallback
-		resp = statiq.handleError(HttpStatus("internal_server_error"));
-
-	resp.setConnectionFromRequest(req);
-	if (statiq.hasUpdatedFinalPath())
-		Log::dev("debug", "Static Handler:\n" + utils::str(statiq));
-	return resp;
+		return StaticHandler::error(req.getStatus().getSlug(), rd);
+	if (decision == RoutingDecision::ERROR)
+		return StaticHandler::error(rd.getErrorSlug(), rd);
+	if (decision == RoutingDecision::REDIRECTION)
+		return _handleRedirectionDecision(rd);
+	if (decision == RoutingDecision::CGI)
+		return _handleCgiDecision(rd, listeningOn);
+	if (decision == RoutingDecision::STATIC)
+		return _handleStaticDecision(rd);
+	return StaticHandler::error("internal_server_error", rd);
 }
 
-void	Router::_handleRedirectionDecision(Response& resp, RoutingDecision const& rd)
+Response	Router::_handleRedirectionDecision(RoutingDecision const& rd)
 {
 	std::pair<int, std::string> const& ret = rd.getLocation()->getReturn();
 	RedirectionHandler redirect(rd, ret.first, ret.second);
-	resp = redirect.run();
+	return redirect.run();
 }
 
-void	Router::_handleCgiDecision(Response& resp, RoutingDecision const& rd, HostPortPair const& listeningOn, StaticHandler& statiq)
+Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair const& listeningOn)
 {
 	std::string const& scriptName = rd.getFinalPath();
-	if (!utils::fileExists(scriptName)) {
-		resp = statiq.handleError(HttpStatus("not_found"));
-	} else if (!utils::isReadableFile(scriptName)) {
-		resp = statiq.handleError(HttpStatus("forbidden"));
-	} else {
-		CgiHandler cgi;
-		try {
-			resp = cgi.execute(rd.getRequest(), rd.getLocation(), scriptName, listeningOn);
-		} catch (CgiHandler::ExecException& e) {
-			Log::prod("warning", "CGI execution error: " + scriptName + ": " + e.what());
-			resp = statiq.handleError(HttpStatus("internal_server_error"));
-		} catch (Response::RawException& e) {
-			Log::prod("warning", "CGI invalid raw output: " + scriptName + ": " + e.what());
-			resp = statiq.handleError(HttpStatus("bad_gateway"));
-		} catch (CgiHandler::TimeoutException& e) {
-			Log::prod("warning", "CGI timeout: " + scriptName + ": " + e.what());
-			resp = statiq.handleError(HttpStatus("timeout"));
-		}
-        Log::dev("debug", "CGI Handler:\n" + utils::str(cgi));
-	}
+	if (!utils::fileExists(scriptName))
+		return StaticHandler::error("not_found", rd);
+	if (!utils::isReadableFile(scriptName))
+		return StaticHandler::error("forbidden", rd);
+	return Response::initCgiResponse(rd, scriptName, listeningOn);
 }
 
-void	Router::_handleStaticDecision(Response& resp, std::string const& method, StaticHandler& statiq)
+Response	Router::_handleStaticDecision(RoutingDecision const& rd)
 {
+	std::string const& method = rd.getRequest().getMethod();
+
 	if (method == "GET")
-		resp = statiq.handleGet();
-	else if (method == "DELETE")
-		resp = statiq.handleDelete();
-	else if (method == "HEAD")
-		resp = statiq.handleHead();
-	else if (method == "PUT")
-		resp = statiq.handlePut();
-	else if (method == "POST")
-		resp = statiq.handlePost();
+		return StaticHandler::get(rd);
+	if (method == "DELETE")
+		return StaticHandler::del(rd);
+	if (method == "HEAD")
+		return StaticHandler::head(rd);
+	if (method == "PUT")
+		return StaticHandler::put(rd);
+	if (method == "POST")
+		return StaticHandler::post(rd);
 	// -- additional supported methods can be added here --
-	else
-		resp = statiq.handleError(HttpStatus("method_not_allowed"));
+	return StaticHandler::error("method_not_allowed", rd);
 }

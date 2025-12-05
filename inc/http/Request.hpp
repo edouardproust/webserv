@@ -1,13 +1,14 @@
 #ifndef REQUEST_HPP
-# define REQUEST_HPP
+#define REQUEST_HPP
 
-# include "http/HttpStatus.hpp"
-# include "utils/utils.hpp"
-# include "utils/Log.hpp"
-# include <iostream>
-# include <vector>
-# include <map>
-# include <set>
+#include "http/HttpStatus.hpp"
+#include "utils/utils.hpp"
+#include "utils/Log.hpp"
+#include "utils/typedefs.hpp"
+#include <iostream>
+#include <vector>
+#include <map>
+#include <set>
 
 /**
  * Represents an HTTP request, including method, URI, headers, body, and version.
@@ -24,7 +25,8 @@ class Request
 	std::string	_pathInfo;
 	std::string	_queryString;
 	std::string	_version;
-	std::vector<std::pair<std::string, std::string> > _headers;
+	AllHeaders	_allHeaders;
+	UniqHeaders	_uniqHeaders;
 	std::string	_contentType;
 	std::string	_body;
 	std::string	_rawRequest;
@@ -36,45 +38,46 @@ class Request
 
  		// Othodox canonical form
 		Request();
-		Request(std::string  const& rawRequest);
-		Request(Request const& other);
-		Request& operator=(Request const& other);
+		Request(Request const&);
+		Request& operator=(Request const&);
 		~Request();
 
+		void		parse();
 		static std::set<std::string> const& getSupportedMethods();
-		static bool	isSupportedMethod(std::string const& method);
-		static bool	isExistingMethod(std::string const& method);
+		static bool	isSupportedMethod(std::string const&);
+		static bool	isExistingMethod(std::string const&);
 		bool		isConnectionClose() const;
+		void		rawRequestAppend(const char*, size_t);
 
-		const HttpStatus&	getStatus() const;
-		const std::string&	getMethod() const;
-		const std::string&	getUri() const;
-		const std::string&	getPath() const;
-		const std::string&	getScriptName() const;
-		const std::string&	getPathInfo() const;
-		const std::string&	getQueryString() const;
-		const std::string&	getVersion() const;
-		const std::map<std::string, std::string> getHeaders() const;
-		const std::vector<std::pair<std::string, std::string> >& getAllHeaders() const;
-		std::map<std::string, std::string> getCombinedHeaders() const;
-		const std::string&	getContentType() const;
-		const std::string&	getBody() const;
-		const std::string&	getRawRequest() const;
 
-		void	setStatus(HttpStatus const& status);
-		void	setMethod(std::string const& method);
-		void	setUri(std::string const& uri);
-		void	setPath(std::string const& path);
-		void	setScriptName(std::string const& scriptName);
-		void	setPathInfo(std::string const& pathInfo);
-		void	setQueryString(std::string const& queryString);
-		void	setVersion(std::string const& version);
-		void	addHeader(std::string const& name, std::string const& value);
-		void	setContentType(const std::string& value);
-		void	setBody(std::string const& body);
-		void	setRawRequest(std::string const& rawRequest);
+		HttpStatus const&	getStatus() const;
+		std::string const&	getMethod() const;
+		std::string const&	getUri() const;
+		std::string const&	getPath() const;
+		std::string const&	getScriptName() const;
+		std::string const&	getPathInfo() const;
+		std::string const&	getQueryString() const;
+		std::string const&	getVersion() const;
+		AllHeaders const& 	getAllHeaders() const;
+		UniqHeaders const&	getUniqHeaders() const;
+		std::string const&	getContentType() const;
+		std::string const&	getBody() const;
+		std::string const&	getRawRequest() const;
+
+		void	setStatus(HttpStatus const&);
+		void	setMethod(std::string const&);
+		void	setUri(std::string const&);
+		void	setPath(std::string const&);
+		void	setScriptName(std::string const&);
+		void	setPathInfo(std::string const&);
+		void	setQueryString(std::string const&);
+		void	setVersion(std::string const&);
+		void	setHeader(std::string const&, std::string const&);
+		void	setContentType(std::string const&);
+		void	setBody(std::string const&);
+		void	setRawRequest(std::string const&);
 };
 
-std::ostream&	operator<<(std::ostream& os, const Request& request);
+std::ostream&	operator<<(std::ostream&, Request const&);
 
 #endif
