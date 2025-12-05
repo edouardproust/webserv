@@ -197,6 +197,16 @@ CgiData*	Response::transferCgiDataOwnership()
 
 //SESSION MANAGEMENT
 
+/**
+ * Handles session creation and destruction based on CGI headers.
+ * 
+ * Called after parsing CGI output that may contain session control headers:
+ * - If `_pendingSessionUsername` is set (from X-Webserv-Create-Session header),
+ *   creates a new session and sends Set-Cookie header to client.
+ * - If `_expireSession` is set (from X-Webserv-Destroy-Session header),
+ *   destroys the current session and expires the client's cookie.
+ * 
+ */
 void	Response::handleSession(const Request& request)
 {
 	SessionManager& sm = SessionManager::getInstance();
