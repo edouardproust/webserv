@@ -49,17 +49,6 @@ Session&	SessionManager::getSession(const std::string& sessionId)
 }
 
 /**
- * Stores custom data in session's key-value store.
- * Only stores data if session exists and is valid.
- */
-void	SessionManager::setSessionData(const std::string& sessionId, const std::string& key, const std::string& value)
-{
-	Session& session = getSession(sessionId);
-	if (!session.getSessionId().empty())
-		session.setData(key, value);
-}
-
-/**
  * Validates session existence and expiration status.
  * Does not update activity timestamp (unlike getSession()).
  */
@@ -92,16 +81,6 @@ void	SessionManager::renewSession(const std::string& sessionId)
 	Session& session = getSession(sessionId);
 	if (!session.getSessionId().empty())
 		session.updateActivity();
-}
-
-/**
- * Retrieves data from session's key-value store.
- * Returns empty string if session not found or key doesn't exist.
- */
-std::string	SessionManager::getSessionData(const std::string& sessionId, const std::string& key)
-{
-	Session& session = getSession(sessionId);
-	return session.getData(key);
 }
 
 /**

@@ -43,9 +43,6 @@ class SessionManager
 	void		destroySession(const std::string& sessionId);
 	void		renewSession(const std::string& sessionId);
 	std::string	generateSessionId();
-
-	void		setSessionData(const std::string& sessionId, const std::string& key, const std::string& value);
-	std::string getSessionData(const std::string& sessionId, const std::string& key);
 };
 
 #endif

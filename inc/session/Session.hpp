@@ -26,7 +26,6 @@ class Session
 	std::string							_username;
 	time_t								_firstActivity;
 	time_t								_lastActivity;
-	std::map<std::string, std::string>	_data;
 
 	public:
 
@@ -40,16 +39,11 @@ class Session
 	const std::string&	getUsername() const;
 	time_t				getFirstActivity() const;
 	time_t				getLastActivity() const;
-	std::string			getData(const std::string& key) const;
-	size_t				getDataCount() const;
 	std::string			getSessionAge() const;
 	static time_t		getTimeout();
 
-	void	setData(const std::string& key, const std::string& value);
-
 	bool	isSessionIdEmpty() const;
 	bool	isExpired() const;
-	bool	hasData(const std::string& key) const;
 	void	updateActivity();
 };
 

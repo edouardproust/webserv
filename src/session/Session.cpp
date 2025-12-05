@@ -21,7 +21,6 @@ Session::Session(Session const& other)
 , _username(other._username)
 , _firstActivity(other._firstActivity)
 , _lastActivity(other._lastActivity)
-, _data(other._data)
 {}
 
 Session& Session::operator=(Session const& other)
@@ -32,7 +31,6 @@ Session& Session::operator=(Session const& other)
 		_username =other._username;
 		_firstActivity= other._firstActivity;
 		_lastActivity = other._lastActivity;
-		_data = other._data;
 	}
 	return (*this);
 }
@@ -60,17 +58,6 @@ time_t	Session::getLastActivity() const
 	return _lastActivity;
 }
 
-std::string	Session::getData(const std::string& key) const
-{
-	std::map<std::string, std::string>::const_iterator it = _data.find(key);
-	return (it != _data.end()) ? it->second : "";
-}
-
-size_t	Session::getDataCount() const
-{
-	return _data.size();
-}
-
 std::string	Session::getSessionAge() const
 {
 	time_t now = std::time(0);
@@ -91,11 +78,6 @@ time_t	Session::getTimeout()
 	return _SESSION_TIMEOUT;
 }
 
-void	Session::setData(const std::string& key, const std::string& value)
-{
-	_data[key] = value;
-}
-
 bool Session::isSessionIdEmpty() const
 {
 	return _sessionId.empty();
@@ -104,11 +86,6 @@ bool Session::isSessionIdEmpty() const
 bool	Session::isExpired() const
 {
 	return (std::time(0) - _lastActivity) > _SESSION_TIMEOUT;
-}
-
-bool	Session::hasData(const std::string& key) const
-{
-	return _data.find(key) != _data.end();
 }
 
 void	Session::updateActivity()
@@ -125,6 +102,5 @@ std::ostream&	operator<<(std::ostream& os, const Session& session)
 	os << "- Created: " << session.getFirstActivity() << "\n";
 	os << "- Last Active: " << session.getLastActivity() << "\n";
 	os << "- Session Expired: " << (session.isExpired() ? "Yes" : "No") << "\n";
-	os << "- Data Count: " << session.getDataCount() << "\n";
 	return os;
 }
