@@ -10,7 +10,7 @@
 #endif
 
 #define CGI_ENABLED 1
-#define PRINT_DEBUG 0
+#define PRINT_DEBUG 1
 
 class Const
 {

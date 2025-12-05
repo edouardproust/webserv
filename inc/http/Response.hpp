@@ -48,6 +48,7 @@ class Response
 		static Response	initCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&);
 		void			parseFromCgiOutput(std::string const&);
 		void			parseHeadersFromCgiOutput(std::string const&);
+		CgiData*		transferCgiDataOwnership();
 
 		void	setStatus(HttpStatus const&);
 		void	setHeader(std::string const&, std::string const&);
@@ -60,7 +61,7 @@ class Response
 		std::string const&		getBody() const;
 		std::string const&		getServedFilePath() const;
 		bool					needsCgiExecution() const;
-		CgiData const&			getCgiData() const;
+		CgiData const*			getCgiData() const;
 
 		class RawException: public std::runtime_error {
 			public:

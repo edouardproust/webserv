@@ -18,11 +18,13 @@ class CgiHandler
 	std::set<pid_t>					_zombiesToReap;
 
 	CgiContext*	_createCgiContext(int, CgiData const&);
+	bool		_safeFork(CgiContext*, pid_t&);
 	void		_executeChildProcess(CgiContext*, CgiData const&);
 	void		_setupParentProcess(pid_t, CgiContext*);
 	void		_setupStdinPipe(CgiContext*);
 	void		_handleTimeout(CgiContext*, time_t);
 	void		_cleanupPipes(CgiContext*);
+	void		_closeStdinPipe(CgiContext*, int, std::string const&);
 	void		_sendErrorResponse(std::string const&, int, CgiData const&, std::string const&, bool = false);
 
 	// TODO canonical ? + comment
@@ -35,7 +37,7 @@ class CgiHandler
 		CgiHandler(Network*);
 		~CgiHandler();
 
-		void	launchAsync(int, Response const&);
+		void	launchAsync(int, Response&);
 		void	writeCgiInput(int);
 		void	readCgiOutput(int);
 		void	checkCompletion();

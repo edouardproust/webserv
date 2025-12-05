@@ -18,7 +18,7 @@ class CgiContext
 	// params
 	pid_t				_pid;
 	int					_clientFd;
-	CgiData const&		_cgiData; // non-owning
+	CgiData*			_cgiData; // owning (transfered using Response::transferCgiDataOwnership)
 	Request	const&		_request; // non-owning
 	ErrorPages const&	_errorPages; // non-owning
 	int					_inReadFd;
@@ -55,7 +55,7 @@ class CgiContext
 
 	public:
 
-		CgiContext(int, CgiData const&, int, int, int, int, int, int);
+		CgiContext(int, CgiData*, int, int, int, int, int, int);
 		~CgiContext();
 
 		void	setPid(int);
@@ -70,7 +70,8 @@ class CgiContext
 		void	closeOutWriteFd();
 		void	closeErrReadFd();
 		void	closeErrWriteFd();
-		void	closeAllFds();
+		void	closeAllPipes();
+		static void	closePipe(int*);
 
 		pid_t				getPid() const;
 		int					getClientFd() const;

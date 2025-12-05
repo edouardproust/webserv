@@ -36,7 +36,10 @@ Response& Response::operator=(Response const& other)
 
 Response::~Response()
 {
-	delete _cgiData;
+	if (_cgiData) {
+		delete _cgiData;
+		_cgiData = NULL;
+	}
 }
 
 Response::RawException::RawException(std::string const& msg)
@@ -165,6 +168,13 @@ void Response::parseHeadersFromCgiOutput(std::string const& headersOnly)
 
 	// Set status
 	setStatus(HttpStatus(statusCode));
+}
+
+CgiData*	Response::transferCgiDataOwnership()
+{
+	CgiData* tmp = _cgiData;
+	_cgiData = NULL;  // <- not Response responsability anymore
+	return tmp;
 }
 
 // PRIVATE METHODS
@@ -313,9 +323,9 @@ bool	Response::needsCgiExecution() const
 	return _needsCgiExecution;
 }
 
-CgiData const&	Response::getCgiData() const
+CgiData const*	Response::getCgiData() const
 {
-	return *_cgiData;
+	return _cgiData;
 }
 
 // PRINT

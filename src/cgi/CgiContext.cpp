@@ -1,11 +1,11 @@
 #include "cgi/CgiContext.hpp"
 
-CgiContext::CgiContext(int cfd, CgiData const& d, int inReadFd, int inWriteFd, int outReadFd, int outWriteFd, int errReadFd, int errWriteFd)
+CgiContext::CgiContext(int cfd, CgiData* d, int inReadFd, int inWriteFd, int outReadFd, int outWriteFd, int errReadFd, int errWriteFd)
 : _pid(-1)
 , _clientFd(cfd)
 , _cgiData(d)
-, _request(d.getRequest())
-, _errorPages(d.getErrorPages())
+, _request(d->getRequest())
+, _errorPages(d->getErrorPages())
 , _inReadFd(inReadFd)
 , _inWriteFd(inWriteFd)
 , _outReadFd(outReadFd)
@@ -27,8 +27,9 @@ CgiContext::CgiContext(int cfd, CgiData const& d, int inReadFd, int inWriteFd, i
 
 CgiContext::~CgiContext()
 {
-	closeAllFds();
-    Log::dev("debug", "CgiContext destroyed for PID " + utils::str(_pid));
+	closeAllPipes();
+	delete _cgiData;;
+    Log::dev("debug", "CgiContext destroyed and cleaned for PID " + utils::str(_pid));
 }
 
 void	CgiContext::setPid(int pid)
@@ -96,7 +97,7 @@ void	CgiContext::closeErrWriteFd()
 	_safeCloseFd(_errWriteFd);
 }
 
-void	CgiContext::closeAllFds()
+void	CgiContext::closeAllPipes()
 {
 	closeInReadFd();
 	closeInWriteFd();
@@ -104,6 +105,12 @@ void	CgiContext::closeAllFds()
 	closeOutWriteFd();
 	closeErrReadFd();
 	closeErrWriteFd();
+}
+
+void	CgiContext::closePipe(int* pipe)
+{
+	close(pipe[0]);
+	close(pipe[1]);
 }
 
 pid_t	CgiContext::getPid() const
@@ -118,7 +125,7 @@ int	CgiContext::getClientFd() const
 
 CgiData const&	CgiContext::getCgiData() const
 {
-	return _cgiData;
+	return *_cgiData;
 }
 
 Request const&	CgiContext::getRequest() const
