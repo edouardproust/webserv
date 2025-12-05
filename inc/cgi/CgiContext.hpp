@@ -75,7 +75,7 @@ class CgiContext
 
 		pid_t				getPid() const;
 		int					getClientFd() const;
-		CgiData const&		getCgiData() const;
+		CgiData const*		getCgiData() const;
 		Request const&		getRequest() const;
 		ErrorPages const&	getErrorPages() const;
 		int					getInReadFd() const;

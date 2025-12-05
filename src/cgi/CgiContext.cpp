@@ -123,9 +123,9 @@ int	CgiContext::getClientFd() const
 	return _clientFd;
 }
 
-CgiData const&	CgiContext::getCgiData() const
+CgiData const*	CgiContext::getCgiData() const
 {
-	return *_cgiData;
+	return _cgiData;
 }
 
 Request const&	CgiContext::getRequest() const

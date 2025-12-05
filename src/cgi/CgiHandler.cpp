@@ -41,7 +41,7 @@ void CgiHandler::launchAsync(int clientFd, Response& resp)
 		_setupParentProcess(pid, ctx);
 }
 
-CgiContext* CgiHandler::_createCgiContext(int clientFd, CgiData const& d)
+CgiContext* CgiHandler::_createCgiContext(int clientFd, CgiData* d)
 {
 	int pipeIn[2] = {-1, -1};
 	int pipeOut[2] = {-1, -1};
@@ -90,7 +90,7 @@ bool	CgiHandler::_safeFork(CgiContext* ctx, pid_t& outPid)
 	return true;
 }
 
-void	CgiHandler::_executeChildProcess(CgiContext* ctx, CgiData const& d)
+void	CgiHandler::_executeChildProcess(CgiContext* ctx, CgiData const* d)
 {
 	// Close parent's ends of pipes
 	ctx->closeInWriteFd();  // parent writes here
@@ -111,7 +111,7 @@ void	CgiHandler::_executeChildProcess(CgiContext* ctx, CgiData const& d)
 	ctx->closeErrWriteFd();
 
 	// Execute CGI
-	execve(d.getExecutor().data(), d.getArgv().data(), d.getEnvp().data());
+	execve(d->getExecutor().data(), d->getArgv().data(), d->getEnvp().data());
 
 	// If we reach here, execve failed
 	perror("execve failed");
@@ -452,7 +452,7 @@ void CgiHandler::fullCleanup()
 	Log::prod("close", "All CGI processes cleaned up.");
 }
 
-void	CgiHandler::_sendErrorResponse(std::string const& status, int clientFd, CgiData const* data, std::string const& msg, bool forceClose)
+void	CgiHandler::_sendErrorResponse(std::string const& status, int clientFd, CgiData const* d, std::string const& msg, bool forceClose)
 {
 	if (!msg.empty())
 		Log::prod("error", msg);
@@ -460,7 +460,7 @@ void	CgiHandler::_sendErrorResponse(std::string const& status, int clientFd, Cgi
 		Log::dev("debug", "Client " + utils::str(clientFd) + " already disconnected, skipping error response");
 		return;
 	}
-	Response errorResp = StaticHandler::error(status, data->getRequest(), data->getErrorPages());
+	Response errorResp = StaticHandler::error(status, d->getRequest(), d->getErrorPages());
 	if (forceClose)
 		errorResp.setHeader("Connection", "close");
 	_network->prepareResponseSend(clientFd, errorResp);

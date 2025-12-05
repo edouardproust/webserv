@@ -246,7 +246,7 @@ void Network::_dispatchAndSendResponse(int clientFd)
 		Response response = Router::dispatchRequest(_config, request, listenDirective);
 
 		if (response.needsCgiExecution()) { // CGI -> async response (stays in EPOLLIN to wait for CGI output)
-			_cgi.launchAsync(clientFd, response); // => Stay in EPOLLIN
+			_cgi.launchAsync(clientFd, response); // => Stay in EPOLLIN + ownership transfert of CgiData from Response to CgiContext
 		} else { // Static or redirection -> immediate response (switch to EPOLLOUT to send response)
 			prepareResponseSend(clientFd, response);
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "static response ready"); // => Switch to EPOLLOUT
