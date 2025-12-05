@@ -17,7 +17,7 @@ void CgiHandler::launchAsync(int clientFd, Response const& resp)
 {
 	CgiData const& d = resp.getCgiData();
 	if (!CGI_ENABLED) {
-		_sendNotImplementedResponse(clientFd, d);
+		_sendErrorResponse("not_implemented", clientFd, d, "CGI not implemented.");
 		return;
 	}
 
@@ -25,14 +25,15 @@ void CgiHandler::launchAsync(int clientFd, Response const& resp)
 
 	// Create pipes and context
 	CgiContext* ctx = _createCgiContext(clientFd, d);
+	if (ctx == NULL) {
+		_sendErrorResponse("internal_error", clientFd, d, "Failed to create CGI context.");
+		return;
+	}
 
 	// Fork and execute
 	pid_t pid = fork();
-
-	if (pid == 0) {
+	if (pid == 0)
 		_executeChildProcess(ctx, d);
-		// Never returns
-	}
 
 	// Parent process
 	_setupParentProcess(pid, ctx);
@@ -40,12 +41,26 @@ void CgiHandler::launchAsync(int clientFd, Response const& resp)
 
 CgiContext* CgiHandler::_createCgiContext(int clientFd, CgiData const& d)
 {
-	// Create pipes
-	int pipeIn[2], pipeOut[2], pipeErr[2];
+	int pipeIn[2] = {-1, -1};
+	int pipeOut[2] = {-1, -1};
+	int pipeErr[2] = {-1, -1};
 
-	if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1 || pipe(pipeErr) == -1) {
-		Log::prod("error", "Failed to create CGI pipes: " + std::string(strerror(errno)));
-		// TODO: cleanup partial pipes
+	if (pipe(pipeIn) == -1) {
+		Log::prod("error", "Failed to create stdin pipe: " + std::string(strerror(errno)));
+		return NULL;
+	}
+	if (pipe(pipeOut) == -1) {
+		Log::prod("error", "Failed to create stdout pipe: " + std::string(strerror(errno)));
+		close(pipeIn[0]);
+		close(pipeIn[1]);
+		return NULL;
+	}
+	if (pipe(pipeErr) == -1) {
+		Log::prod("error", "Failed to create stderr pipe: " + std::string(strerror(errno)));
+		close(pipeIn[0]);
+		close(pipeIn[1]);
+		close(pipeOut[0]);
+		close(pipeOut[1]);
 		return NULL;
 	}
 
@@ -229,6 +244,7 @@ void CgiHandler::readCgiOutput(int pipeFd)
  */
 void CgiHandler::checkCompletion()
 {
+	if (_contextsByPid.empty()) return;
 	std::map<pid_t, CgiContext*>::iterator it = _contextsByPid.begin();
 	time_t now = time(NULL);
 
@@ -269,23 +285,20 @@ void CgiHandler::checkCompletion()
 				continue;
 			}
 
-			// Build response
-			Response resp;
+			// Build and send response
 			if (ctx->getExitStatus() != 0) { // CGI failed -> send corresponding error
-				resp = StaticHandler::error("internal_error", ctx->getRequest(), ctx->getErrorPages());
+				_sendErrorResponse("internal_error", ctx->getClientFd(), ctx->getCgiData(), "CGI process exited with code " + utils::str(ctx->getExitStatus()));
 			} else { // CGI succeeded -> parse output
 				try {
 					//Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput()))); // DEBUG
+					Response resp;
 					resp.parseFromCgiOutput(ctx->getOutput());
+					_network->prepareResponseSend(ctx->getClientFd(), resp);
+					_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
 				} catch (std::exception& e) {
-					Log::prod("error", "Failed to parse CGI output: " + utils::str(e.what()));
-					resp = StaticHandler::error("internal_error", ctx->getRequest(), ctx->getErrorPages());
+					_sendErrorResponse("internal_error", ctx->getClientFd(), ctx->getCgiData(), "Failed to parse CGI output: " + utils::str(e.what()));
 				}
 			}
-
-			// Send response
-			_network->prepareResponseSend(ctx->getClientFd(), resp);
-			_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
 
 			// Cleanup
 			delete ctx;
@@ -302,19 +315,26 @@ void CgiHandler::checkCompletion()
 void	CgiHandler::_handleTimeout(CgiContext* ctx, time_t elapsedTime)
 {
 	Log::prod("warning", "CGI timeout: process " + Log::hl(ctx->getPid()) + " exceeded " + Log::hl(_TIMEOUT_SECONDS) + " seconds (closed after " + Log::hl(elapsedTime) + " sec).");
+	pid_t pid = ctx->getPid();
 
 	// Kill process
-	kill(ctx->getPid(), SIGKILL);
-	Log::dev("close", "Killed CGI process " + utils::str(ctx->getPid()));
+	kill(pid, SIGKILL);
+	waitpid(pid, NULL, 0); // reap zombie
+	Log::dev("close", "Killed CGI process " + utils::str(pid));
 
-	// Send timeout builtin error page to clientt
-	Response errorResp = StaticHandler::error("gateway_timeout", ctx->getRequest(), ctx->getErrorPages());
-	_network->prepareResponseSend(ctx->getClientFd(), errorResp);
-	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI timeout error");
+	// Send timeout builtin error page to client
+	if (_network->isClientConnected(ctx->getClientFd())) {
+		Response errorResp = StaticHandler::error("gateway_timeout", ctx->getRequest(), ctx->getErrorPages());
+		_network->prepareResponseSend(ctx->getClientFd(), errorResp);
+		_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI timeout error");
+	} else {
+		Log::dev("debug", "Client already disconnected, skipping timeout response");
+	}
 
 	// Cleanup
 	_cleanupPipes(ctx);
 	delete ctx;
+	_contextsByPid.erase(pid);
 }
 
 bool	CgiHandler::isCgiPipe(int fd) const
@@ -347,22 +367,27 @@ std::map<pid_t, CgiContext*> const&	CgiHandler::getContextsByPid() const
 void	CgiHandler::_cleanupPipes(CgiContext* ctx)
 {
 	// stdout pipe
-	if (_contextsByPipeFd.find(ctx->getOutReadFd()) != _contextsByPipeFd.end()) {
-		_network->epollControl(ctx->getOutReadFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
-		ctx->closeOutReadFd();
-		_contextsByPipeFd.erase(ctx->getOutReadFd());
+	int outFd = ctx->getOutReadFd();
+	if (!ctx->isStdoutClosed() && _contextsByPipeFd.find(outFd) != _contextsByPipeFd.end()) {
+		_network->epollControl(outFd, EPOLL_CTL_DEL, 0, "CGI cleanup outRead");
+		_contextsByPipeFd.erase(outFd);  // ← Erase AVANT close
+		ctx->closeOutReadFd();  // ← Close après
 	}
+
 	// stderr pipe
-	if (_contextsByPipeFd.find(ctx->getErrReadFd()) != _contextsByPipeFd.end()) {
-		_network->epollControl(ctx->getErrReadFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
+	int errFd = ctx->getErrReadFd();
+	if (!ctx->isStderrClosed() && _contextsByPipeFd.find(errFd) != _contextsByPipeFd.end()) {
+		_network->epollControl(errFd, EPOLL_CTL_DEL, 0, "CGI cleanup errRead");
+		_contextsByPipeFd.erase(errFd);
 		ctx->closeErrReadFd();
-		_contextsByPipeFd.erase(ctx->getErrReadFd());
 	}
-	// stdin pipe (si encore ouvert)
-	if (_contextsByPipeFd.find(ctx->getInWriteFd()) != _contextsByPipeFd.end()) {
-		_network->epollControl(ctx->getInWriteFd(), EPOLL_CTL_DEL, 0, "CGI cleanup");
+
+	// stdin pipe
+	int inFd = ctx->getInWriteFd();
+	if (inFd != -1 && _contextsByPipeFd.find(inFd) != _contextsByPipeFd.end()) {
+		_network->epollControl(inFd, EPOLL_CTL_DEL, 0, "CGI cleanup inWrite");
+		_contextsByPipeFd.erase(inFd);
 		ctx->closeInWriteFd();
-		_contextsByPipeFd.erase(ctx->getInWriteFd());
 	}
 
 	Log::dev("close", "Cleaned up pipes for CGI process " + utils::str(ctx->getPid()));
@@ -397,8 +422,16 @@ void CgiHandler::fullCleanup()
 	Log::prod("close", "All CGI processes cleaned up.");
 }
 
-
-// BUILTIN RESPONSES
+void	CgiHandler::_sendErrorResponse(std::string const& status, int clientFd, CgiData const& data, std::string const& msg, bool forceClose)
+{
+	if (!msg.empty())
+		Log::prod("error", msg);
+	Response errorResp = StaticHandler::error(status, data.getRequest(), data.getErrorPages());
+	if (forceClose)
+		errorResp.setHeader("Connection", "close");
+	_network->prepareResponseSend(clientFd, errorResp);
+	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "Sending CGI response");
+}
 
 void	CgiHandler::errorFromPipeFd(int pipeFd, std::string const& errorSlug, std::string const& errorMsg)
 {
@@ -406,23 +439,6 @@ void	CgiHandler::errorFromPipeFd(int pipeFd, std::string const& errorSlug, std::
 	if (it == _contextsByPipeFd.end())
 		return;
 	CgiContext* ctx = it->second;
-	Log::prod("error", "CGI: " + errorMsg);
-	Response errorResp = StaticHandler::error(errorSlug, ctx->getRequest(), ctx->getErrorPages());
-	errorResp.setHeader("Connection", "close"); // force close
-	_network->prepareResponseSend(ctx->getClientFd(), errorResp);
-	_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "error response after CGI disabled");
+	_sendErrorResponse(errorSlug, ctx->getClientFd(), ctx->getCgiData(), errorMsg, true); // force close (critical error)
 }
 
-void CgiHandler::_sendNotImplementedResponse(int clientFd, CgiData const& data)
-{
-	Response resp = StaticHandler::error("not_implemented", data.getRequest(), data.getErrorPages());
-	_network->prepareResponseSend(clientFd, resp);
-	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI 501 response");
-}
-
-void	CgiHandler::_sendPlaceholderResponse(int clientFd)
-{
-	Response resp = StaticHandler::cgiPlaceholder();
-	_network->prepareResponseSend(clientFd, resp);
-	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "CGI placeholder response");
-}

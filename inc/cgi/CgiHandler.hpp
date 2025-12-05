@@ -23,9 +23,7 @@ class CgiHandler
 	void		_setupStdinPipe(CgiContext*);
 	void		_handleTimeout(CgiContext*, time_t);
 	void		_cleanupPipes(CgiContext*);
-
-	void	_sendNotImplementedResponse(int, CgiData const&);
-	void	_sendPlaceholderResponse(int);
+	void		_sendErrorResponse(std::string const&, int, CgiData const&, std::string const&, bool = false);
 
 	// TODO canonical ? + comment
 	CgiHandler();
@@ -44,6 +42,7 @@ class CgiHandler
 		bool	isCgiPipe(int) const;
 		bool	hasActiveCgi(int) const;
 		void	fullCleanup();
+
 		std::map<pid_t, CgiContext*> const&	getContextsByPid() const;
 		void	errorFromPipeFd(int, std::string const&, std::string const&);
 };

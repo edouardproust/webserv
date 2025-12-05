@@ -45,9 +45,8 @@ class CgiContext
 
 
 	static void	_safeCloseFd(int&);
-
-	void	_setStdoutClosed(bool);
-	void	_setStderrClosed(bool);
+	void		_setStdoutClosed(bool);
+	void		_setStderrClosed(bool);
 
 	// Not default-constructible, not copyable, not assignable
 	CgiContext();

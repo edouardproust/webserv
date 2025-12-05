@@ -204,18 +204,6 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
 	return resp;
 }
 
-Response	StaticHandler::cgiPlaceholder()
-{
-	Response resp;
-	resp.setServedFilePath("built-in CGI placeholder page"); // for debug
-	resp.setStatus(HttpStatus("ok"));
-	resp.setHeader("Content-Type", _getMime("html"));
-	resp.setBodyAndContentLength(_builtinCgiPlaceholderHtml());
-	resp.setHeader("Connection", "close"); // force close
-	return resp;
-}
-
-
 // HTML
 
 /**
@@ -315,24 +303,6 @@ std::string StaticHandler::_builtinErrorPageHtml(HttpStatus const& status)
 	);
 }
 
-std::string StaticHandler::_builtinCgiPlaceholderHtml()
-{
-	return std::string(
-		"<!DOCTYPE html>"
-		"<html>"
-		"<head>"
-		" <title>CGI: Work in progress</title>\n"
-		"</head>\n"
-		"<body>\n"
-		" <center>"
-		"  <h1>Work in progress...</h1>"
-		"  <p>The CGI feature is being implemented.</p>"
-		" </center>"
-		" <hr><center>webserv/1.0</center>"
-		" </body>"
-		"</html>"
-	);
-}
 
 // MIME
 

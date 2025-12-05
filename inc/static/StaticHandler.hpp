@@ -21,7 +21,6 @@ class StaticHandler
 	static std::string	_builtinAutoindexHtml(RoutingDecision const&);
 	static std::string	_builtinErrorPageHtml(HttpStatus const&);
 	static std::string	_builtinWelcomePageHtml();
-	static std::string	_builtinCgiPlaceholderHtml();
 
 	static std::string	_getMime(std::string const&);
 	static std::string	_getMimeFromPath(std::string const&);
@@ -41,7 +40,6 @@ class StaticHandler
 		static Response	post(RoutingDecision const&);
 		static Response	error(std::string const&, RoutingDecision const&);
 		static Response	error(std::string const&, Request const&, ErrorPages const&);
-		static Response	cgiPlaceholder();
 
 		static Response	builtinError(std::string const&, std::string const&);
 };
