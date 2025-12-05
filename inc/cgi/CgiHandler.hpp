@@ -1,83 +1,52 @@
 #ifndef CGI_HANDLER_HPP
 #define CGI_HANDLER_HPP
 
-#include "http/Request.hpp"
+class Network;
+#include "cgi/CgiContext.hpp"
 #include "http/Response.hpp"
-#include "config/LocationBlock.hpp"
-#include "config/HostPortPair.hpp"
-#include "utils/signal.hpp"
-#include "utils/utils.hpp"
-#include "utils/typedefs.hpp"
-#include "fcntl.h"
 #include <sys/wait.h>
 
-/**
- * Handles execution of CGI scripts.
- *
- * Resource-type RAII class: manages pipes and child processes, non-copyable.
- */
+// TODO make canonical ? + class comment
 class CgiHandler
 {
-	static size_t const			_TIMEOUT_MS;
-	static size_t const			_STEP_MS;
-	static size_t const			_READ_BUFFER;
+	static size_t const	_TIMEOUT_SECONDS;
+	static size_t const	_READ_BUFFER_SIZE;
 
-	std::string					_scriptName;
-	std::string					_extension;
-	std::string					_executor;
-	std::vector<std::string>	_envp;
-	std::vector<std::string>	_argv;
-	std::string					_cgiOutput;
-	std::string					_cgiError;
+	Network*						_network;
+	std::map<int, CgiContext*>		_contextsByPipeFd;
+	std::map<pid_t, CgiContext*>	_contextsByPid;
+	std::set<pid_t>					_zombiesToReap;
 
-	int							_stdinPipe[2];
-	int							_stdoutPipe[2];
-	int							_stderrPipe[2];
-	std::string					_tmpFile;
+	CgiContext*	_createCgiContext(int, CgiData*);
+	bool		_safeFork(CgiContext*, pid_t&);
+	void		_executeChildProcess(CgiContext*, CgiData const*);
+	void		_setupParentProcess(pid_t, CgiContext*);
+	void		_setupStdinPipe(CgiContext*);
+	void		_handleTimeout(CgiContext*, time_t);
+	void		_cleanupPipes(CgiContext*);
+	void		_closeStdinPipe(CgiContext*, int, std::string const&);
+	void		_sendErrorResponse(std::string const&, int, CgiData const*, std::string const&, bool = false);
 
-	void		_buildEnvp(Request const&, std::string const&, HostPortPair const&);
-	void		_buildArgv();
-	pid_t		_forkAndExec() const;
-	void		_prepareIo(std::string const&, std::string const&);
-	Response	_handleStatus(int);
-	void		_redirectIoInChild() const;
-	void		_setNonBlocking(int);
-	bool		_waitWithTimeout(pid_t, int&, size_t);
-	void		_readPipes();
-	void		_cleanupPipes();
-
-	static std::string			_headerToEnvVar(std::string const&);
-	static std::vector<char*>	_toCharPtrArrayInChild(const std::vector<std::string>&);
-
-	// Copy constructor and assignation are forbidden
+	// TODO canonical ? + comment
+	CgiHandler();
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
 
 	public:
 
-		CgiHandler();
+		CgiHandler(Network*);
 		~CgiHandler();
 
-		Response execute(Request const&, LocationBlock const*, std::string const&, HostPortPair const&);
+		void	launchAsync(int, Response&);
+		void	writeCgiInput(int);
+		void	readCgiOutput(int);
+		void	checkCompletion();
+		bool	isCgiPipe(int) const;
+		bool	hasActiveCgi(int) const;
+		void	fullCleanup();
 
-		std::string const&				getScriptName() const;
-		std::string const&				getExecutor() const;
-		std::vector<std::string> const&	getEnvp() const;
-		std::vector<std::string> const&	getArgv() const;
-		std::string const&				getCgiOutput() const;
-		std::string const&				getCgiError() const;
-
-		class ExecException: public std::runtime_error {
-			public:
-				ExecException(std::string const&);
-		};
-
-		class TimeoutException: public std::runtime_error {
-			public:
-				TimeoutException(std::string const&);
-		};
+		std::map<pid_t, CgiContext*> const&	getContextsByPid() const;
+		void	errorFromPipeFd(int, std::string const&, std::string const&);
 };
-
-std::ostream&	operator<<(std::ostream&, CgiHandler const&);
 
 #endif

@@ -40,9 +40,9 @@ void	RoutingDecision::_makeDecision()
 
 /**
  * Selects the appropriate server block based on request connection details and Host header.
- * 
+ *
  * Server selection follows a priority-based matching system:
- * 
+ *
  * 1. Exact match: Server with exact IP:Port + matching Hostname
  *    - Example: Request to 127.0.0.1:8080 with Host: example.com
  *    - Matches: Server listening on 127.0.0.1:8080 with server_name example.com
@@ -53,15 +53,14 @@ void	RoutingDecision::_makeDecision()
  *	  - Matches: First server listening on 127.0.0.1:8080 (regardless of server_name)
  * 3. Wildcard IP: Server with wildcard IP (0.0.0.0) matching requested port
  *    - Example: Request to 192.168.1.1:8080 matches server on 0.0.0.0:8080
- * 4. Port only: Any server listening on the requested port
- *    - Final fallback for port-based routing when hostname doesn't match
- *    - Follows Nginx behavior of using first server block on the port
+ * 4. Final fallback for port-based routing when hostname doesn't match
+ *    - Follows Nginx behavior of using first server block
  */
 void	RoutingDecision::_setServer()
 {
 	_server = NULL;
 	std::vector<ServerBlock> const& servers = _config.getServers();
-	std::string requestedHost = utils::extractHostname(_request.getHeaders());
+	std::string requestedHost = utils::extractHostname(_request.getUniqHeaders());
 	ServerBlock const* wildcardMatch = NULL;
 	ServerBlock const* exactPortMatch = NULL;
 	for (size_t i = 0; i < servers.size(); ++i) {

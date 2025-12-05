@@ -5,6 +5,8 @@ CXX = c++
 
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
+VALGRIND = valgrind --leak-check=full --track-fds=yes
+
 # ------- CONFIG --------
 
 CONFIG_SRC_DIR = tests/config
@@ -44,6 +46,8 @@ BASE_SRC_FILES = \
 	session/SessionManager.cpp \
 	static/StaticHandler.cpp \
 	cgi/CgiHandler.cpp \
+	cgi/CgiData.cpp \
+	cgi/CgiContext.cpp \
 	utils/Const.cpp \
 	utils/utils.cpp \
 	utils/signal.cpp \
@@ -111,7 +115,6 @@ fclean: clean
 	rm -f $(NAME) $(NAME_DEV)
 	rm -rf $(LOG_DIR)
 	rm -rf $(CONFIG_DST_DIR)
-	rm -rf $(TMP_FILES_DIR)
 
 re: fclean all
 
@@ -125,12 +128,12 @@ test_prod: all
 test_dev: dev
 	@clear
 	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE) $(CONFIG_DST_DIR)
-	valgrind ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE)
+	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE)
 
 test_42: dev
 	@clear
 	bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE_42) $(CONFIG_DST_DIR)
-	valgrind ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
+	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
 
 test_welcome: all
 	@clear

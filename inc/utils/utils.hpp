@@ -32,7 +32,7 @@ namespace utils {
 	bool	isRelativePath(std::string const&);
 
 	bool	isAccessibleDirectory(std::string const&);
-	bool	isWritableDirectory(const std::string& path);
+	bool	isWritableDirectory(std::string const&);
 	bool	isReadableFile(std::string const&);
 	bool	isExecutableFile(std::string const&);
 	bool	fileExists(std::string const&);
@@ -43,23 +43,19 @@ namespace utils {
 	char	hexToChar(std::string const&);
 	std::string	toUpper(std::string const& s);
 
-
 	std::string	readFile(std::string const&);
-	std::string	getFileName(const std::string& path);
+	std::string	getFileName(std::string const&);
 	std::string	getFileExtension(std::string const&);
 	std::string	toLowerCase(std::string const&);
 	std::vector<std::string>	split(std::string const&, char);
 
 	std::string	pathsJoin(std::string const&, std::string const&);
 	std::string securedPathsJoin(std::string const&, std::string const&);
-
 	std::string	normalizePath(std::string const&);
-
 	std::string	trim(std::string const&);
-	std::string	excerpt(size_t, std::string const&);
 	std::string	formatDate(time_t, const std::string&);
-
-	std::string extractHostname(const Headers& headers);
+	std::string extractHostname(UniqHeaders const&);
+	std::pair<size_t, size_t>	headersBodySeparatorPos(std::string const&);
 
 }
 

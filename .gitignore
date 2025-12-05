@@ -20,3 +20,4 @@ webserv
 webserv_dev
 log*
 tests/website/*.txt
+tests/*[0-9][gGmMkK][bB]

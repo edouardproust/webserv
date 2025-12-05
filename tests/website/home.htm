@@ -10,19 +10,39 @@
 		<img src="/webserv.png" alt="Test Image" width="200">
 		<h1>webserv</h1>
 	</div>
+	<div class="flex-50-container">
+		<div>
+			<p>This is the content of <code>/home.htm</code>.</p>
 
-	<p>This is the content of <code>/home.htm</code>.</p>
-
-	<h2>Testing Instructions</h2>
-	<ul>
-		<li>Open browser Developer Tools (F12) → Network tab → Tick "Preserve log"</li>
-		<li>To see stored cookies: Application tab → Storage → Cookies</li>
-		<li>Follow tests in the table below:
+			<h2>Testing Instructions</h2>
 			<ul>
-				<li><code>GET</code> and <code>POST</code> requests: click the links</li>
-				<li><code>PUT</code> and <code>HEAD</code> requests: run the command in console</li>
+				<li>Open browser Developer Tools (F12) → Network tab → Tick "Preserve log"</li>
+				<li>Follow tests in the table below:
+					<ul>
+						<li><code>GET</code> and <code>POST</code> requests: click the links</li>
+						<li><code>PUT</code> and <code>HEAD</code> requests: run the command in console</li>
+					</ul>
 			</ul>
-	</ul>
+		</div>
+		<div class="highlight-box">
+			<h2>Charge testing</h2>
+			<p><code>sudo apt install siege</code></p>
+			<ol>
+				<li>
+					<b>Light</b> (10 users, 20 requests): <code>siege -c 10 -r 2 http://localhost:8080/cgi/test.php</code>
+				</li>
+				<li>
+					<b>Medium</b> (20 users, 100 requests): <code>siege -c 20 -r 5 http://localhost:8080/cgi/test.php</code>
+				</li>
+				<li>
+					<b>Intensive</b> (50 users for 30 seconds): <code>siege -c 50 -t 30S http://localhost:8080/cgi/test.php</code>
+				</li>
+				<li>
+					<b>POST</b>: <code>siege -c 10 -r 5 "http://localhost:8080/cgi/test.php POST name=test&age=25"</code>
+				</li>
+			</ol>
+		</div>
+	</div>
 
 	<h2>Tests list</h2>
 	<table class="test-table">
@@ -69,6 +89,7 @@
 				<td><code>curl -I http://localhost:8080/put-demo.txt</code></td>
 				<td class="status-ok">200</td>
 				<td class="notes"><code>HEAD</code> request (headers only, no body)</td>
+			</tr>
 
 			<!-- Autoindex Tests -->
 			<tr class="category">
@@ -158,6 +179,14 @@
 				<td><a href="http://localhost:8080/cgi/timeout.php" class="test-link">http://localhost:8080/cgi/timeout.php</a></td>
 				<td class="status-error">504</td>
 				<td class="notes">Timeout after 5 seconds</td>
+			</tr><tr>
+				<td><code>POST</code></td>
+				<td>
+					<p><code>head -c 100M /dev/zero | tr '\0' 'x' > tests/100mb</code></p>
+					<p><code>curl -X POST --data-binary @tests/100mb http://localhost:8080/cgi/upload_test.php</code></p>
+				</td>
+				<td class="status-ok">200</td>
+				<td class="notes"><code>POST</code> request with a very big body (100MB)</td>
 			</tr>
 
 			<!-- CGI Tests - Python -->

@@ -19,7 +19,7 @@ const HttpStatus::Entry HttpStatus::STATUS_TABLE[] = {
 	{500, "Internal Server Error", "internal_server_error"}, // default (do not delete!)
 	{501, "Not Implemented", "not_implemented"},
 	{502, "Bad Gateway", "bad_gateway"},
-	{504, "Gateway Timeout", "timeout"},
+	{504, "Gateway Timeout", "gateway_timeout"},
 	{505, "HTTP Version Not Supported", "version_not_supported"},
 };
 
@@ -110,9 +110,9 @@ std::string	HttpStatus::toStr() const
 	return oss.str();
 }
 
-bool	HttpStatus::isError(int code)
+bool	HttpStatus::isError() const
 {
-	return code >= 400;
+	return _code >= 400;
 }
 
 bool	HttpStatus::isRedirection(int code)

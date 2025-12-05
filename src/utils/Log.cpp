@@ -3,42 +3,46 @@
 std::ostream&		Log::_DEBUG_STREAM	= std::cerr;
 std::ostream&		Log::_ACCESS_STREAM	= std::cout;
 std::ostream&		Log::_ERROR_STREAM	= std::cerr;
+std::string const	Log::_DEBUG_SLUG	= "debug";
 
 std::string const	Log::_RESET			= "\033[0m";
 std::string const	Log::_BOLD			= "\033[1m";
 std::string const	Log::_NORMAL		= "\033[0m";
 
 std::string const	Log::_RED			= "\033[31m";
-std::string const	Log::_BRIGHT_RED	= "\033[91m";
+std::string const	Log::_LIGHT_RED		= "\033[91m";
 std::string const	Log::_GREEN			= "\033[32m";
 std::string const	Log::_YELLOW		= "\033[33m";
 std::string const	Log::_BLUE			= "\033[34m";
 std::string const	Log::_MAGENTA		= "\033[35m";
+std::string const	Log::_LIGHT_MAGENTA	= "\033[95m";
 std::string const	Log::_CYAN			= "\033[36m";
 
-size_t const		Log::EXCERPT_CHARS	= 500;
+size_t const		Log::EXCERPT_SIZE	= 500;
 
-const Log::Entry Log::TYPE_TABLE[] = {
+const Log::Category Log::_CATEGORIES[] = {
 	{"ok", _BOLD + _GREEN, _ACCESS_STREAM}, // Succeeded requests
 	{"event", _BLUE, _ACCESS_STREAM}, // Request event
 	{"status", _CYAN, _ACCESS_STREAM}, // Status, metrics
 	{"info", _BOLD + _YELLOW, _ACCESS_STREAM}, // General acitivity informations
+	{"cgi", _LIGHT_MAGENTA, _ACCESS_STREAM}, // CGI-related logs
 
 	{"error", _BOLD + _RED, _ERROR_STREAM}, // Critical errors
-	{"warning", _BOLD + _BRIGHT_RED, _ERROR_STREAM},	// Warnings
+	{"warning", _BOLD + _LIGHT_RED, _ERROR_STREAM},	// Warnings
 	{"close", _RED, _ERROR_STREAM}, // Uncommon exits
 
 	{"setup", _MAGENTA, _DEBUG_STREAM},
-	{"debug", _BLUE, _DEBUG_STREAM},
+	{_DEBUG_SLUG, _BLUE, _DEBUG_STREAM},
+	{"todo", _BOLD + _YELLOW, _DEBUG_STREAM},
 };
 
-const size_t Log::TYPE_TABLE_SIZE = sizeof(Log::TYPE_TABLE) / sizeof(Log::Entry);
+const size_t Log::_CATEGORIES_SIZE = sizeof(Log::_CATEGORIES) / sizeof(Log::Category);
 
-Log::Entry const*	Log::_findByType(std::string const& type)
+Log::Category const*	Log::_findBySlug(std::string const& slug)
 {
-	for (size_t i = 0; i < TYPE_TABLE_SIZE; ++i)
-		if (TYPE_TABLE[i].type == type)
-			return &TYPE_TABLE[i];
+	for (size_t i = 0; i < _CATEGORIES_SIZE; ++i)
+		if (_CATEGORIES[i].slug == utils::toLowerCase(slug))
+			return &_CATEGORIES[i];
 	return NULL;
 }
 

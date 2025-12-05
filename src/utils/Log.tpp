@@ -1,17 +1,17 @@
 #include "utils/Log.hpp"
 
 template <typename T>
-void	Log::dev(std::string const& type, T const& message)
+void	Log::dev(std::string const& category, T const& message)
 {
 	if (!DEVMODE)
 		return;
-	_print(type, message);
+	_print(category, message);
 }
 
 template <typename T>
-void	Log::prod(std::string const& type, T const& message)
+void	Log::prod(std::string const& category, T const& message)
 {
-	_print(type, message);
+	_print(category, message);
 }
 
 /**
@@ -28,22 +28,25 @@ std::string	Log::hl(T const& value)
 }
 
 template <typename T>
-void Log::_print(std::string const& type, T const& value)
+void Log::_print(std::string const& categorySlug, T const& value)
 {
-	std::string logLine = utils::formatDate(time(0), "%Y-%m-%d %H:%M:%S") + " ";
-	Log::Entry const* res = _findByType(type);
+	Log::Category const* category = _findBySlug(categorySlug);
+	if (category != NULL && category->slug == _DEBUG_SLUG && !PRINT_DEBUG)
+		return;
 
 	std::ostringstream oss;
 	oss << value; // converts any printable type into a string stream
 
-	if (res != NULL) {
-		if (DEVMODE)
-			logLine += res->color + "[" + utils::toUpper(type) + "]" + _RESET + " " + oss.str();
-		else
-			logLine += "[" + utils::toUpper(type) + "]" + " " + oss.str();
-	} else { // not found
-		logLine += "[" + type + "] " + oss.str();
-	}
+	std::string logLine = utils::formatDate(time(0), "%Y-%m-%d %H:%M:%S") + " ";
+	if (category != NULL) {
+		if (DEVMODE) // with color
+			logLine += category->color + "[" + utils::toUpper(categorySlug) + "] " + _RESET + oss.str();
+		else // without color
+			logLine += "[" + utils::toUpper(categorySlug) + "] " + oss.str();
+		category->stream << logLine << std::endl;
+	} else { // not found (without color + error stream)
+		logLine += "[" + utils::toUpper(categorySlug) + "] " + oss.str();
+		_ERROR_STREAM << logLine << std::endl;
 
-	res->stream << logLine << std::endl;
+	}
 }
