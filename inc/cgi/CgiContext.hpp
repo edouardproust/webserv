@@ -41,6 +41,7 @@ class CgiContext
 	int					_exitStatus;
 	bool				_stdoutClosed;
 	bool				_stderrClosed;
+	bool				_clientDisconnectLogged;
 
 
 	static void	_safeCloseFd(int&);
@@ -93,11 +94,13 @@ class CgiContext
 		int					getExitStatus() const;
 		bool				isStdoutClosed() const;
 		bool				isStderrClosed() const;
+		bool				hasClientDisconnectLogged() const;
 
 		void	setHeadersReceived(bool);
 		void	setHeadersSent(bool);
 		void	setProcessExited(bool);
 		void	setExitStatus(int);
+		void	setClientDisconnectLogged(bool v);
 };
 
 std::ostream&	operator<<(std::ostream&, CgiContext const&);

@@ -22,6 +22,7 @@ CgiContext::CgiContext(int cfd, CgiData const& d, int inReadFd, int inWriteFd, i
 , _exitStatus(-1)
 , _stdoutClosed(false)
 , _stderrClosed(false)
+, _clientDisconnectLogged(false)
 {}
 
 CgiContext::~CgiContext()
@@ -210,6 +211,11 @@ bool	CgiContext::isStderrClosed() const
 	return _stderrClosed;
 }
 
+bool	CgiContext::hasClientDisconnectLogged() const
+{
+	return _clientDisconnectLogged;
+}
+
 void	CgiContext::setHeadersReceived(bool headersReceived)
 {
 	_headersReceived = headersReceived;
@@ -238,6 +244,11 @@ void	CgiContext::_setStdoutClosed(bool isClosed)
 void	CgiContext::_setStderrClosed(bool isClosed)
 {
 	_stderrClosed = isClosed;
+}
+
+void	CgiContext::setClientDisconnectLogged(bool isLogged)
+{
+	_clientDisconnectLogged = isLogged;
 }
 
 

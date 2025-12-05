@@ -14,7 +14,7 @@ Network::Network(Config const& config)
 Network::~Network()
 {
 	// Cleanup CGI processes (must be done before closing client fds)
-	//_cgi.fullCleanup();
+	_cgi.fullCleanup();
 
 	// Close client sockets
 	for (std::map<int, Socket*>::iterator it = _socketsByClientFd.begin(); it != _socketsByClientFd.end(); ++it) {
@@ -440,18 +440,25 @@ void Network::_prepareClientForNextRequest(int clientFd)
  */
 void Network::_disconnectClient(int clientFd)
 {
-	if (_cgi.hasActiveCgi(clientFd)) {
-		Log::dev("warning", "Client " + utils::str(clientFd) + " disconnected but CGI still running, marking for cleanup");
-		return;
-	}
-	Log::prod("event", "Client " + Log::hl(clientFd) + " disconnected gracefully."); // log before to ensure clientFd is still valid
-	_socketsByClientFd.erase(clientFd);
-	_pendingRequests.erase(clientFd);
-	_pendingResponses.erase(clientFd);
+	// COnditional log
+    if (_cgi.hasActiveCgi(clientFd)) {
+        Log::dev("warning", "Client " + utils::str(clientFd) + " disconnected but CGI still running, cleanup deferred");
+    } else {
+        Log::prod("event", "Client " + Log::hl(clientFd) + " disconnected gracefully.");
+    }
+
+    // Close client
+    epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect");
+    close(clientFd);
+
+    // CleaRemove client in maps
+    _socketsByClientFd.erase(clientFd);
+    _pendingRequests.erase(clientFd);
+    _pendingResponses.erase(clientFd);
     _responseSendPos.erase(clientFd);
     _shouldCloseAfterResponse.erase(clientFd);
-	epollControl(clientFd, EPOLL_CTL_DEL, 0, "client disconnect"); // throw
-	close(clientFd);
+
+	// If a CGI process is active, CgiHandler will clean context in checkCompletion()
 }
 
 

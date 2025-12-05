@@ -260,7 +260,8 @@ void CgiHandler::checkCompletion()
 		if (ctx->hasProcessExited() && ctx->isStdoutClosed() && ctx->isStderrClosed()) {
 			Log::dev("debug", "CGI " + utils::str(pid) + " ready to finalize");
 
-			// Verify that client is still connected
+			// If client was disconnected via Network::disconnectCLient: cleanup CgiContext
+			// (This is done ONLY once CGI process finished)
 			if (!_network->isClientConnected(ctx->getClientFd())) {
 				Log::dev("warning", "Client " + utils::str(ctx->getClientFd()) + " disconnected before CGI finished, discarding response");
 				delete ctx;
@@ -314,6 +315,7 @@ void	CgiHandler::_handleTimeout(CgiContext* ctx, time_t elapsedTime)
 	// Cleanup
 	_cleanupPipes(ctx);
 	delete ctx;
+	_contextsByPid.erase(pid);
 }
 
 bool	CgiHandler::isCgiPipe(int fd) const
