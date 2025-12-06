@@ -33,6 +33,7 @@ class Response
 	void		_parseRawResponse(std::string const&);
 	bool		_hasHeader(std::string const&) const;
 	std::string	_buildHeaders() const;
+	void		_handleSession(const Request& request);
 
 	public:
 
@@ -49,7 +50,7 @@ class Response
 		bool		isConnectionClose() const;
 
 		static Response	initCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&);
-		void			parseFromCgiOutput(std::string const&);
+		void			parseFromCgiOutput(std::string const&, const Request&);
 		void			parseHeadersFromCgiOutput(std::string const&);
 		CgiData*		transferCgiDataOwnership();
 
@@ -69,8 +70,6 @@ class Response
 		std::string const&				getServedFilePath() const;
 		bool							needsCgiExecution() const;
 		CgiData const*					getCgiData() const;
-
-		void							handleSession(const Request& request);
 
 		class RawException: public std::runtime_error {
 			public:
