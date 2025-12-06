@@ -1,10 +1,13 @@
 #include "http/Response.hpp"
+#include "session/SessionManager.hpp"
 
 Response::Response()
 : _status(HttpStatus())
 , _bodyClearedForHead(false)
 , _needsCgiExecution(false)
 , _cgiData(NULL)
+, _pendingSessionUsername("")
+, _expireSession(false)
 {
 	_initDefaultHeaders();
 }
@@ -12,11 +15,14 @@ Response::Response()
 Response::Response(Response const& other)
 : _status(other._status)
 , _headers(other._headers)
+, _setCookieHeaders(other._setCookieHeaders)
 , _body(other._body)
 , _bodyClearedForHead(other._bodyClearedForHead)
 , _servedFilePath(other._servedFilePath)
 , _needsCgiExecution(other._needsCgiExecution)
 , _cgiData(other._cgiData ? new CgiData(*other._cgiData) : NULL)
+, _pendingSessionUsername(other._pendingSessionUsername)
+, _expireSession(other._expireSession)
 {}
 
 Response& Response::operator=(Response const& other)
@@ -24,8 +30,11 @@ Response& Response::operator=(Response const& other)
 	if (this != &other) {
 		_status = other._status;
 		_headers = other._headers;
+		_setCookieHeaders = other._setCookieHeaders;
 		_body = other._body;
 		_bodyClearedForHead = other._bodyClearedForHead;
+		_pendingSessionUsername = other._pendingSessionUsername;
+		_expireSession = other._expireSession;
 		_servedFilePath = other._servedFilePath;
 		_needsCgiExecution = other._needsCgiExecution;
 		delete _cgiData;
@@ -79,7 +88,6 @@ bool	Response::isConnectionClose() const {
 	std::string value = utils::toLowerCase(utils::trim(found->second));
 	return value == "close";
 }
-
 
 // CGI
 
@@ -152,9 +160,18 @@ void Response::parseHeadersFromCgiOutput(std::string const& headersOnly)
 		size_t start = value.find_first_not_of(' ');
 		if (start != std::string::npos)
 			value = value.substr(start);
-
+		std::string lname = utils::toLowerCase(key);
+		// Check if it has session headers
+		if (lname == "x-webserv-create-session") {
+			_pendingSessionUsername = value;
+			continue;
+		}
+		if (lname == "x-webserv-destroy-session") {
+			_expireSession = true;
+			continue;
+		}
 		// Check if it's the Status header
-		if (utils::toLowerCase(key) == "status") {
+		if (lname == "status") {
 			std::istringstream statusStream(value);
 			statusStream >> statusCode;
 		} else {
@@ -175,6 +192,38 @@ CgiData*	Response::transferCgiDataOwnership()
 	CgiData* tmp = _cgiData;
 	_cgiData = NULL;  // <- not Response responsability anymore
 	return tmp;
+}
+
+
+//SESSION MANAGEMENT
+
+/**
+ * Handles session creation and destruction based on CGI headers.
+ * 
+ * Called after parsing CGI output that may contain session control headers:
+ * - If `_pendingSessionUsername` is set (from X-Webserv-Create-Session header),
+ *   creates a new session and sends Set-Cookie header to client.
+ * - If `_expireSession` is set (from X-Webserv-Destroy-Session header),
+ *   destroys the current session and expires the client's cookie.
+ * 
+ */
+void	Response::handleSession(const Request& request)
+{
+	SessionManager& sm = SessionManager::getInstance();
+
+	if (!_pendingSessionUsername.empty()) {
+		std::string sessionId = sm.createSession(_pendingSessionUsername);
+		std::string maxAge = utils::str(Session::getTimeout());
+		std::string options = "HttpOnly; Path=" + SessionManager::COOKIE_PATH + "; Max-Age=" + maxAge;
+		addSetCookieHeader(SessionManager::COOKIE_NAME, sessionId, options);
+    }
+	if (_expireSession) {
+		std::string sessionId = request.getCookie(SessionManager::COOKIE_NAME);
+		if (!sessionId.empty()) {
+			sm.destroySession(sessionId);
+			addSetCookieHeader(SessionManager::COOKIE_NAME, "", "HttpOnly; Path=" + SessionManager::COOKIE_PATH + "; Max-Age=0");
+		}
+	}	
 }
 
 // PRIVATE METHODS
@@ -228,6 +277,9 @@ std::string Response::_buildHeaders() const
 		headerStream << "Content-Type: " << _headers.find("content-type")->second << "\r\n";
 	headerStream << "Content-Length: " << _headers.find("content-length")->second << "\r\n";
 	headerStream << "Connection: " << _headers.find("connection")->second << "\r\n";
+	for (std::vector<std::string>::const_iterator it = _setCookieHeaders.begin();
+		it != _setCookieHeaders.end(); ++it)
+			headerStream << "Set-Cookie: " << *it << "\r\n";
 	if (_headers.find("location") != _headers.end())
 		headerStream << "Location: " << _headers.find("location")->second << "\r\n";
 	if (_headers.find("cache-control") != _headers.end())
@@ -296,6 +348,16 @@ void	Response::setConnectionFromRequest(Request const& request)
 		setHeader("Connection", "keep-alive");
 }
 
+void	Response::addSetCookieHeader(const std::string& name, const std::string& value, 
+                        const std::string& options)
+{
+	std::string setCookieHeader = name + "=" + value;
+    
+    if (!options.empty())
+		setCookieHeader += "; " + options;
+	_setCookieHeaders.push_back(setCookieHeader);
+}
+
 // GETTERS
 
 HttpStatus const&	Response::getStatus() const
@@ -306,6 +368,11 @@ HttpStatus const&	Response::getStatus() const
 UniqHeaders const&	Response::getHeaders() const
 {
 	return _headers;
+}
+
+const std::vector<std::string>& Response::getSetCookieHeaders() const
+{
+	return _setCookieHeaders;
 }
 
 std::string const&	Response::getBody() const
@@ -326,6 +393,11 @@ bool	Response::needsCgiExecution() const
 CgiData const*	Response::getCgiData() const
 {
 	return _cgiData;
+}
+
+const std::string&	Response::getPendingSessionUsername() const
+{
+	return _pendingSessionUsername;
 }
 
 // PRINT

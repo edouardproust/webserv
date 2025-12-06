@@ -17,6 +17,8 @@ RedirectionHandler::~RedirectionHandler()
  * For 3xx redirects, sets the Location header and applies cache control for best pratice:
  * - 301 (Permanent): Cached for 1 year (max-age=31536000) since browsers cache these
  * - 302 (Temporary): Uses no-cache to ensure fresh redirects on subsequent requests
+ * - 307 (Temporary): Uses no-cache, preserves HTTP method (for eg POST stays POST)
+ * - 308 (Permanent): Cached for 1 year, preserves HTTP method
  *
  * Also generates a user-friendly HTML body with redirect information and links.
  * (This HTML will only be visible inside the browser if the client doesn't follow the redirect automatically)
@@ -30,13 +32,13 @@ Response	RedirectionHandler::run()
 	Response response;
 	response.setServedFilePath("redirecting..."); // for debug
 	response.setStatus(HttpStatus(_code));
-	if (_code >= 300 && _code < 400)
+	if (HttpStatus::isRedirection(_code))
 		response.setHeader("Location", _path);
-	if (_code == 301)
+	if (_code == 301 || _code == 308)
 		response.setHeader("Cache-Control", "max-age=31536000");
-	else if (_code == 302)
+	else if (_code == 302 || _code == 307)
 		response.setHeader("Cache-Control", "no-cache");
-	response.setBodyAndContentLength(_redirectionHtml());
+	response.setBodyAndContentLength(_redirectionPageHtml());
 	response.setHeader("Content-Type", "text/html");
 	response.setConnectionFromRequest(_routingDecision.getRequest());
 	return response;
@@ -62,7 +64,7 @@ std::string const&	RedirectionHandler::getPath() const
 	return _path;
 }
 
-std::string	RedirectionHandler::_redirectionHtml() const
+std::string	RedirectionHandler::_redirectionPageHtml() const
 {
 	std::string html =
 		"<!DOCTYPE html>"

@@ -17,6 +17,7 @@
 			<h2>Testing Instructions</h2>
 			<ul>
 				<li>Open browser Developer Tools (F12) → Network tab → Tick "Preserve log"</li>
+				<li>To check Cookies lifecycle → Application tab → Cookies"</li>
 				<li>Follow tests in the table below:
 					<ul>
 						<li><code>GET</code> and <code>POST</code> requests: click the links</li>
@@ -139,6 +140,16 @@
 				<td><a href="http://localhost:8080/redirect/tmp" class="test-link">http://localhost:8080/redirect/tmp</a></td>
 				<td class="status-redirection">302 → 200</td>
 				<td class="notes">Temporary redirect</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/redirect/api-perm" class="test-link">http://localhost:8080/redirect/api-perm</a></td>
+				<td class="status-redirection">308 → 200</td>
+				<td class="notes">Permanent redirect with method preservation</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/redirect/api-tmp" class="test-link">http://localhost:8080/redirect/api-tmp</a></td>
+				<td class="status-redirection">307 → 200</td>
+				<td class="notes">Temporary redirect with method preservation</td>
 			</tr>
 
 			<!-- CGI Tests - PHP -->
@@ -212,6 +223,30 @@
 				<td><a href="http://localhost:8080/cgi/segfault.py" class="test-link">http://localhost:8080/cgi/segfault.py</a></td>
 				<td class="status-error">500</td>
 				<td class="notes">Script segfault</td>
+			</tr>
+			<!-- Session Management Tests -->
+			<tr class="category">
+				<td colspan="4">🔐 Session Management & Cookies</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/cgi/auth_login.py" class="test-link">http://localhost:8080/cgi/auth_login.py</a></td>
+				<td class="status-ok">200</td>
+				<td class="notes">Login page - creates session cookie after form submission</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/cgi/profile.py" class="test-link">http://localhost:8080/cgi/profile.py</a></td>
+				<td class="status-ok">200</td>
+				<td class="notes">Profile page - requires valid session cookie</td>
+			</tr><tr>
+				<td><code>GET</code></td>
+				<td><a href="http://localhost:8080/cgi/auth_logout.py" class="test-link">http://localhost:8080/cgi/auth_logout.py</a></td>
+				<td class="status-ok">200</td>
+				<td class="notes">Logout - destroys session cookie</td>
+			</tr><tr>
+				<td><code>POST</code></td>
+				<td><code>curl -X POST http://localhost:8080/cgi/auth_login.py -d "username=testuser"</code></td>
+				<td class="status-ok">200</td>
+				<td class="notes">Test session creation with curl (check Set-Cookie header)</td>
 			</tr>
 		</tbody>
 	</table>

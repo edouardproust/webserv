@@ -177,6 +177,8 @@ Response	StaticHandler::error(std::string const& errorSlug, Request const& req, 
 			resp.setHeader("Content-Type", _getMime("html"));
 			if (method != "HEAD")
 				resp.setBodyAndContentLength(errorBody);
+			else
+				resp.setHeader("Content-Length", utils::str(errorBody.size()));
 			resp.setServedFilePath(errorPath);
 			resp.setConnectionFromRequest(req);
 			return resp;
@@ -200,6 +202,8 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
 	resp.setHeader("Content-Type", _getMime("html"));
 	if (method != "HEAD")
 		resp.setBodyAndContentLength(errorBody);
+	else
+		resp.setHeader("Content-Length", utils::str(errorBody.size()));
 	// TODO keep alive ?
 	return resp;
 }

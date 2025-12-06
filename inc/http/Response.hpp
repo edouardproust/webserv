@@ -15,13 +15,16 @@
  */
 class Response
 {
-	HttpStatus	_status;
-	UniqHeaders	_headers;
-	std::string	_body;
-	bool		_bodyClearedForHead;
-	std::string	_servedFilePath; // for debug purpose only
-	bool		_needsCgiExecution;
-	CgiData*	_cgiData; // Owning (deleted in destructor);
+	HttpStatus					_status;
+	UniqHeaders					_headers;
+	std::vector<std::string>	_setCookieHeaders;
+	std::string					_body;
+	bool						_bodyClearedForHead;
+	std::string					_servedFilePath; // for debug purpose only
+	bool						_needsCgiExecution;
+	CgiData*					_cgiData; // Owning (deleted in destructor);
+	std::string					_pendingSessionUsername;
+	bool						_expireSession;
 
 	void		_initDefaultHeaders();
 	void		_updateContentLength();
@@ -55,13 +58,19 @@ class Response
 		void	setBodyAndContentLength(std::string const&);
 		void	setServedFilePath(std::string const&);
 		void	setConnectionFromRequest(Request const&);
+		void	addSetCookieHeader(const std::string& name, const std::string& value, 
+                   const std::string& options);
 
-		HttpStatus const& 		getStatus() const;
-		UniqHeaders const&		getHeaders() const;
-		std::string const&		getBody() const;
-		std::string const&		getServedFilePath() const;
-		bool					needsCgiExecution() const;
-		CgiData const*			getCgiData() const;
+		HttpStatus const& 				getStatus() const;
+		UniqHeaders const&				getHeaders() const;
+		const std::vector<std::string>&	getSetCookieHeaders() const;
+		std::string const&				getBody() const;
+		const std::string&				getPendingSessionUsername() const;
+		std::string const&				getServedFilePath() const;
+		bool							needsCgiExecution() const;
+		CgiData const*					getCgiData() const;
+
+		void							handleSession(const Request& request);
 
 		class RawException: public std::runtime_error {
 			public:

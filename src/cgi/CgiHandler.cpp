@@ -1,7 +1,7 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 10; // for big uploads
+size_t const	CgiHandler::_TIMEOUT_SECONDS = 120; // for big uploads
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
 
 CgiHandler::CgiHandler(Network* network)
@@ -314,6 +314,7 @@ void CgiHandler::checkCompletion()
 					Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput())));
 					Response resp;
 					resp.parseFromCgiOutput(ctx->getOutput());
+					resp.handleSession(ctx->getRequest());
 					_network->prepareResponseSend(ctx->getClientFd(), resp);
 					_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
 				} catch (std::exception& e) {

@@ -46,7 +46,9 @@ class HttpStatus
 		std::string const&	getReason() const;
 		std::string const&	getSlug() const;
 
-		std::string	toStr() const;
+		std::string			toStr() const;
+		static bool			isError(int);
+		static bool			isRedirection(int);
 
 		bool	isError() const;
 

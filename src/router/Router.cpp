@@ -43,10 +43,6 @@ Response	Router::_handleRedirectionDecision(RoutingDecision const& rd)
 Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair const& listeningOn)
 {
 	std::string const& scriptName = rd.getFinalPath();
-	if (!utils::fileExists(scriptName))
-		return StaticHandler::error("not_found", rd);
-	if (!utils::isReadableFile(scriptName))
-		return StaticHandler::error("forbidden", rd);
 	return Response::initCgiResponse(rd, scriptName, listeningOn);
 }
 

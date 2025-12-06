@@ -45,6 +45,42 @@ git clone https://github.com/edouardproust/webserv.git webserv
 cd webserv
 make
 ```
+## Features
+
+### HTTP Protocol
+- Full HTTP/1.1 compliance (RFC 9110, RFC 9112)
+- Support for persistent connections keep-alive or close if specified
+- Chunked transfer encoding
+- Multiple request methods: GET, POST, PUT, DELETE, HEAD
+
+### Configuration
+- Custom configuration file parsing
+- Virtual hosts with multiple server blocks
+- Location-based routing with regex support
+- Custom error pages
+- Client body size limits
+- Autoindex for directory listings
+
+### CGI Support
+- **Multiple scripting languages**: PHP (.php) and Python (.py)
+- **Custom extensions**: Configurable via `cgi` directive (e.g., .bla)
+- **Environment variables**: Full CGI/1.1 environment support
+- **Timeout handling**: Configurable CGI execution timeouts
+- **Security**: Proper script validation and execution
+
+### Session Management
+- Cookie-based session handling
+- Session creation, validation, and destruction
+- Session timeout support
+
+### Redirection
+- Full 3xx redirect support: 301, 302, 307, 308
+- Method preservation (307/308 for API compatibility)
+- Configurable via `return` directive
+
+### Static File Serving
+- MIME type detection
+- Directory indexing (autoindex)
 
 3. Run the server
 ```bash
@@ -57,10 +93,11 @@ make
 - **`utils`**: [shared] Utils functions, like error and signal handling.
 - **`server`:** [Daniel] Listen for TCP connections, read raw request, send raw response.
 - **`http`:** [Ava] Parse raw request into Request object and build raw response.
-- **`config`:** parse configuration file into a structured Config object.
-- **`router`:** Determine if request is for static content or CGI.
+- **`config`:** [Edouard] Parse configuration file into a structured Config object.
+- **`router`:** [Edouard] Determine if request is for static content or CGI.
 - **`static`:** [Ava] Read static files and produce raw HTTP response.
 - **`cgi`:** [Edouard] Execute CGI program and retrieve output.
+- **`session`:** [Ava] Cookie headers and session management support
 
 **Mandatory Updates**
 - **HTML1.0 to HTML 1.1:** will concern `server` (keep-alive connexions) and `http` modules (and `config`?)
