@@ -338,3 +338,16 @@ std::pair<size_t, size_t> utils::headersBodySeparatorPos(std::string const& rawR
 
 	return std::make_pair(std::string::npos, 0);
 }
+
+/**
+ * Helper to get parent directory from a path.
+ */
+std::string	utils::getParentDirectory(const std::string& path)
+{
+	size_t lastSlash = path.find_last_of('/');
+	if (lastSlash == std::string::npos)
+		return "/";
+	if (lastSlash == 0)
+		return "/"; // Root directory
+	return path.substr(0, lastSlash);
+}

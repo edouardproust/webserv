@@ -56,6 +56,7 @@ namespace utils {
 	std::string	formatDate(time_t, const std::string&);
 	std::string extractHostname(UniqHeaders const&);
 	std::pair<size_t, size_t>	headersBodySeparatorPos(std::string const&);
+	std::string	getParentDirectory(const std::string&);
 
 }
 
