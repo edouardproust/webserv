@@ -96,6 +96,7 @@ class CgiContext
 		bool				isStderrClosed() const;
 		bool				hasClientDisconnectLogged() const;
 
+		void	setInputBytesSent(size_t);
 		void	setHeadersReceived(bool);
 		void	setHeadersSent(bool);
 		void	setProcessExited(bool);

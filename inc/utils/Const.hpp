@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_HPP
-#define CONSTANTS_HPP
+#ifndef CONST_HPP
+#define CONST_HPP
 
 #include <limits>
 #include <string>
@@ -9,15 +9,20 @@
 # define DEVMODE 0
 #endif
 
-#define CGI_ENABLED 1
+#ifndef OPTIMIZED_READ_WRITE
+# define OPTIMIZED_READ_WRITE 1
+#endif
+
 #define PRINT_DEBUG 1
+#define CGI_ENABLED 1
 
 class Const
 {
 	public:
 
-		static size_t const			MAX_SIZE_T;
-		static size_t const			ABSOLUTE_MAX_CLIENT_BODY_SIZE;
+		static size_t const	MAX_SIZE_T;
+		static size_t const	ABSOLUTE_MAX_CLIENT_BODY_SIZE;
+		static size_t const	READ_WRITE_LOG_THRESHOLD_SIZE;
 
 		static std::string const	SERVER_NAME;
 		static std::string const	SERVER_VERSION;

@@ -1,7 +1,7 @@
 #include "network/Network.hpp"
 
 size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
-size_t const	Network::_MAX_NB_OF_EVENTS = 100;
+size_t const	Network::_MAX_NB_OF_EVENTS = 1024;
 
 Network::Network(Config const& config)
 : _config(config)
@@ -213,7 +213,7 @@ void Network::_readClientRequest(int clientFd)
             return;
         }
 		req.rawRequestAppend(buff, bytesReceived);
-		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
+		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd) + ".");
 		if (RequestParser::isRawRequestComplete(req)) {
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 			_dispatchAndSendResponse(clientFd);

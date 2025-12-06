@@ -81,10 +81,13 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 }
 
 /**
- * Simply return an error (POST method not allowed on a static file).
+ * Simply return a "No Content" response to pass ubunutu_tester test
  */
-Response StaticHandler::post(RoutingDecision const& rd) {
-	return error("method_not_allowed", rd);
+Response StaticHandler::post() {
+	Response resp;
+    resp.setStatus(HttpStatus("no_content"));
+    resp.setBodyAndContentLength("");
+	return resp;
 }
 
 Response	StaticHandler::head(RoutingDecision const& rd)

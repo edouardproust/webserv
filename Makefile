@@ -52,9 +52,7 @@ BASE_SRC_FILES = \
 	utils/utils.cpp \
 	utils/signal.cpp \
 	utils/Log.cpp \
-	utils/PrintableString.cpp \
-
-DEV_SRC_FILES =
+	utils/PrintableString.cpp
 
 SRC_DIR = src
 
@@ -70,9 +68,13 @@ PROD_DEPS = $(PROD_OBJS:.o=.d)
 
 DEV_CXXFLAGS := $(CXXFLAGS) -DDEVMODE=1
 DEV_OBJ_DIR = $(OBJ_DIR)/dev
-DEV_SRCS = $(addprefix $(SRC_DIR)/, $(BASE_SRC_FILES) $(DEV_SRC_FILES))
-DEV_OBJS = $(addprefix $(DEV_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o) $(DEV_SRC_FILES:.cpp=.o))
+DEV_OBJS = $(addprefix $(DEV_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o))
 DEV_DEPS = $(DEV_OBJS:.o=.d)
+
+TESTER_CXXFLAGS := $(CXXFLAGS) -DDEVMODE=1 OPTIMIZED_READ_WRITE=1
+TESTER_OBJ_DIR = $(OBJ_DIR)/tester
+TESTER_OBJS = $(addprefix $(TESTER_OBJ_DIR)/, $(BASE_SRC_FILES:.cpp=.o))
+TESTER_DEPS = $(TESTER_OBJS:.o=.d)
 
 # ------- Includes -------
 
@@ -85,15 +87,18 @@ DEPS_FLAGS = -MMD -MP
 
 # ------- Rules -------
 
-.PHONY: all clean fclean re dev test_prod test_dev test_42 test_welcome
+.PHONY: all clean fclean re dev tester test_prod test_dev test_42 test_welcome
 
 all: $(NAME)
 
 $(NAME): $(PROD_OBJS)
 	$(CXX) $(PROD_OBJS) -o $@
 
-$(NAME_DEV): $(DEV_OBJS)
-	$(CXX) $(DEV_OBJS) -o $@ $(DEV_CXXFLAGS)
+dev: $(DEV_OBJS)
+	$(CXX) $(DEV_OBJS) -o $(NAME_DEV)
+
+tester: $(TESTER_OBJS)
+	$(CXX) $(TESTER_OBJS) -o $(NAME_DEV)
 
 $(PROD_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@mkdir -p $(dir $@)
@@ -103,10 +108,14 @@ $(DEV_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(DEV_CXXFLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
 
+$(TESTER_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
+	@mkdir -p $(dir $@)
+	$(CXX) -c $< -o $@ $(TESTER_CXXFLAGS) $(DEPS_FLAGS) $(INC_FLAGS)
+
 -include $(PROD_DEPS)
 -include $(DEV_DEPS)
+-include $(TESTER_DEPS)
 
-dev: $(NAME_DEV)
 
 clean:
 	rm -rf $(OBJ_DIR)
@@ -130,7 +139,7 @@ test_dev: dev
 	@bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE) $(CONFIG_DST_DIR)
 	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE)
 
-test_42: dev
+test_42: tester
 	@clear
 	bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE_42) $(CONFIG_DST_DIR)
 	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)

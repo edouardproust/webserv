@@ -83,7 +83,7 @@ void	Socket::safeBind()
 
 void	Socket::safeListen()
 {
-	int status = listen(_fd, 10);
+	int status = listen(_fd, 1024);
 	if (status < 0) {
 		Log::prod("status", "Listen error: " + utils::str(strerror(errno)));
 		throw std::runtime_error("Can't put Socket in Listen Mode.");
