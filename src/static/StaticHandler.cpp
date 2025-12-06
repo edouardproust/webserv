@@ -80,21 +80,19 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 		return error("internal_server_error", rd);
 }
 
-/**
- * Handle POST requests to static files.
- */
 Response StaticHandler::post(RoutingDecision const& rd)
 {
-	std::string const& finalPath = rd.getFinalPath();
 	const Request& req = rd.getRequest();
+	std::string const& finalPath = rd.getFinalPath();
 
-	if (utils::isAccessibleDirectory(finalPath) || !utils::fileExists(finalPath))
-		return _createFile(rd);
-	else {
-		if (access(finalPath.c_str(), W_OK) != 0)
-			return error("forbidden", rd);
-		return _appendToFile(finalPath, req.getBody(), req);
+	bool isVirtualEndpoint = !utils::fileExists(finalPath) && !utils::isAccessibleDirectory(finalPath);
+	if (isVirtualEndpoint) {
+		Response resp;
+		resp.setStatus(HttpStatus("no_content"));
+		resp.setConnectionFromRequest(req);
+		return resp;
 	}
+	return error("method_not_allowed", rd);
 }
 
 Response	StaticHandler::head(RoutingDecision const& rd)
@@ -109,14 +107,37 @@ Response	StaticHandler::put(RoutingDecision const& rd)
 	Request const& req = rd.getRequest();
 	std::string const& finalPath = rd.getFinalPath();
 
-	if (utils::isAccessibleDirectory(finalPath))
+	std::string directory = finalPath;
+	if (utils::isAccessibleDirectory(finalPath)) {
+        return error("forbidden", rd);
+	} else {
+		size_t lastSlash = finalPath.find_last_of('/');
+		if (lastSlash != std::string::npos)
+			directory = finalPath.substr(0, lastSlash);
+    }
+	if (directory.empty())
+		directory = "/";
+	if (!utils::isWritableDirectory(directory))
 		return error("forbidden", rd);
-	std::string parentDir = utils::getParentDirectory(finalPath);
-	if (!utils::isWritableDirectory(parentDir))
-		return error("forbidden", rd);
-	if (utils::fileExists(finalPath) && access(finalPath.c_str(), W_OK) != 0)
-		return error("forbidden", rd);
-	return _writeFile(finalPath, req.getBody(), req);
+	std::string const& body = req.getBody();
+	bool fileExists = utils::fileExists(finalPath);
+	std::ofstream file(finalPath.c_str(), std::ios::binary);
+	if (!file.is_open())
+		return error("internal_server_error", rd);
+	file.write(body.c_str(), body.size());
+	file.close();
+
+	Response resp;
+    if (fileExists) {
+        resp.setStatus(HttpStatus("ok"));
+		resp.setHeader("Content-Location", req.getPath());
+	} else {
+		resp.setStatus(HttpStatus("created"));
+		resp.setHeader("Location", req.getPath());
+	}
+	resp.setServedFilePath(finalPath);
+	resp.setConnectionFromRequest(req);
+	return resp;
 }
 
 /**
@@ -193,84 +214,6 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
 		resp.setBodyAndContentLength(errorBody);
 	else
 		resp.setHeader("Content-Length", utils::str(errorBody.size()));
-	return resp;
-}
-
-/**
- * Write or replace a file with given content.
- * Used by PUT and POST (create) operations.
- */
-Response	StaticHandler::_writeFile(const std::string& path, const std::string& content, const Request& req)
-{
-	std::ofstream file(path.c_str(), std::ios::binary);
-	if (!file.is_open())
-		 return error("internal_server_error", req, ErrorPages());
-	file.write(content.c_str(), content.size());
-	file.close();
-	Response resp;
-	bool fileExists = utils::fileExists(path);
-    if (fileExists) {
-        resp.setStatus(HttpStatus("ok"));
-		resp.setHeader("Content-Location", req.getPath());
-	} else {
-		resp.setStatus(HttpStatus("created"));
-		resp.setHeader("Location", req.getPath());
-	}
-	resp.setServedFilePath(path);
-	resp.setConnectionFromRequest(req);
-	return resp;
-}
-
-/**
- * Append content to an existing file.
- * Used by POST to existing files.
- */
-Response	StaticHandler::_appendToFile(const std::string& path, const std::string& content, const Request& request)
-{
-	std::ofstream file(path.c_str(), std::ios::binary | std::ios::app);
-	if (!file.is_open())
-		return error("internal_server_error", request, ErrorPages());
-	file.write(content.c_str(), content.size());
-	file.close();
-	Response resp;
-	resp.setStatus(HttpStatus("ok"));
-	resp.setServedFilePath(path);
-	resp.setConnectionFromRequest(request);
-	return resp;
-}
-
-/**
- * Create a new file with POST.
- * 
- * For directories: Creates file with unique name inside directory
- * For non-existent paths: Creates file at exact path
- */
-Response	StaticHandler::_createFile(RoutingDecision const& rd)
-{
-	const Request& req = rd.getRequest();
-	std::string const& finalPath = rd.getFinalPath();
-
-	bool isDirectory = utils::isAccessibleDirectory(finalPath);
-	std::string filePath;
-	std::string locationHeader;
-	if (isDirectory) {
-		std::string filename = "upload_" + utils::str(time(NULL)) + ".post";
-		filePath = utils::pathsJoin(finalPath, filename);
-		locationHeader = req.getPath();
-		if (!locationHeader.empty() && locationHeader[locationHeader.size() - 1] != '/')
-			locationHeader += '/';
-		locationHeader += filename;
-	}
-	else {
-		std::string parentDir = utils::getParentDirectory(finalPath);
-		if (!utils::isWritableDirectory(parentDir))
-			return error("forbidden", rd);
-		filePath = finalPath;
-		locationHeader = req.getPath();
-	}
-	Response resp = _writeFile(filePath, req.getBody(), req);
-	if (resp.getStatus().getSlug() == "created")
-		resp.setHeader("Location", locationHeader);
 	return resp;
 }
 

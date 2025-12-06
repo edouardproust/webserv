@@ -21,9 +21,6 @@ class StaticHandler
 	static std::string	_builtinAutoindexHtml(RoutingDecision const&);
 	static std::string	_builtinErrorPageHtml(HttpStatus const&);
 	static std::string	_builtinWelcomePageHtml();
-	static Response		_writeFile(const std::string&, const std::string&, const Request&);
-	static Response		_appendToFile(const std::string&, const std::string&, const Request&);
-	static Response		_createFile(RoutingDecision const&);
 
 	static std::string	_getMime(std::string const&);
 	static std::string	_getMimeFromPath(std::string const&);
