@@ -203,7 +203,13 @@ void Network::_readClientRequest(int clientFd)
 	char buff[_CLIENT_BUFFER_SIZE];
 	if (_pendingRequests.find(clientFd) == _pendingRequests.end())
 		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
+
 	Request& req = _pendingRequests[clientFd];
+
+	// Skip check if already complete (optimization)
+	if (req.rawRequestComplete())
+		return;
+
 	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
 	if (bytesReceived > 0) {
 		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
@@ -215,15 +221,23 @@ void Network::_readClientRequest(int clientFd)
         }
 		req.rawRequestAppend(buff, bytesReceived);
 		Log::dev("event", "Received " + Log::hl(req.getRawRequest().size()) + " bytes from client fd " + Log::hl(clientFd) + ".");
-		if (RequestParser::isRawRequestComplete(req)) {
+
+		// Check headers only once (optimization)
+		if (!req.rawHeadersComplete()) {
+			if (RequestParser::tryParseHeaders(req))
+				Log::dev("event", "Headers complete for fd " + Log::hl(clientFd));
+        }
+		// Check completion only if headers are complete (optimization)
+		 if (req.rawHeadersComplete() && RequestParser::isBodyComplete(req)) {
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
+			req.setRawRequestComplete(true);
 			_dispatchAndSendResponse(clientFd);
 		}
 	} else if (bytesReceived == 0) {
 		_disconnectClient(clientFd); // finished reading -> disconnect client
 	} else { // bytes == -1
 		Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
-		// Stay on EPOLLIN
+		// Wait for next EPOLLIN
 	}
 }
 

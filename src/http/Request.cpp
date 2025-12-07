@@ -5,8 +5,8 @@ std::set<std::string>	Request::_existingMethods;
 
 Request::Request()
 : _status(HttpStatus())
-, _headersComplete(false)
-, _requestComplete(false)
+, _rawHeadersComplete(false)
+, _rawRequestComplete(false)
 , _contentLength(0)
 , _isChunked(false)
 , _bodyStartPos(0)
@@ -27,8 +27,8 @@ Request::Request(const Request& other)
 , _body(other._body)
 , _rawRequest(other._rawRequest)
 , _cookies(other._cookies)
-, _headersComplete(other._headersComplete)
-, _requestComplete(other._requestComplete)
+, _rawHeadersComplete(other._rawHeadersComplete)
+, _rawRequestComplete(other._rawRequestComplete)
 , _contentLength(other._contentLength)
 , _isChunked(other._isChunked)
 , _bodyStartPos(other._bodyStartPos)
@@ -51,8 +51,8 @@ Request& Request::operator=(const Request& other)
 		_body = other._body;
 		_rawRequest = other._rawRequest;
 		_cookies = other._cookies;
-		_headersComplete = other._headersComplete;
-		_requestComplete = other._requestComplete;
+		_rawHeadersComplete = other._rawHeadersComplete;
+		_rawRequestComplete = other._rawRequestComplete;
 		_contentLength = other._contentLength;
 		_isChunked = other._isChunked;
 		_bodyStartPos = other._bodyStartPos;
@@ -108,10 +108,20 @@ bool	Request::isConnectionClose() const {
 	return false;
 }
 
-void	Request::rawRequestAppend(const char* data, size_t size)
+void	Request::rawRequestAppend(const char* buff, size_t size)
 {
-	 _rawRequest.append(data, size);
+	// If we know Content-Length, reserve in advance (optimization)
+	if (_rawHeadersComplete && _contentLength > 0) {
+		size_t totalNeeded = _bodyStartPos + _contentLength;
+		if (_rawRequest.capacity() < totalNeeded) {
+			_rawRequest.reserve(totalNeeded);
+		}
+	}
+	_rawRequest.append(buff, size);
 }
+
+
+// GETTERS
 
 HttpStatus const& Request::getStatus() const
 {
@@ -179,18 +189,46 @@ std::string const&	Request::getRawRequest() const
 	return _rawRequest;
 }
 
-std::map<std::string, std::string> const& Request::getCookies() const
-{
-	return this->_cookies;
-}
-
-std::string const& Request::getCookie(const std::string& name) const
+std::string	Request::getCookie(std::string const& name) const
 {
 	std::map<std::string, std::string>::const_iterator it = _cookies.find(name);
 	if (it != _cookies.end())
 		return it->second;
 	return "";
 }
+
+std::map<std::string, std::string> const& Request::getCookies() const
+{
+	return this->_cookies;
+}
+
+bool	Request::rawHeadersComplete() const
+{
+	return _rawHeadersComplete;
+}
+
+bool	Request::rawRequestComplete() const
+{
+	return _rawRequestComplete;
+}
+
+size_t	Request::getContentLength() const
+{
+	return _contentLength;
+}
+
+bool	Request::isChunked() const
+{
+	return _isChunked;
+}
+
+size_t	Request::getBodyStartPos() const
+{
+	return _bodyStartPos;
+}
+
+
+// SETTERS
 
 void	Request::setStatus(HttpStatus const& status)
 {
@@ -268,6 +306,31 @@ void	Request::addCookie(const std::string& name, const std::string& value)
 bool	Request::hasCookie(const std::string& name) const
 {
 	return _cookies.find(name) != _cookies.end();
+}
+
+void	Request::setRawHeadersComplete(bool isComplete)
+{
+	_rawHeadersComplete = isComplete;
+}
+
+void	Request::setRawRequestComplete(bool isComplete)
+{
+	_rawRequestComplete = isComplete;
+}
+
+void	Request::setContentLength(size_t pos)
+{
+	_contentLength = pos;
+}
+
+void	Request::setIsChunked(bool isChunked)
+{
+	_isChunked = isChunked;
+}
+
+void	Request::setBodyStartPos(size_t pos)
+{
+	_bodyStartPos = pos;
 }
 
 std::ostream& operator<<(std::ostream& os, const Request& request)

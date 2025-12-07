@@ -58,7 +58,7 @@ Response	Router::_handleStaticDecision(RoutingDecision const& rd)
 	if (method == "PUT")
 		return StaticHandler::put(rd);
 	if (method == "POST")
-		return StaticHandler::post();
+		return StaticHandler::post(rd);
 	// -- additional supported methods can be added here --
 	return StaticHandler::error("method_not_allowed", rd);
 }

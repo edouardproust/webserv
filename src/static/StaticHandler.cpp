@@ -86,10 +86,8 @@ Response StaticHandler::post(RoutingDecision const& rd)
 		return get(rd);
 	} else {
 		Response resp;
-		const Request& req = rd.getRequest();
-		std::string const& finalPath = rd.getFinalPath();
 		resp.setStatus(HttpStatus("no_content"));
-		resp.setConnectionFromRequest(req);
+		resp.setConnectionFromRequest(rd.getRequest());
 		return resp;
 	}
 }
