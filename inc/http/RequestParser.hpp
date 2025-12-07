@@ -30,6 +30,7 @@ class RequestParser
 	static void			_extractScriptAndPathInfo(Request&, std::string const&);
 	static bool			_isValidVersion(std::string const&);
 	static bool			_isValidVersionNumber(std::string const&);
+	static bool			_hasDuplicateSingleHeaders(const AllHeaders&);
 	static bool			_isValidHeaderName(std::string const&);
 	static bool			_isValidHeaderValue(std::string const&);
 	static bool			_headersIndicateBody(Request const&);
