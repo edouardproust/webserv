@@ -10,7 +10,7 @@
 #endif
 
 #ifndef OPTIMIZED_READ_WRITE
-# define OPTIMIZED_READ_WRITE 1
+# define OPTIMIZED_READ_WRITE 0
 #endif
 
 #define PRINT_DEBUG 1

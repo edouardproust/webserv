@@ -19,6 +19,7 @@ class Network
 {
 	static size_t const			_CLIENT_BUFFER_SIZE;
 	static size_t const			_MAX_NB_OF_EVENTS;
+	static size_t const			_MAX_READS_PER_CYCLE;
 
 	Config const&				_config;			// the parsed config file
 	int							_epollFd;			// fd of the epoll instance
@@ -35,9 +36,12 @@ class Network
 
 	void	_initListeningSockets();
 	void	_cleanupListeningSockets();
-
 	void 	_registerNewClientToEpoll(int);
+
 	void	_readClientRequest(int);
+	void	_readClientRequestStrict(int);
+	void	_readClientRequestOptimized(int);
+
 	void	_dispatchAndSendResponse(int);
 	void    _continuePendingSend(int);
 

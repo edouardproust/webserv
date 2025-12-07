@@ -1,7 +1,7 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 120; // for big uploads
+size_t const	CgiHandler::_TIMEOUT_SECONDS = 30; // for big uploads
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
 size_t const	CgiHandler::_LINUX_PIPE_BUFFER_SIZE = 65536;
 
@@ -175,9 +175,9 @@ void	CgiHandler::_setupStdinPipe(CgiContext* ctx)
 void	CgiHandler::writeCgiInput(int pipeFd)
 {
 	if (OPTIMIZED_READ_WRITE)
-		_writeCgiInputStrict(pipeFd);
-	else
 		_writeCgiInputOptimized(pipeFd);
+	else
+		_writeCgiInputStrict(pipeFd);
 }
 
 void	CgiHandler::_writeCgiInputStrict(int pipeFd)
@@ -219,7 +219,7 @@ void	CgiHandler::_writeCgiInputStrict(int pipeFd)
 	} else if (written == 0) { // EOF on pipe
 		_closeStdinPipe(ctx, pipeFd, "write() returned 0, CGI closed stdin");
 	} else {
-		_closeStdinPipe(ctx, pipeFd, "write() to CGI stdin failed, stopping");
+		// Prpbably EAGAIN -> Wait next EPOLLOUT
 	}
 }
 
@@ -247,7 +247,7 @@ void CgiHandler::_writeCgiInputOptimized(int pipeFd)
             sent += written;
             ctx->setInputBytesSent(sent);
             if (sent % Const::READ_WRITE_LOG_THRESHOLD_SIZE == 0 || sent == body.size()) {  // Log every 1MB to prevent log spam
-                Log::dev("cgi", "Wrote " + Log::hl(sent) + " bytes (on " + utils::str(body.size()) + ") to CGI stdin.");
+                Log::dev("cgi", "Wrote " + Log::hl(sent) + "/" + utils::str(body.size()) + " bytes to CGI stdin.");
             }
             if (written < (ssize_t)toWrite) {
 				// Stdin pipe buffer is full -> wait for EPOLLOUT (CGI will read and free space in pipe)
@@ -283,7 +283,8 @@ void CgiHandler::readCgiOutput(int pipeFd)
 	if (bytesRead > 0) {
 		if (pipeFd == ctx->getOutReadFd()) {
 			ctx->appendOutput(buffer, bytesRead);
-			Log::dev("cgi", "Read " + Log::hl(bytesRead) + " bytes from stdout (pipe fd " + Log::hl(pipeFd) + ")");
+			if (ctx->getOutput().size() % Const::READ_WRITE_LOG_THRESHOLD_SIZE == 0)
+				Log::dev("cgi", "Read " + Log::hl(ctx->getOutput().size()) + " bytes from stdout (pipe fd " + Log::hl(pipeFd) + ")");
 		} else if (pipeFd == ctx->getErrReadFd()) {
 			ctx->appendError(buffer, bytesRead);
 			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
