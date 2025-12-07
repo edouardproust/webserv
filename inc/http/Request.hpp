@@ -32,12 +32,6 @@ class Request
 	std::map<std::string, std::string> _cookies;
 
 	// Raw request parsing state
-	bool		_rawHeadersComplete;
-	bool		_rawRequestComplete;
-	size_t		_contentLength;
-	bool		_isChunked;
-	size_t		_bodyStartPos;
-	size_t		_lastChunkedCheckPos;
 	size_t		_loggedBytes;
 
 	static std::set<std::string> _supportedMethods;
@@ -73,12 +67,6 @@ class Request
 		std::string const&	getRawRequest() const;
 		std::string 		getCookie(std::string const&) const;
 		std::map<std::string, std::string> const&	getCookies() const;
-		bool				rawHeadersComplete() const;
-		bool				rawRequestComplete() const;
-		size_t				getContentLength() const;
-		bool				isChunked() const;
-		size_t				getBodyStartPos() const;
-		size_t				getLastChunkedCheckPos() const;
 		size_t				getLoggedBytes() const;
 
 		void	setStatus(HttpStatus const&);
@@ -95,12 +83,6 @@ class Request
 		void	setRawRequest(std::string const&);
 		void	addCookie(std::string const&, std::string const&);
 		bool	hasCookie(std::string const&) const;
-		void	setRawHeadersComplete(bool);
-		void	setRawRequestComplete(bool);
-		void	setContentLength(size_t);
-		void	setIsChunked(bool);
-		void	setBodyStartPos(size_t);
-   		void	setLastChunkedCheckPos(size_t);
 		void	setLoggedBytes(size_t);
 };
 

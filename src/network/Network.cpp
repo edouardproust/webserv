@@ -205,41 +205,34 @@ void Network::_readClientRequest(int clientFd)
 		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
 
 	Request& req = _pendingRequests[clientFd];
-
-	if (req.rawRequestComplete())
-		Log::dev("warning", "Receiving data on fd " + Log::hl(clientFd) + " but request already complete!");
-
 	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
+
 	if (bytesReceived > 0) {
-		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
+		size_t rawSize = req.getRawRequest().size();
+		if (rawSize + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
             Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
             Response response = StaticHandler::builtinError("content_too_large", "GET");
-			prepareResponseSend(clientFd, response);
+            std::string rawResponse = response.stringify();
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
+
 		req.rawRequestAppend(buff, bytesReceived);
-		if (req.getRawRequest().size() - req.getLoggedBytes() >= _CLIENT_BUFFER_SIZE) {
-			req.setLoggedBytes(req.getRawRequest().size());
-			Log::dev("event", "Received " + utils::str(req.getLoggedBytes()) + " bytes from client fd " + Log::hl(clientFd) + ".");
+
+		if (rawSize - req.getLoggedBytes() >= 2 * 1024 * 1024) { // print only every 2MB
+			Log::dev("event", "Received " + Log::hl(rawSize) + " bytes from client fd " + Log::hl(clientFd) + ".");
+			req.setLoggedBytes(rawSize);
 		}
 
-		// Check headers only once (optimization)
-		if (!req.rawHeadersComplete()) {
-			if (RequestParser::tryParseHeaders(req))
-				Log::dev("event", "Headers complete for fd " + Log::hl(clientFd));
-        }
-		// Check completion only if headers are complete (optimization)
-		 if (req.rawHeadersComplete() && RequestParser::isBodyComplete(req)) {
+		if (RequestParser::isRawRequestComplete(req)) {
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
-			req.setRawRequestComplete(true);
 			_dispatchAndSendResponse(clientFd);
 		}
 	} else if (bytesReceived == 0) {
 		_disconnectClient(clientFd); // finished reading -> disconnect client
 	} else { // bytes == -1
 		Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
-		// Wait for next EPOLLIN
+		// Stay on EPOLLIN
 	}
 }
 
