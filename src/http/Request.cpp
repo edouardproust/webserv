@@ -5,6 +5,11 @@ std::set<std::string>	Request::_existingMethods;
 
 Request::Request()
 : _status(HttpStatus())
+, _headersComplete(false)
+, _requestComplete(false)
+, _contentLength(0)
+, _isChunked(false)
+, _bodyStartPos(0)
 {}
 
 Request::Request(const Request& other)
@@ -22,6 +27,11 @@ Request::Request(const Request& other)
 , _body(other._body)
 , _rawRequest(other._rawRequest)
 , _cookies(other._cookies)
+, _headersComplete(other._headersComplete)
+, _requestComplete(other._requestComplete)
+, _contentLength(other._contentLength)
+, _isChunked(other._isChunked)
+, _bodyStartPos(other._bodyStartPos)
 {}
 
 Request& Request::operator=(const Request& other)
@@ -41,6 +51,11 @@ Request& Request::operator=(const Request& other)
 		_body = other._body;
 		_rawRequest = other._rawRequest;
 		_cookies = other._cookies;
+		_headersComplete = other._headersComplete;
+		_requestComplete = other._requestComplete;
+		_contentLength = other._contentLength;
+		_isChunked = other._isChunked;
+		_bodyStartPos = other._bodyStartPos;
 	}
 	return (*this);
 }
@@ -164,12 +179,12 @@ std::string const&	Request::getRawRequest() const
 	return _rawRequest;
 }
 
-const std::map<std::string, std::string>& Request::getCookies() const
+std::map<std::string, std::string> const& Request::getCookies() const
 {
 	return this->_cookies;
 }
 
-const std::string Request::getCookie(const std::string& name) const
+std::string const& Request::getCookie(const std::string& name) const
 {
 	std::map<std::string, std::string>::const_iterator it = _cookies.find(name);
 	if (it != _cookies.end())

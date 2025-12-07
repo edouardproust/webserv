@@ -31,6 +31,13 @@ class Request
 	std::string	_rawRequest;
 	std::map<std::string, std::string> _cookies;
 
+	// Raw request parsing state
+	bool		_headersComplete;
+	bool		_requestComplete;
+	size_t		_contentLength;
+	bool		_isChunked;
+	size_t		_bodyStartPos;
+
 	static std::set<std::string> _supportedMethods;
 	static std::set<std::string> _existingMethods;
 
@@ -43,12 +50,12 @@ class Request
 		~Request();
 
 		void		parse();
-		static std::set<std::string> const& getSupportedMethods();
+		static std::set<std::string>	const& getSupportedMethods();
 		static bool	isSupportedMethod(std::string const&);
 		static bool	isExistingMethod(std::string const&);
 		bool		isConnectionClose() const;
 		void		rawRequestAppend(const char*, size_t);
-		bool		hasCookie(const std::string& name) const;
+		bool		hasCookie(std::string const&) const;
 
 		HttpStatus const&	getStatus() const;
 		std::string const&	getMethod() const;
@@ -63,8 +70,8 @@ class Request
 		std::string const&	getContentType() const;
 		std::string const&	getBody() const;
 		std::string const&	getRawRequest() const;
-		const std::string	getCookie(const std::string& name) const;
-		const std::map<std::string, std::string>&	getCookies() const;
+		std::string	const& 	getCookie(const std::string&) const;
+		std::map<std::string, std::string> const&	getCookies() const;
 
 		void	setStatus(HttpStatus const&);
 		void	setMethod(std::string const&);
@@ -78,7 +85,7 @@ class Request
 		void	setContentType(std::string const&);
 		void	setBody(std::string const&);
 		void	setRawRequest(std::string const&);
-		void	addCookie(const std::string& name, const std::string& value);
+		void	addCookie(std::string const&, const std::string const&);
 };
 
 std::ostream&	operator<<(std::ostream&, Request const&);
