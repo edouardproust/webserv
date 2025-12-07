@@ -9,8 +9,8 @@
 # define DEVMODE 0
 #endif
 
-#ifndef OPTIMIZED_READ_WRITE
-# define OPTIMIZED_READ_WRITE 0
+#ifndef UBUNTU_TESTER
+# define UBUNTU_TESTER 0
 #endif
 
 #define PRINT_DEBUG 1

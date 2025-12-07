@@ -112,7 +112,7 @@ Response	Response::initCgiResponse(RoutingDecision const& rd, std::string const&
  *
  * Throws Response::RawException if headers are malformed or missing Content-Type.
  */
-void Response::parseFromCgiOutput(std::string const& cgiOutput)
+void Response::parseFromCgiOutput(std::string const& cgiOutput, const Request& request)
 {
 	if (cgiOutput.empty())
 		throw RawException("CGI output is empty");
@@ -130,6 +130,9 @@ void Response::parseFromCgiOutput(std::string const& cgiOutput)
 
 	// Set body
 	setBodyAndContentLength(bodyPart);
+
+	// Handle session
+	_handleSession(request);
 }
 
 void Response::parseHeadersFromCgiOutput(std::string const& headersOnly)
@@ -161,16 +164,17 @@ void Response::parseHeadersFromCgiOutput(std::string const& headersOnly)
 		if (start != std::string::npos)
 			value = value.substr(start);
 		std::string lname = utils::toLowerCase(key);
-		if (lname == "x-webserv-create-session") { // Check if it has session headers
+		// Check if it has session headers
+		if (lname == "x-webserv-create-session")
 			_pendingSessionUsername = value;
-		} else if (lname == "x-webserv-destroy-session") {
+		else if (lname == "x-webserv-destroy-session")
 			_expireSession = true;
-		} else if (lname == "status") { // Check if it's the Status header
+		// Check if it's the Status header
+		else if (lname == "status") {
 			std::istringstream statusStream(value);
 			statusStream >> statusCode;
-		} else {
+		} else
 			setHeader(key, value);
-		}
 	}
 
 	// Vérifier qu'on a bien Content-Type
@@ -201,7 +205,7 @@ CgiData*	Response::transferCgiDataOwnership()
  *   destroys the current session and expires the client's cookie.
  *
  */
-void	Response::handleSession(const Request& request)
+void	Response::_handleSession(const Request& request)
 {
 	SessionManager& sm = SessionManager::getInstance();
 

@@ -80,14 +80,18 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 		return error("internal_server_error", rd);
 }
 
-/**
- * Simply return a "No Content" response to pass ubunutu_tester test
- */
-Response StaticHandler::post() {
-	Response resp;
-    resp.setStatus(HttpStatus("no_content"));
-    resp.setBodyAndContentLength("");
-	return resp;
+Response StaticHandler::post(RoutingDecision const& rd)
+{
+	if (!UBUNTU_TESTER) {
+		return get(rd);
+	} else {
+		Response resp;
+		const Request& req = rd.getRequest();
+		std::string const& finalPath = rd.getFinalPath();
+		resp.setStatus(HttpStatus("no_content"));
+		resp.setConnectionFromRequest(req);
+		return resp;
+	}
 }
 
 Response	StaticHandler::head(RoutingDecision const& rd)
@@ -187,7 +191,9 @@ Response	StaticHandler::error(std::string const& errorSlug, Request const& req, 
 			return resp;
 		}
 	}
-	return builtinError(status.getSlug(), method);
+	Response resp = builtinError(status.getSlug(), method);
+	resp.setConnectionFromRequest(req);
+	return resp;
 }
 
 /**
@@ -207,7 +213,6 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
 		resp.setBodyAndContentLength(errorBody);
 	else
 		resp.setHeader("Content-Length", utils::str(errorBody.size()));
-	// TODO keep alive ?
 	return resp;
 }
 
@@ -309,7 +314,6 @@ std::string StaticHandler::_builtinErrorPageHtml(HttpStatus const& status)
 		"</html>"
 	);
 }
-
 
 // MIME
 
