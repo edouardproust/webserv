@@ -227,6 +227,11 @@ size_t	Request::getBodyStartPos() const
 	return _bodyStartPos;
 }
 
+size_t	Request::getLastChunkedCheckPos() const
+{
+	return _lastChunkedCheckPos;
+}
+
 
 // SETTERS
 
@@ -332,6 +337,14 @@ void	Request::setBodyStartPos(size_t pos)
 {
 	_bodyStartPos = pos;
 }
+
+void	Request::setLastChunkedCheckPos(size_t pos)
+{
+	_lastChunkedCheckPos = pos;
+}
+
+
+// PRINT
 
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
