@@ -284,13 +284,15 @@ std::string Response::_buildHeaders() const
 		headerStream << "Cache-Control: " << _headers.find("cache-control")->second << "\r\n";
 	if (_headers.find("content-disposition") != _headers.end())
 		headerStream << "Content-Disposition: " << _headers.find("content-disposition")->second << "\r\n";
+	if (_headers.find("content-location") != _headers.end())
+		headerStream << "Content-Location: " << _headers.find("content-location")->second << "\r\n";
 	for (UniqHeaders::const_iterator it = _headers.begin();
 		it != _headers.end(); ++it)
 		{
 			std::string const& key = it->first;
 			if (key != "server" && key != "date" && key != "content-type" &&
-				key != "content-length" && key != "connection" &&
-				key != "location" && key != "cache-control" && key != "content-disposition")
+				key != "content-length" && key != "connection" && key != "location" &&
+				key != "cache-control" && key != "content-disposition" && key != "content-location")
 					headerStream << key << ": " << it->second << "\r\n";
 		}
 	return headerStream.str();
