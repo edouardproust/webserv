@@ -10,9 +10,9 @@ class Network;
 // TODO make canonical ? + class comment
 class CgiHandler
 {
-	static size_t const	_TIMEOUT_SECONDS;
 	static size_t const	_READ_BUFFER_SIZE;
 	static size_t const	_LINUX_PIPE_BUFFER_SIZE;
+	static size_t const	_TIMEOUT_SECONDS;
 
 	Network*						_network;
 	std::map<int, CgiContext*>		_contextsByPipeFd;

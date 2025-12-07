@@ -1,6 +1,6 @@
 <?php
 
-$wait = 10; // seconds
+$wait = 300; // seconds
 
 sleep($wait);
 

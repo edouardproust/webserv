@@ -1,7 +1,7 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 30; // for big uploads
+size_t const	CgiHandler::_TIMEOUT_SECONDS = 10; // Increase this for big requests!!
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
 size_t const	CgiHandler::_LINUX_PIPE_BUFFER_SIZE = 65536;
 
@@ -329,8 +329,7 @@ void CgiHandler::checkCompletion()
 
 		// Check timeout
         time_t elapsed = now - ctx->getStartTime();
-        if (elapsed > (time_t)_TIMEOUT_SECONDS) {
-			Log::dev("todo", utils::str(elapsed)); // TODO
+        if (elapsed >= (time_t)_TIMEOUT_SECONDS) {
             _handleTimeout(ctx, elapsed);
             _contextsByPid.erase(it++);
             continue;
