@@ -80,10 +80,18 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 		return error("internal_server_error", rd);
 }
 
-/**
- * Simply return an error (POST method not allowed on a static file).
- */
-Response StaticHandler::post(RoutingDecision const& rd) {
+Response StaticHandler::post(RoutingDecision const& rd)
+{
+	const Request& req = rd.getRequest();
+	std::string const& finalPath = rd.getFinalPath();
+
+	bool isVirtualEndpoint = !utils::fileExists(finalPath) && !utils::isAccessibleDirectory(finalPath);
+	if (isVirtualEndpoint) {
+		Response resp;
+		resp.setStatus(HttpStatus("no_content"));
+		resp.setConnectionFromRequest(req);
+		return resp;
+	}
 	return error("method_not_allowed", rd);
 }
 
@@ -184,7 +192,9 @@ Response	StaticHandler::error(std::string const& errorSlug, Request const& req, 
 			return resp;
 		}
 	}
-	return builtinError(status.getSlug(), method);
+	Response resp = builtinError(status.getSlug(), method);
+	resp.setConnectionFromRequest(req);
+	return resp;
 }
 
 /**
@@ -204,7 +214,6 @@ Response	StaticHandler::builtinError(std::string const& errorSlug, std::string c
 		resp.setBodyAndContentLength(errorBody);
 	else
 		resp.setHeader("Content-Length", utils::str(errorBody.size()));
-	// TODO keep alive ?
 	return resp;
 }
 
@@ -306,7 +315,6 @@ std::string StaticHandler::_builtinErrorPageHtml(HttpStatus const& status)
 		"</html>"
 	);
 }
-
 
 // MIME
 

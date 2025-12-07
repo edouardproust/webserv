@@ -313,8 +313,7 @@ void CgiHandler::checkCompletion()
 				try {
 					Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput())));
 					Response resp;
-					resp.parseFromCgiOutput(ctx->getOutput());
-					resp.handleSession(ctx->getRequest());
+					resp.parseFromCgiOutput(ctx->getOutput(), ctx->getRequest());
 					_network->prepareResponseSend(ctx->getClientFd(), resp);
 					_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
 				} catch (std::exception& e) {
