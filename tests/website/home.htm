@@ -78,12 +78,18 @@
 				<td><code>PUT</code></td>
 				<td><code>curl -X PUT http://localhost:8080/put_test.txt -d "new content"</code></td>
 				<td class="status-ok">200</td>
-				<td class="notes">Demo file for <code>PUT</code> testing</td>
+				<td class="notes">Test <code>PUT</code> in an existing file</td>
 			</tr><tr>
 				<td><code>PUT</code></td>
 				<td><code>curl -X PUT http://localhost:8080/new_file.txt -d "your content"</code></td>
 				<td class="status-ok">201</td>
-				<td class="notes">Create any new file</td>
+				<td class="notes">Create (upload) any new file</td>
+			</tr>
+			</tr><tr>
+				<td><code>PUT</code> (image)</td>
+				<td><code>curl -X PUT http://localhost:8080/test_image.jpg --data-binary @/tmp/test_image.jpg</code></td>
+				<td class="status-ok">201</td>
+				<td class="notes">First do : <code>wget https://picsum.photos/200/300.jpg -O /tmp/test_image.jpg</code></td>
 			</tr>
 			</tr><tr>
 				<td><code>HEAD</code></td>
