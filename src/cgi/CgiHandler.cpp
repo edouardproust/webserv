@@ -330,6 +330,7 @@ void CgiHandler::checkCompletion()
 		// Check timeout
         time_t elapsed = now - ctx->getStartTime();
         if (elapsed > (time_t)_TIMEOUT_SECONDS) {
+			Log::dev("todo", utils::str(elapsed)); // TODO
             _handleTimeout(ctx, elapsed);
             _contextsByPid.erase(it++);
             continue;
