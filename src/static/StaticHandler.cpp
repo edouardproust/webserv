@@ -65,8 +65,10 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 
 	if (!utils::fileExists(finalPath))
 		return error("not_found", rd);
-	std::string directoryPath = finalPath.substr(0, finalPath.find_last_of('/'));
-	if (access(directoryPath.c_str(), W_OK) != 0)
+	if (utils::isAccessibleDirectory(finalPath))
+		return error("forbidden", rd);
+	std::string directoryPath = utils::getParentDirectory(finalPath);
+	if (!utils::isWritableDirectory(directoryPath))
 		return error("forbidden", rd);
 	if (std::remove(finalPath.c_str()) == 0)
 	{

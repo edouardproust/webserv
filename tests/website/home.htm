@@ -76,20 +76,38 @@
 				<td class="notes">Browser downloads file</td>
 			</tr><tr>
 				<td><code>PUT</code></td>
-				<td><code>curl -X PUT http://localhost:8080/put-demo.txt -d "new content"</code></td>
+				<td><code>curl -X PUT http://localhost:8080/put_test.txt -d "new content"</code></td>
 				<td class="status-ok">200</td>
 				<td class="notes">Demo file for <code>PUT</code> testing</td>
 			</tr><tr>
 				<td><code>PUT</code></td>
-				<td><code>curl -X PUT http://localhost:8080/your-new-file.txt -d "your content"</code></td>
+				<td><code>curl -X PUT http://localhost:8080/new_file.txt -d "your content"</code></td>
 				<td class="status-ok">201</td>
 				<td class="notes">Create any new file</td>
 			</tr>
 			</tr><tr>
 				<td><code>HEAD</code></td>
-				<td><code>curl -I http://localhost:8080/put-demo.txt</code></td>
+				<td><code>curl -I http://localhost:8080/put_test.txt</code></td>
 				<td class="status-ok">200</td>
 				<td class="notes"><code>HEAD</code> request (headers only, no body)</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/put_test.txt</code></td>
+				<td class="status-ok">204</td>
+				<td class="notes">Deletes the test file</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/nonexistent.txt</code></td>
+				<td class="status-error">404</td>
+				<td class="notes">File not found to delete</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/read_only/test.txt</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">No permission to delete the file</td>
 			</tr>
 
 			<!-- Autoindex Tests -->
