@@ -130,9 +130,9 @@ void	CgiHandler::_setupParentProcess(pid_t pid, CgiContext* ctx)
 	ctx->closeErrWriteFd(); // child writes here
 
 	// Set pipes non-blocking
-	fcntl(ctx->getInWriteFd(), F_SETFL, O_NONBLOCK);
-	fcntl(ctx->getOutReadFd(), F_SETFL, O_NONBLOCK);
-	fcntl(ctx->getErrReadFd(), F_SETFL, O_NONBLOCK);
+    Socket::setNonBlocking(ctx->getInWriteFd(), false);
+    Socket::setNonBlocking(ctx->getOutReadFd(), false);
+    Socket::setNonBlocking(ctx->getErrReadFd(), false);
 
 	// Register stdout and stderr pipes in epoll
 	_network->epollControl(ctx->getOutReadFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stdout pipe");

@@ -58,14 +58,8 @@ void	Socket::_createSocket()
 	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
 		throw std::runtime_error("Can't configure socket (fd " + Log::hl(_fd) + ").");
 	}
-	//Log::dev("setup", "Setting Socket to non-blocking mode...");
-	int flags = fcntl(_fd, F_GETFL);
-    int fdflags = fcntl(_fd, F_GETFD);
-    if (flags == -1 || fdflags == -1
-		|| fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1
-		|| fcntl(_fd, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
-		throw std::runtime_error("Can't set socket (fd " + Log::hl(_fd) + ") to non blocking mode.");
-    }
+	//Log::dev("setup", "Setting Listening socket to non-blocking mode...");
+	setNonBlocking(_fd, true);
 }
 
 int	Socket::getFd() const
@@ -105,6 +99,8 @@ int	Socket::createNewClientSocket()
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
 		return -1;
 	}
+	//Log::dev("setup", "Setting Client socket to non-blocking mode...");
+	setNonBlocking(newClientSocketFd, true);
 	Log::dev("setup", "Socket accept() success.");
 	return (newClientSocketFd);
 }
@@ -112,4 +108,38 @@ int	Socket::createNewClientSocket()
 HostPortPair const&	Socket::getListenDirective() const
 {
     return (_listenDirective);
+}
+
+
+// STATIC UTILS
+
+bool	Socket::setNonBlocking(int fd, bool closeOnExec)
+{
+	// O_NONBLOCK
+	int flags = fcntl(fd, F_GETFL);
+	if (flags == -1) {
+		Log::dev("error", "fcntl(F_GETFL) failed for fd " + Log::hl(fd) + ": " + strerror(errno));
+		return false;
+	}
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+		Log::dev("error", "fcntl(F_SETFL, O_NONBLOCK) failed for fd " + Log::hl(fd) + ": " + strerror(errno));
+		return false;
+	}
+
+	// FD_CLOEXEC
+	if (closeOnExec) {
+		int fdflags = fcntl(fd, F_GETFD);
+		if (fdflags == -1) {
+			Log::dev("error", "fcntl(F_GETFD) failed for fd " + utils::str(fd) +
+						": " + strerror(errno));
+			return false;
+		}
+		if (fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC) == -1) {
+			Log::dev("error", "fcntl(F_SETFD, FD_CLOEXEC) failed for fd " +
+						utils::str(fd) + ": " + strerror(errno));
+			return false;
+		}
+	}
+
+	return true;
 }

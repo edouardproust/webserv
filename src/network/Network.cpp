@@ -1,6 +1,6 @@
 #include "network/Network.hpp"
 
-size_t const	Network::_CLIENT_BUFFER_SIZE = 64 * 1024; // 64KB
+size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
 size_t const	Network::_MAX_NB_OF_EVENTS = 1024;
 size_t const	Network::_MAX_READS_PER_CYCLE = 50;
 
@@ -190,14 +190,6 @@ void	Network::_registerNewClientToEpoll(int clientFd)
 	epollControl(clientFd, EPOLL_CTL_ADD, EPOLLIN, "new client setup"); // throw
 }
 
-void Network::_readClientRequest(int clientFd)
-{
-	if (OPTIMIZED_READ_WRITE)
-		_readClientRequestOptimized(clientFd);
-	else
-		_readClientRequestStrict(clientFd);
-}
-
 /**
  * Reads data sent by a client. Accumulates the HTTP request until it is complete, then switches the fd to send mode.
  *
@@ -206,30 +198,25 @@ void Network::_readClientRequest(int clientFd)
  * This is the only place we read from a client socket.
  * No errno-based decision-making occurs after recv().
  */
-void Network::_readClientRequestStrict(int clientFd)
+void Network::_readClientRequest(int clientFd)
 {
+	char buff[_CLIENT_BUFFER_SIZE];
 	if (_pendingRequests.find(clientFd) == _pendingRequests.end())
 		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
-
 	Request& req = _pendingRequests[clientFd];
-	char buff[_CLIENT_BUFFER_SIZE];
-
 	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
 	if (bytesReceived > 0) {
 		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
-            Log::prod("error", "413 Payload Too Large from client fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
+            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
             Response response = StaticHandler::builtinError("content_too_large", "GET");
-            prepareResponseSend(clientFd, response);
+            std::string rawResponse = response.stringify();
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
-
 		req.rawRequestAppend(buff, bytesReceived);
 		Log::dev("event", "Received " + Log::hl(req.getRawRequest().size()) + " bytes from client fd " + Log::hl(clientFd) + ".");
-
-		// Check if request is complete
 		if (RequestParser::isRawRequestComplete(req)) {
-			Log::dev("event", "Request fully received (" + Log::hl(req.getRawRequest().size()) + " bytes) from client (fd " + Log::hl(clientFd) + ").");
+			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 			_dispatchAndSendResponse(clientFd);
 		}
 	} else if (bytesReceived == 0) {
@@ -237,47 +224,6 @@ void Network::_readClientRequestStrict(int clientFd)
 	} else { // bytes == -1
 		Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
 		// Stay on EPOLLIN
-	}
-}
-
-void Network::_readClientRequestOptimized(int clientFd)
-{
-	if (_pendingRequests.find(clientFd) == _pendingRequests.end())
-		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
-
-	Request& req = _pendingRequests[clientFd];
-	char buff[_CLIENT_BUFFER_SIZE];
-
-	size_t readCount = 0;
-	while (readCount < _MAX_READS_PER_CYCLE) {
-		int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
-		if (bytesReceived > 0) {
-			readCount++;
-			if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
-				Log::prod("error", "413 Payload Too Large from client fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
-				Response response = StaticHandler::builtinError("content_too_large", "GET");
-				prepareResponseSend(clientFd, response);
-				epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
-				return;
-			}
-
-			req.rawRequestAppend(buff, bytesReceived);
-			Log::dev("event", "Received " + Log::hl(req.getRawRequest().size()) + " bytes from client fd " + Log::hl(clientFd) + ".");
-
-			// Check if request is complete
-			if (RequestParser::isRawRequestComplete(req)) {
-				Log::dev("event", "Request fully received (" + Log::hl(req.getRawRequest().size()) + " bytes) from client (fd " + Log::hl(clientFd) + ").");
-				_dispatchAndSendResponse(clientFd);
-				return;
-			}
-			// Continue to read if data is left
-		} else if (bytesReceived == 0) {
-			_disconnectClient(clientFd); // finished reading -> disconnect client
-			return;
-		} else { // bytes == -1
-			Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
-			return; // Wait next EPOLLIN
-		}
 	}
 }
 
