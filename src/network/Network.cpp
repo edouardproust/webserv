@@ -197,36 +197,7 @@ void	Network::_registerNewClientToEpoll(int clientFd)
  * and is non-blocking (reading by buffer chunks).
  * This is the only place we read from a client socket.
  * No errno-based decision-making occurs after recv().
- *
-void Network::_readClientRequest(int clientFd)
-{
-	char buff[_CLIENT_BUFFER_SIZE];
-	if (_pendingRequests.find(clientFd) == _pendingRequests.end())
-		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
-	Request& req = _pendingRequests[clientFd];
-	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
-	if (bytesReceived > 0) {
-		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
-            Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
-            Response response = StaticHandler::builtinError("content_too_large", "GET");
-            std::string rawResponse = response.stringify();
-			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
-            return;
-        }
-		req.rawRequestAppend(buff, bytesReceived);
-		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
-		if (RequestParser::isRawRequestComplete(req)) {
-			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
-			_dispatchAndSendResponse(clientFd);
-		}
-	} else if (bytesReceived == 0) {
-		_disconnectClient(clientFd); // finished reading -> disconnect client
-	} else { // bytes == -1
-		Log::dev("event", "Recv would block on fd " + Log::hl(clientFd) + ", waiting for next epoll event");
-		// Stay on EPOLLIN
-	}
-}
-*/
+ */
 void Network::_readClientRequest(int clientFd)
 {
 	char buff[_CLIENT_BUFFER_SIZE];
@@ -243,12 +214,15 @@ void Network::_readClientRequest(int clientFd)
 		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
             Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
             Response response = StaticHandler::builtinError("content_too_large", "GET");
-            std::string rawResponse = response.stringify();
+			prepareResponseSend(clientFd, response);
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
 		req.rawRequestAppend(buff, bytesReceived);
-		Log::dev("event", "Received " + Log::hl(req.getRawRequest().size()) + " bytes from client fd " + Log::hl(clientFd) + ".");
+		if (req.getRawRequest().size() - req.getLoggedBytes() >= _CLIENT_BUFFER_SIZE) {
+			req.setLoggedBytes(req.getRawRequest().size());
+			Log::dev("event", "Received " + utils::str(req.getLoggedBytes()) + " bytes from client fd " + Log::hl(clientFd) + ".");
+		}
 
 		// Check headers only once (optimization)
 		if (!req.rawHeadersComplete()) {

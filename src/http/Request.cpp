@@ -232,6 +232,11 @@ size_t	Request::getLastChunkedCheckPos() const
 	return _lastChunkedCheckPos;
 }
 
+size_t	Request::getLoggedBytes() const
+{
+	return _loggedBytes;
+}
+
 
 // SETTERS
 
@@ -341,6 +346,11 @@ void	Request::setBodyStartPos(size_t pos)
 void	Request::setLastChunkedCheckPos(size_t pos)
 {
 	_lastChunkedCheckPos = pos;
+}
+
+void	Request::setLoggedBytes(size_t bytes)
+{
+	_loggedBytes = bytes;
 }
 
 

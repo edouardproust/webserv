@@ -38,6 +38,7 @@ class Request
 	bool		_isChunked;
 	size_t		_bodyStartPos;
 	size_t		_lastChunkedCheckPos;
+	size_t		_loggedBytes;
 
 	static std::set<std::string> _supportedMethods;
 	static std::set<std::string> _existingMethods;
@@ -78,6 +79,7 @@ class Request
 		bool				isChunked() const;
 		size_t				getBodyStartPos() const;
 		size_t				getLastChunkedCheckPos() const;
+		size_t				getLoggedBytes() const;
 
 		void	setStatus(HttpStatus const&);
 		void	setMethod(std::string const&);
@@ -99,6 +101,7 @@ class Request
 		void	setIsChunked(bool);
 		void	setBodyStartPos(size_t);
    		void	setLastChunkedCheckPos(size_t);
+		void	setLoggedBytes(size_t);
 };
 
 std::ostream&	operator<<(std::ostream&, Request const&);

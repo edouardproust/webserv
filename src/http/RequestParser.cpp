@@ -41,44 +41,6 @@ void	RequestParser::parseRequest(Request& request, std::string const& rawRequest
 	request.setStatus(HttpStatus("ok"));
 }
 
-/*
-bool	RequestParser::isRawRequestComplete(Request const& req)
-{
-	std::string const& rawRequest = req.getRawRequest();
-	// Check headers
-	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(rawRequest);
-	if (sep.first == std::string::npos)
-		return false; // incomplete
-	std::string headersLower = rawRequest.substr(0, std::min(sep.first, RequestParser::_HEADER_MAX_LEN));
-	headersLower = utils::toLowerCase(headersLower);
-	size_t bodyStartPos = sep.first + sep.second;
-	// Check transfer-encoding chunked
-	std::string teStr = "transfer-encoding:";
-	size_t tePos = headersLower.find(teStr);
-	if (tePos != std::string::npos) {
-		tePos += teStr.size();
-		while (tePos < headersLower.size() && headersLower[tePos] == ' ') ++tePos;
-		if (headersLower.substr(tePos).find("chunked") != std::string::npos)
-			return (rawRequest.find("0\r\n\r\n", bodyStartPos) != std::string::npos);
-	}
-	// Check content-length
-	std::string clStr = "content-length:";
-	size_t clPos = headersLower.find(clStr);
-	if (clPos != std::string::npos) {
-		clPos += clStr.size();
-		while (clPos < headersLower.size() && headersLower[clPos] == ' ') ++clPos;
-		size_t contentLength = 0;
-		std::stringstream ss(headersLower.substr(clPos));
-		ss >> contentLength;
-
-		// Compare to the actual body length
-		size_t bodyLength = rawRequest.size() - bodyStartPos;
-		return (bodyLength >= contentLength);
-	}
-	return true;
-}
-*/
-
 bool	RequestParser::tryParseHeaders(Request& req)
 {
 	std::string const& rawRequest = req.getRawRequest();

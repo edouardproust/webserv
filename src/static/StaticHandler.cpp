@@ -82,13 +82,13 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 
 Response StaticHandler::post(RoutingDecision const& rd)
 {
-	if (!UBUNTU_TESTER) {
-		return get(rd);
-	} else {
+	if (UBUNTU_TESTER) {
 		Response resp;
 		resp.setStatus(HttpStatus("no_content"));
-		resp.setConnectionFromRequest(rd.getRequest());
+		resp.setBodyAndContentLength("");
 		return resp;
+	} else {
+		return error("method_not_allowed", rd);
 	}
 }
 
