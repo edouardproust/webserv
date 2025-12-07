@@ -58,7 +58,7 @@ Response	StaticHandler::get(RoutingDecision const& rd)
 	return error("not_found", rd);
 }
 
-Response	StaticHandler::del(RoutingDecision const& rd)
+Response	StaticHandler::del(RoutingDecision const& rd)  
 {
 	std::string const& finalPath = rd.getFinalPath();
 	Request const& req = rd.getRequest();
@@ -154,7 +154,8 @@ Response	StaticHandler::_serveFile(std::string const& filePath, RoutingDecision 
 	Response resp;
 	resp.setStatus(HttpStatus("ok"));
 	resp.setHeader("Content-Type", _getMimeFromPath(filePath));
-	resp.setHeader("Content-Disposition", "inline; filename=\"" + utils::getFileName(filePath) + "\"");
+	if (_getMimeFromPath(filePath) == "application/octet-stream")
+		resp.setHeader("Content-Disposition", "inline; filename=\"" + utils::getFileName(filePath) + "\"");
 	resp.setBodyAndContentLength(content);
 	resp.setServedFilePath(filePath);
 	resp.setConnectionFromRequest(rd.getRequest());
