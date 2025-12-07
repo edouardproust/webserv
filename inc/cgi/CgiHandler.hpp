@@ -4,13 +4,15 @@
 class Network;
 #include "cgi/CgiContext.hpp"
 #include "http/Response.hpp"
+#include "utils/Const.hpp"
 #include <sys/wait.h>
 
 // TODO make canonical ? + class comment
 class CgiHandler
 {
-	static size_t const	_TIMEOUT_SECONDS;
 	static size_t const	_READ_BUFFER_SIZE;
+	static size_t const	_LINUX_PIPE_BUFFER_SIZE;
+	static size_t const	_TIMEOUT_SECONDS;
 
 	Network*						_network;
 	std::map<int, CgiContext*>		_contextsByPipeFd;
@@ -22,6 +24,8 @@ class CgiHandler
 	void		_executeChildProcess(CgiContext*, CgiData const*);
 	void		_setupParentProcess(pid_t, CgiContext*);
 	void		_setupStdinPipe(CgiContext*);
+	void		_writeCgiInputStrict(int);
+	void		_writeCgiInputOptimized(int);
 	void		_handleTimeout(CgiContext*, time_t);
 	void		_cleanupPipes(CgiContext*);
 	void		_closeStdinPipe(CgiContext*, int, std::string const&);

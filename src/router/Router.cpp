@@ -7,7 +7,6 @@
  * - Router does not check the validity of the data inside Config and Request objects,
  *   so the data needs to be 100% correct when passed to the Router. Related parsers are
  *   responsible for checking the data thoroughly.
- * - A POST request matching a non-CGI location returns an error (method_not_allowed)
  * - It is the role of StaticHandler to check if the requested file or directory is accesible.
  *   It also checks "autoindex" and "index" directives in config, in order to serve a directory
  *   listing page if needed.
@@ -16,7 +15,7 @@
 Response	Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
 {
 	RoutingDecision rd(config, req, listeningOn);
-	//Log::dev("debug", "Routing Decision:\n" + utils::str(rd)); // DEBUG
+	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
 
 	RoutingDecision::Decision decision = rd.getDecision();
 

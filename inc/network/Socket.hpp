@@ -39,6 +39,7 @@ class Socket
 		HostPortPair const&	getListenDirective() const;
 		int					getFd() const;
 
+		static bool	setNonBlocking(int, bool = true);
 };
 
 #endif

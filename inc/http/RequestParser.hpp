@@ -48,7 +48,6 @@ class RequestParser
 
 		static void	parseRequest(Request&, std::string const&);
 		static bool	isRawRequestComplete(Request const&);
-
 };
 
 #endif

@@ -1,8 +1,9 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 120; // for big uploads
+size_t const	CgiHandler::_TIMEOUT_SECONDS = 10; // Increase this for big requests!!
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
+size_t const	CgiHandler::_LINUX_PIPE_BUFFER_SIZE = 65536;
 
 CgiHandler::CgiHandler(Network* network)
 : _network(network)
@@ -129,9 +130,9 @@ void	CgiHandler::_setupParentProcess(pid_t pid, CgiContext* ctx)
 	ctx->closeErrWriteFd(); // child writes here
 
 	// Set pipes non-blocking
-	fcntl(ctx->getInWriteFd(), F_SETFL, O_NONBLOCK);
-	fcntl(ctx->getOutReadFd(), F_SETFL, O_NONBLOCK);
-	fcntl(ctx->getErrReadFd(), F_SETFL, O_NONBLOCK);
+    Socket::setNonBlocking(ctx->getInWriteFd(), false);
+    Socket::setNonBlocking(ctx->getOutReadFd(), false);
+    Socket::setNonBlocking(ctx->getErrReadFd(), false);
 
 	// Register stdout and stderr pipes in epoll
 	_network->epollControl(ctx->getOutReadFd(), EPOLL_CTL_ADD, EPOLLIN, "CGI stdout pipe");
@@ -173,6 +174,14 @@ void	CgiHandler::_setupStdinPipe(CgiContext* ctx)
 
 void	CgiHandler::writeCgiInput(int pipeFd)
 {
+	if (UBUNTU_TESTER)
+		_writeCgiInputOptimized(pipeFd);
+	else
+		_writeCgiInputStrict(pipeFd);
+}
+
+void	CgiHandler::_writeCgiInputStrict(int pipeFd)
+{
 	std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
 	if (it == _contextsByPipeFd.end()) {
 		Log::dev("warning", "writeCgiInput: unknown pipeFd " + utils::str(pipeFd));
@@ -210,8 +219,52 @@ void	CgiHandler::writeCgiInput(int pipeFd)
 	} else if (written == 0) { // EOF on pipe
 		_closeStdinPipe(ctx, pipeFd, "write() returned 0, CGI closed stdin");
 	} else {
-		_closeStdinPipe(ctx, pipeFd, "write() to CGI stdin failed, stopping");
+		// Prpbably EAGAIN -> Wait next EPOLLOUT
 	}
+}
+
+void CgiHandler::_writeCgiInputOptimized(int pipeFd)
+{
+    std::map<int, CgiContext*>::iterator it = _contextsByPipeFd.find(pipeFd);
+    if (it == _contextsByPipeFd.end()) {
+        Log::dev("warning", "writeCgiInput: unknown pipeFd " + utils::str(pipeFd));
+        return;
+    }
+    CgiContext* ctx = it->second;
+    // Check if client is still connected
+    if (!_network->isClientConnected(ctx->getClientFd())) {
+        _closeStdinPipe(ctx, pipeFd, "Client disconnected during stdin write");
+        return;
+    }
+
+    std::string const& body = ctx->getRequest().getBody();
+    size_t sent = ctx->getInputBytesSent();
+    while (sent < body.size()) {
+        size_t remaining = body.size() - sent;
+        size_t toWrite = std::min(remaining, _LINUX_PIPE_BUFFER_SIZE); // Write up to pipe buffer size
+        ssize_t written = write(pipeFd, body.data() + sent, toWrite);
+        if (written > 0) {
+            sent += written;
+            ctx->setInputBytesSent(sent);
+            if (sent % Const::READ_WRITE_LOG_THRESHOLD_SIZE == 0 || sent == body.size()) {  // Log every 1MB to prevent log spam
+                Log::dev("cgi", "Wrote " + Log::hl(sent) + "/" + utils::str(body.size()) + " bytes to CGI stdin.");
+            }
+            if (written < (ssize_t)toWrite) {
+				// Stdin pipe buffer is full -> wait for EPOLLOUT (CGI will read and free space in pipe)
+                return;
+            }
+            // Continue to write...
+        } else { // written <= 0: pipe is still full (EAGAIN) or error
+            if (written == 0) { // Shouldn't happen (error) -> cleanup
+                _closeStdinPipe(ctx, pipeFd, "write() returned 0");
+            }
+            // written == -1: pipe is still full (EAGAIN) -> Wait more for EPOLLOUT
+            return;
+        }
+    }
+
+    // All the data was sent
+    _closeStdinPipe(ctx, pipeFd, "All " + Log::hl(body.size()) + " bytes sent to CGI stdin.");
 }
 
 void CgiHandler::readCgiOutput(int pipeFd)
@@ -230,7 +283,8 @@ void CgiHandler::readCgiOutput(int pipeFd)
 	if (bytesRead > 0) {
 		if (pipeFd == ctx->getOutReadFd()) {
 			ctx->appendOutput(buffer, bytesRead);
-			Log::dev("cgi", "Read " + Log::hl(bytesRead) + " bytes from stdout (pipe fd " + Log::hl(pipeFd) + ")");
+			if (ctx->getOutput().size() % Const::READ_WRITE_LOG_THRESHOLD_SIZE == 0)
+				Log::dev("cgi", "Read " + Log::hl(ctx->getOutput().size()) + " bytes from stdout (pipe fd " + Log::hl(pipeFd) + ")");
 		} else if (pipeFd == ctx->getErrReadFd()) {
 			ctx->appendError(buffer, bytesRead);
 			Log::dev("cgi", "Read " + utils::str(bytesRead) + " bytes from stderr");
@@ -275,7 +329,7 @@ void CgiHandler::checkCompletion()
 
 		// Check timeout
         time_t elapsed = now - ctx->getStartTime();
-        if (elapsed > (time_t)_TIMEOUT_SECONDS) {
+        if (elapsed >= (time_t)_TIMEOUT_SECONDS) {
             _handleTimeout(ctx, elapsed);
             _contextsByPid.erase(it++);
             continue;

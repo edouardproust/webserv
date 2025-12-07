@@ -96,7 +96,7 @@ Response	Response::initCgiResponse(RoutingDecision const& rd, std::string const&
 	Response resp;
 	resp._needsCgiExecution = true;
 	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn);
-	//Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData)); // DEBUG
+	//Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData));
 	return resp;
 }
 
@@ -173,7 +173,7 @@ void Response::parseHeadersFromCgiOutput(std::string const& headersOnly)
 		else if (lname == "status") {
 			std::istringstream statusStream(value);
 			statusStream >> statusCode;
-		} else 
+		} else
 			setHeader(key, value);
 	}
 
@@ -197,13 +197,13 @@ CgiData*	Response::transferCgiDataOwnership()
 
 /**
  * Handles session creation and destruction based on CGI headers.
- * 
+ *
  * Called after parsing CGI output that may contain session control headers:
  * - If `_pendingSessionUsername` is set (from X-Webserv-Create-Session header),
  *   creates a new session and sends Set-Cookie header to client.
  * - If `_expireSession` is set (from X-Webserv-Destroy-Session header),
  *   destroys the current session and expires the client's cookie.
- * 
+ *
  */
 void	Response::_handleSession(const Request& request)
 {
@@ -214,14 +214,14 @@ void	Response::_handleSession(const Request& request)
 		std::string maxAge = utils::str(Session::getTimeout());
 		std::string options = "HttpOnly; Path=" + SessionManager::COOKIE_PATH + "; Max-Age=" + maxAge;
 		addSetCookieHeader(SessionManager::COOKIE_NAME, sessionId, options);
-    }
+	}
 	if (_expireSession) {
 		std::string sessionId = request.getCookie(SessionManager::COOKIE_NAME);
 		if (!sessionId.empty()) {
 			sm.destroySession(sessionId);
 			addSetCookieHeader(SessionManager::COOKIE_NAME, "", "HttpOnly; Path=" + SessionManager::COOKIE_PATH + "; Max-Age=0");
 		}
-	}	
+	}
 }
 
 // PRIVATE METHODS
@@ -346,12 +346,11 @@ void	Response::setConnectionFromRequest(Request const& request)
 		setHeader("Connection", "keep-alive");
 }
 
-void	Response::addSetCookieHeader(const std::string& name, const std::string& value, 
-                        const std::string& options)
+void	Response::addSetCookieHeader(const std::string& name, const std::string& value, const std::string& options)
 {
 	std::string setCookieHeader = name + "=" + value;
-    
-    if (!options.empty())
+
+	if (!options.empty())
 		setCookieHeader += "; " + options;
 	_setCookieHeaders.push_back(setCookieHeader);
 }

@@ -9,6 +9,7 @@ static void	handler(int)
 
 void	sig::setup()
 {
+	signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, handler);
     signal(SIGQUIT, handler);
 }

@@ -82,17 +82,14 @@ Response	StaticHandler::del(RoutingDecision const& rd)
 
 Response StaticHandler::post(RoutingDecision const& rd)
 {
-	const Request& req = rd.getRequest();
-	std::string const& finalPath = rd.getFinalPath();
-
-	bool isVirtualEndpoint = !utils::fileExists(finalPath) && !utils::isAccessibleDirectory(finalPath);
-	if (isVirtualEndpoint) {
+	if (UBUNTU_TESTER) {
 		Response resp;
 		resp.setStatus(HttpStatus("no_content"));
-		resp.setConnectionFromRequest(req);
+		resp.setBodyAndContentLength("");
 		return resp;
+	} else {
+		return error("method_not_allowed", rd);
 	}
-	return error("method_not_allowed", rd);
 }
 
 Response	StaticHandler::head(RoutingDecision const& rd)

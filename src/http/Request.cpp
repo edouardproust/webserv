@@ -93,10 +93,13 @@ bool	Request::isConnectionClose() const {
 	return false;
 }
 
-void	Request::rawRequestAppend(const char* data, size_t size)
+void	Request::rawRequestAppend(const char* buff, size_t size)
 {
-	 _rawRequest.append(data, size);
+	_rawRequest.append(buff, size);
 }
+
+
+// GETTERS
 
 HttpStatus const& Request::getStatus() const
 {
@@ -164,18 +167,26 @@ std::string const&	Request::getRawRequest() const
 	return _rawRequest;
 }
 
-const std::map<std::string, std::string>& Request::getCookies() const
-{
-	return this->_cookies;
-}
-
-const std::string Request::getCookie(const std::string& name) const
+std::string	Request::getCookie(std::string const& name) const
 {
 	std::map<std::string, std::string>::const_iterator it = _cookies.find(name);
 	if (it != _cookies.end())
 		return it->second;
 	return "";
 }
+
+std::map<std::string, std::string> const& Request::getCookies() const
+{
+	return this->_cookies;
+}
+
+size_t	Request::getLoggedBytes() const
+{
+	return _loggedBytes;
+}
+
+
+// SETTERS
 
 void	Request::setStatus(HttpStatus const& status)
 {
@@ -254,6 +265,14 @@ bool	Request::hasCookie(const std::string& name) const
 {
 	return _cookies.find(name) != _cookies.end();
 }
+
+void	Request::setLoggedBytes(size_t bytes)
+{
+	_loggedBytes = bytes;
+}
+
+
+// PRINT
 
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {

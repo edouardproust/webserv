@@ -223,6 +223,12 @@ bool	CgiContext::hasClientDisconnectLogged() const
 	return _clientDisconnectLogged;
 }
 
+void	CgiContext::setInputBytesSent(size_t sent)
+{
+	_inputBytesSent = sent;
+}
+
+
 void	CgiContext::setHeadersReceived(bool headersReceived)
 {
 	_headersReceived = headersReceived;

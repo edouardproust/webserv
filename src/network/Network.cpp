@@ -1,7 +1,8 @@
 #include "network/Network.hpp"
 
 size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
-size_t const	Network::_MAX_NB_OF_EVENTS = 100;
+size_t const	Network::_MAX_NB_OF_EVENTS = 1024;
+size_t const	Network::_MAX_READS_PER_CYCLE = 50;
 
 Network::Network(Config const& config)
 : _config(config)
@@ -202,18 +203,27 @@ void Network::_readClientRequest(int clientFd)
 	char buff[_CLIENT_BUFFER_SIZE];
 	if (_pendingRequests.find(clientFd) == _pendingRequests.end())
 		_pendingRequests[clientFd] = Request(); // Create a new request for this client if does not exist yet
+
 	Request& req = _pendingRequests[clientFd];
 	int bytesReceived = recv(clientFd, buff, _CLIENT_BUFFER_SIZE, 0);
+
 	if (bytesReceived > 0) {
-		if (req.getRawRequest().size() + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
+		size_t rawSize = req.getRawRequest().size();
+		if (rawSize + bytesReceived > Const::ABSOLUTE_MAX_CLIENT_BODY_SIZE) {
             Log::prod("error", "413 Payload Too Large from fd " + Log::hl(clientFd) + " (" + utils::str(req.getRawRequest().size()) + " bytes)");
             Response response = StaticHandler::builtinError("content_too_large", "GET");
             std::string rawResponse = response.stringify();
 			epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "error response after oversized request");
             return;
         }
+
 		req.rawRequestAppend(buff, bytesReceived);
-		Log::dev("event", "Received " + utils::str(bytesReceived) + " bytes from client fd " + Log::hl(clientFd));
+
+		if (rawSize - req.getLoggedBytes() >= 2 * 1024 * 1024) { // print only every 2MB
+			Log::dev("event", "Received " + Log::hl(rawSize) + " bytes from client fd " + Log::hl(clientFd) + ".");
+			req.setLoggedBytes(rawSize);
+		}
+
 		if (RequestParser::isRawRequestComplete(req)) {
 			Log::dev("event", "Request fully received from client (fd " + Log::hl(clientFd) + ").");
 			_dispatchAndSendResponse(clientFd);
@@ -269,8 +279,6 @@ void	Network::prepareResponseSend(int clientFd, Response const& response)
     Log::dev("cgi", "Queued " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(clientFd));
 }
 
-
-
 /**
  * Sends the next part of the pending HTTP response.
  * Continues until everything is sent or the next EPOLLOUT event.
@@ -316,7 +324,7 @@ void Network::_continuePendingSend(int clientFd)
 		}
 		_shouldCloseAfterResponse.erase(clientFd);
 	} else {
-		Log::dev("event", "Partial send for fd " + Log::hl(clientFd) + ": " + utils::str(sendPos) + "/" + utils::str(response.length()) + " bytes");
+		Log::dev("event", "Sent " + Log::hl(sendPos) + "/" + utils::str(response.length()) + " bytes to client " + Log::hl(clientFd) + ".");
 		// Stay in EPOLLOUT mode to continue sending
     }
 }
