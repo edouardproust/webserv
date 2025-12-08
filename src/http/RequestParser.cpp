@@ -180,8 +180,8 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 		if (result.getSlug() != "ok")
 			return result;
 	}
-//	if (_hasDuplicateSingleHeaders(request.getAllHeaders()))
-//		return HttpStatus("bad_request");
+	if (_hasDuplicateSingleHeaders(request.getAllHeaders()))
+		return HttpStatus("bad_request");
 	const std::vector<std::pair<std::string, std::string> >& allHeaders = request.getAllHeaders();
 	int hostHeaderCount = 0;
 	for (size_t i = 0; i < allHeaders.size(); ++i) {
@@ -436,7 +436,7 @@ bool	RequestParser::_isValidVersionNumber(std::string const& numStr)
 	return true;
 }
 
-/*bool	RequestParser::_hasDuplicateSingleHeaders(const AllHeaders& headers)
+bool	RequestParser::_hasDuplicateSingleHeaders(const AllHeaders& headers)
 {
 	int	hostCount = 0;
 	int contentTypeCount = 0;
@@ -455,7 +455,7 @@ bool	RequestParser::_isValidVersionNumber(std::string const& numStr)
 			connectionCount++;
 	}
 	return (hostCount > 1 || contentTypeCount > 1 || contentLengthCount > 1 || connectionCount > 1);
-}*/
+}
 
 bool	RequestParser::_isValidHeaderName(std::string const& name)
 {
