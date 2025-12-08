@@ -1,9 +1,10 @@
 #ifndef WEBSERVER_HPP
 #define WEBSERVER_HPP
 
+#include "network/Client.hpp"
+#include "network/Socket.hpp"
 #include "http/RequestParser.hpp"
 #include "router/Router.hpp"
-#include "network/Socket.hpp"
 #include "static/StaticHandler.hpp"
 #include "utils/signal.hpp"
 #include <sys/epoll.h>
@@ -20,15 +21,12 @@ class Network
 	static size_t const			_CLIENT_BUFFER_SIZE;
 	static size_t const			_MAX_NB_OF_EVENTS;
 	static size_t const			_MAX_READS_PER_CYCLE;
+	static size_t const			_CLIENT_TIMEOUT_SECONDS;
 
 	Config const&				_config;			// the parsed config file
 	int							_epollFd;			// fd of the epoll instance
 	std::vector<Socket*>		_listeningSockets;	// There is one Socket per listen directive in the config file
-	std::map<int, Socket*>		_socketsByClientFd; // Maps client fd with server socket
-	std::map<int, Request>		_pendingRequests;	// Maps client fd with the Request object being built
-	std::map<int, std::string>  _pendingResponses;	// Maps client fd with the raw response being built
-	std::map<int, size_t>       _responseSendPos;	// Maps client fd with the cursor position in the raw response being built
-	std::map<int, bool>         _shouldCloseAfterResponse; // Tells for each client fds, if the client socket must be closed after response was sent
+	std::vector<Client*>		_activeClients;
 	CgiHandler					_cgi; 				// Instance of CgiHandler
 
 	static std::string	_epollOpToString(int);
@@ -36,23 +34,21 @@ class Network
 
 	void	_initListeningSockets();
 	void	_cleanupListeningSockets();
-	void 	_registerNewClientToEpoll(int);
 
-	void	_readClientRequest(int);
-	void	_readClientRequestStrict(int);
-	void	_readClientRequestOptimized(int);
-
-	void	_dispatchAndSendResponse(int);
-	void    _continuePendingSend(int);
+	void 	_registerNewClientToEpoll(Client*);
+	void	_readClientRequest(Client*);
+	void	_dispatchAndSendResponse(Client*);
 
 	void	_createEpollInstance();
 	void	_registerListeningSocketsToEpoll();
 	int		_waitAndCollectEvents(struct epoll_event*, int);
 
 	bool	_isListeningSocket(int);
-	int		_acceptNewClient(int);
-	void	_prepareClientForNextRequest(int);
+	Client*	_acceptNewClient(int);
 	void	_disconnectClient(int);
+	void	_disconnectClient(Client*);
+
+	void	_checkClientsInactivity();
 
 	// Default and copy constructors, assignation are forbidden
 	Network();
@@ -66,13 +62,12 @@ class Network
 
 		void	startServers();
 		void	epollControl(int, int, uint32_t, const std::string&);
-		void	prepareResponseSend(int, Response const&);
 
-		int									getEpollFd() const;
-		std::vector<Socket*> const&			getListeningSockets() const;
-		std::map<int, Request> const&		getPendingRequests() const;
-		std::map<int, Socket*> const&		getSocketsByClientFd() const;
-		bool								isClientConnected(int) const;
+		int							getEpollFd() const;
+		std::vector<Socket*> const&	getListeningSockets() const;
+		std::vector<Client*> const&	getActiveClients() const;
+		Client*						getClientByFd(int) const;
+		bool						isClientConnected(int) const;
 };
 
 std::ostream&	operator<<(std::ostream&, Network const&);

@@ -6,6 +6,8 @@ std::set<std::string>	Request::_existingMethods;
 Request::Request()
 : _status(HttpStatus())
 , _loggedBytes(0)
+, _rawRequestComplete(false)
+, _creationTime(time(NULL))
 {}
 
 Request::Request(const Request& other)
@@ -24,6 +26,8 @@ Request::Request(const Request& other)
 , _rawRequest(other._rawRequest)
 , _cookies(other._cookies)
 , _loggedBytes(other._loggedBytes)
+, _rawRequestComplete(false)
+, _creationTime(time(NULL))
 {}
 
 Request& Request::operator=(const Request& other)
@@ -44,6 +48,8 @@ Request& Request::operator=(const Request& other)
 		_rawRequest = other._rawRequest;
 		_cookies = other._cookies;
 		_loggedBytes = other._loggedBytes;
+		_rawRequestComplete = other._rawRequestComplete;
+		_creationTime = other._creationTime;
 	}
 	return (*this);
 }
@@ -188,6 +194,16 @@ size_t	Request::getLoggedBytes() const
 	return _loggedBytes;
 }
 
+bool	Request::isRawRequestComplete() const
+{
+	return _rawRequestComplete;
+}
+
+time_t	Request::getCreationTime() const
+{
+	return _creationTime;
+}
+
 
 // SETTERS
 
@@ -274,12 +290,18 @@ void	Request::setLoggedBytes(size_t bytes)
 	_loggedBytes = bytes;
 }
 
+void	Request::setRawRequestComplete(bool isComplete)
+{
+	_rawRequestComplete = isComplete;
+}
+
 
 // PRINT
 
 std::ostream& operator<<(std::ostream& os, const Request& request)
 {
 	os << "- Status: " << request.getStatus() << "\n";
+	os << "- Creation time: " << utils::str(request.getCreationTime());
 	os << "- Method: " << PrintableString(request.getMethod()) << "\n";
 	os << "- URI: " << PrintableString(request.getUri()) << "\n";
 	os << "- Path: " << PrintableString(request.getPath()) << "\n";

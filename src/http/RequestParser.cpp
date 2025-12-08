@@ -41,7 +41,7 @@ void	RequestParser::parseRequest(Request& request, std::string const& rawRequest
 	request.setStatus(HttpStatus("ok"));
 }
 
-bool	RequestParser::isRawRequestComplete(Request const& req)
+bool	RequestParser::isRawRequestComplete(Request& req)
 {
 	std::string const& rawRequest = req.getRawRequest();
 	// Check headers
@@ -57,8 +57,13 @@ bool	RequestParser::isRawRequestComplete(Request const& req)
 	if (tePos != std::string::npos) {
 		tePos += teStr.size();
 		while (tePos < headersLower.size() && headersLower[tePos] == ' ') ++tePos;
-		if (headersLower.substr(tePos).find("chunked") != std::string::npos)
-			return (rawRequest.find("0\r\n\r\n", bodyStartPos) != std::string::npos);
+		if (headersLower.substr(tePos).find("chunked") != std::string::npos) {
+			if (rawRequest.find("0\r\n\r\n", bodyStartPos) != std::string::npos) {
+				req.setRawRequestComplete(true);
+				return true;
+			}
+			return false;
+		}
 	}
 	// Check content-length
 	std::string clStr = "content-length:";
@@ -72,10 +77,12 @@ bool	RequestParser::isRawRequestComplete(Request const& req)
 
 		// Compare to the actual body length
 		size_t bodyLength = rawRequest.size() - bodyStartPos;
-		if (bodyLength != contentLength)
-			return true;
-		return (bodyLength >= contentLength);
+		if (bodyLength < contentLength)
+			return false;
+		req.setRawRequestComplete(true);
+		return true;
 	}
+	req.setRawRequestComplete(true);
 	return true;
 }
 
@@ -444,9 +451,9 @@ bool	RequestParser::_hasDuplicateSingleHeaders(const AllHeaders& headers)
 	int contentTypeCount = 0;
 	int contentLengthCount = 0;
 	int connectionCount = 0;
-        
+
 	for (size_t i = 0; i < headers.size(); ++i) {
-		std::string name = utils::toLowerCase(headers[i].first);    
+		std::string name = utils::toLowerCase(headers[i].first);
 		if (name == "host")
 			hostCount++;
 		else if (name == "content-type")

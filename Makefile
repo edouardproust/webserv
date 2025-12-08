@@ -1,5 +1,6 @@
 NAME = webserv
 NAME_DEV = $(NAME)_dev
+NAME_TESTER = $(NAME)_42
 
 CXX = c++
 
@@ -35,6 +36,7 @@ BASE_SRC_FILES = \
 	config/HostPortPair.cpp \
 	network/Network.cpp \
 	network/Socket.cpp \
+	network/Client.cpp \
 	http/Request.cpp \
 	http/RequestParser.cpp \
 	http/Response.cpp \
@@ -98,7 +100,7 @@ dev: $(DEV_OBJS)
 	$(CXX) $(DEV_OBJS) -o $(NAME_DEV)
 
 tester: $(TESTER_OBJS)
-	$(CXX) $(TESTER_OBJS) -o $(NAME_DEV)
+	$(CXX) $(TESTER_OBJS) -o $(NAME_TESTER)
 
 $(PROD_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp Makefile
 	@mkdir -p $(dir $@)
@@ -142,7 +144,7 @@ test_dev: dev
 test_42: tester
 	@clear
 	bash $(CONFIG_REPL_SH) $(CONFIG_SRC_DIR)/$(CONFIG_FILE_42) $(CONFIG_DST_DIR)
-	$(VALGRIND) ./$(NAME_DEV) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
+	./$(NAME_TESTER) $(CONFIG_DST_DIR)/$(CONFIG_FILE_42)
 
 test_welcome: all
 	@clear

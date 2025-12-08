@@ -4,7 +4,7 @@
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
 
-// TODO canonical? + method comment
+
 class CgiData
 {
 	bool	_isValid;
@@ -28,7 +28,7 @@ class CgiData
 
 	static std::string	_headerToEnvVar(std::string const&);
 
-	// TODO Orthodox canonical form? + comment
+	
 	CgiData();
 	CgiData&	operator=(CgiData const&);
 

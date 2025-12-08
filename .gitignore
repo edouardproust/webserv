@@ -18,6 +18,7 @@ tmp/
 # Specific files
 webserv
 webserv_dev
+webserv_42
 log*
 tests/website/*.txt
 !tests/website/put_test.txt

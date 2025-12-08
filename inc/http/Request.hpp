@@ -31,8 +31,9 @@ class Request
 	std::string	_rawRequest;
 	std::map<std::string, std::string> _cookies;
 
-	// Raw request parsing state
 	size_t		_loggedBytes;
+	bool		_rawRequestComplete;
+	time_t		_creationTime;
 
 	static std::set<std::string> _supportedMethods;
 	static std::set<std::string> _existingMethods;
@@ -68,6 +69,8 @@ class Request
 		std::string 		getCookie(std::string const&) const;
 		std::map<std::string, std::string> const&	getCookies() const;
 		size_t				getLoggedBytes() const;
+		bool				isRawRequestComplete() const;
+		time_t				getCreationTime() const;
 
 		void	setStatus(HttpStatus const&);
 		void	setMethod(std::string const&);
@@ -84,6 +87,7 @@ class Request
 		void	addCookie(std::string const&, std::string const&);
 		bool	hasCookie(std::string const&) const;
 		void	setLoggedBytes(size_t);
+		void	setRawRequestComplete(bool);
 };
 
 std::ostream&	operator<<(std::ostream&, Request const&);

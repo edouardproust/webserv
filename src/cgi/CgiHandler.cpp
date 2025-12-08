@@ -368,7 +368,7 @@ void CgiHandler::checkCompletion()
 					Log::dev("debug", "CGI output:\n" + PrintableString(Log::excerpt(Log::EXCERPT_SIZE, ctx->getOutput())));
 					Response resp;
 					resp.parseFromCgiOutput(ctx->getOutput(), ctx->getRequest());
-					_network->prepareResponseSend(ctx->getClientFd(), resp);
+					_network->getClientByFd(ctx->getClientFd())->prepareResponseSend(resp);
 					_network->epollControl(ctx->getClientFd(), EPOLL_CTL_MOD, EPOLLOUT, "CGI response ready");
 				} catch (std::exception& e) {
 					_sendErrorResponse("internal_error", ctx->getClientFd(), ctx->getCgiData(), "Failed to parse CGI output: " + utils::str(e.what()));
@@ -517,7 +517,7 @@ void	CgiHandler::_sendErrorResponse(std::string const& status, int clientFd, Cgi
 	Response errorResp = StaticHandler::error(status, d->getRequest(), d->getErrorPages());
 	if (forceClose)
 		errorResp.setHeader("Connection", "close");
-	_network->prepareResponseSend(clientFd, errorResp);
+	_network->getClientByFd(clientFd)->prepareResponseSend(errorResp);
 	_network->epollControl(clientFd, EPOLL_CTL_MOD, EPOLLOUT, "Sending CGI response");
 }
 
