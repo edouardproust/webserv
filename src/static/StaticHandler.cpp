@@ -58,15 +58,17 @@ Response	StaticHandler::get(RoutingDecision const& rd)
 	return error("not_found", rd);
 }
 
-Response	StaticHandler::del(RoutingDecision const& rd)
+Response	StaticHandler::del(RoutingDecision const& rd)  
 {
 	std::string const& finalPath = rd.getFinalPath();
 	Request const& req = rd.getRequest();
 
 	if (!utils::fileExists(finalPath))
 		return error("not_found", rd);
-	std::string directoryPath = finalPath.substr(0, finalPath.find_last_of('/'));
-	if (access(directoryPath.c_str(), W_OK) != 0)
+	if (utils::isAccessibleDirectory(finalPath))
+		return error("forbidden", rd);
+	std::string directoryPath = utils::getParentDirectory(finalPath);
+	if (!utils::isWritableDirectory(directoryPath))
 		return error("forbidden", rd);
 	if (std::remove(finalPath.c_str()) == 0)
 	{
@@ -152,7 +154,8 @@ Response	StaticHandler::_serveFile(std::string const& filePath, RoutingDecision 
 	Response resp;
 	resp.setStatus(HttpStatus("ok"));
 	resp.setHeader("Content-Type", _getMimeFromPath(filePath));
-	resp.setHeader("Content-Disposition", "inline; filename=\"" + utils::getFileName(filePath) + "\"");
+	if (_getMimeFromPath(filePath) == "application/octet-stream")
+		resp.setHeader("Content-Disposition", "inline; filename=\"" + utils::getFileName(filePath) + "\"");
 	resp.setBodyAndContentLength(content);
 	resp.setServedFilePath(filePath);
 	resp.setConnectionFromRequest(rd.getRequest());

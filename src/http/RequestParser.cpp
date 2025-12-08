@@ -72,6 +72,8 @@ bool	RequestParser::isRawRequestComplete(Request const& req)
 
 		// Compare to the actual body length
 		size_t bodyLength = rawRequest.size() - bodyStartPos;
+		if (bodyLength != contentLength)
+			return true;
 		return (bodyLength >= contentLength);
 	}
 	return true;
@@ -180,6 +182,8 @@ HttpStatus RequestParser::_parseHeaders(Request& request, std::string const& hea
 		if (result.getSlug() != "ok")
 			return result;
 	}
+	if (_hasDuplicateSingleHeaders(request.getAllHeaders()))
+		return HttpStatus("bad_request");
 	const std::vector<std::pair<std::string, std::string> >& allHeaders = request.getAllHeaders();
 	int hostHeaderCount = 0;
 	for (size_t i = 0; i < allHeaders.size(); ++i) {
@@ -432,6 +436,27 @@ bool	RequestParser::_isValidVersionNumber(std::string const& numStr)
 	if (numStr.length() > 1 && numStr[0] == '0')
 			return false;
 	return true;
+}
+
+bool	RequestParser::_hasDuplicateSingleHeaders(const AllHeaders& headers)
+{
+	int	hostCount = 0;
+	int contentTypeCount = 0;
+	int contentLengthCount = 0;
+	int connectionCount = 0;
+        
+	for (size_t i = 0; i < headers.size(); ++i) {
+		std::string name = utils::toLowerCase(headers[i].first);    
+		if (name == "host")
+			hostCount++;
+		else if (name == "content-type")
+			contentTypeCount++;
+		else if (name == "content-length")
+			contentLengthCount++;
+		else if (name == "connection")
+			connectionCount++;
+	}
+	return (hostCount > 1 || contentTypeCount > 1 || contentLengthCount > 1 || connectionCount > 1);
 }
 
 bool	RequestParser::_isValidHeaderName(std::string const& name)

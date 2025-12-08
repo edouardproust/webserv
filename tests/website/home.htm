@@ -26,7 +26,10 @@
 			</ul>
 		</div>
 		<div class="highlight-box">
-			<h2>Charge testing</h2>
+			<h2>Raw Request manual testing</h2>
+			<p>Eg with netcat <code>printf "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n" | nc localhost 8080</code></p>
+			<p>Eg with curl <code>curl -v http://localhost:8080/</code></p>
+			<h2>Siege testing</h2>
 			<p><code>sudo apt install siege</code></p>
 			<ol>
 				<li>
@@ -76,20 +79,32 @@
 				<td class="notes">Browser downloads file</td>
 			</tr><tr>
 				<td><code>PUT</code></td>
-				<td><code>curl -X PUT http://localhost:8080/put-demo.txt -d "new content"</code></td>
+				<td><code>curl -X PUT http://localhost:8080/put_test.txt -d "new content"</code></td>
 				<td class="status-ok">200</td>
-				<td class="notes">Demo file for <code>PUT</code> testing</td>
+				<td class="notes">Test <code>PUT</code> in an existing file</td>
 			</tr><tr>
 				<td><code>PUT</code></td>
-				<td><code>curl -X PUT http://localhost:8080/your-new-file.txt -d "your content"</code></td>
+				<td><code>curl -X PUT http://localhost:8080/new_file.txt -d "your content"</code></td>
 				<td class="status-ok">201</td>
-				<td class="notes">Create any new file</td>
+				<td class="notes">Create (upload) any new file</td>
+			</tr>
+			</tr><tr>
+				<td><code>PUT</code> (image)</td>
+				<td><code>curl -X PUT http://localhost:8080/test_image.jpg --data-binary @/tmp/test_image.jpg</code></td>
+				<td class="status-ok">201</td>
+				<td class="notes">First do : <code>wget https://picsum.photos/200/300.jpg -O /tmp/test_image.jpg</code></td>
 			</tr>
 			</tr><tr>
 				<td><code>HEAD</code></td>
-				<td><code>curl -I http://localhost:8080/put-demo.txt</code></td>
+				<td><code>curl -I http://localhost:8080/put_test.txt</code></td>
 				<td class="status-ok">200</td>
 				<td class="notes"><code>HEAD</code> request (headers only, no body)</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/put_test.txt</code></td>
+				<td class="status-ok">204</td>
+				<td class="notes">Deletes the test file</td>
 			</tr>
 
 			<!-- Autoindex Tests -->
@@ -125,6 +140,31 @@
 				<td><a href="http://localhost:8080/autoindex/off/invalid" class="test-link">http://localhost:8080/autoindex/off/invalid</a></td>
 				<td class="status-error">404</td>
 				<td class="notes">Custom 404 page</td>
+			</tr>
+			</tr><tr>
+				<td><code>PUT</code></td>
+				<td><code>curl -X PUT http://localhost:8080/read_only/ -d "test content"</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">Trying to write to a directory path</td>
+			</tr>
+			</tr>
+			</tr><tr>
+				<td><code>PUT</code></td>
+				<td><code>curl -X PUT http://localhost:8080/read_only/new_file.txt -d "your content"</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">Trying to upload to a read only folder</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/nonexistent.txt</code></td>
+				<td class="status-error">404</td>
+				<td class="notes">File not found to delete</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/read_only/test.txt</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">No permission to delete the file</td>
 			</tr>
 
 			<!-- Redirection Tests -->
