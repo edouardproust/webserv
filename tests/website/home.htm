@@ -106,18 +106,6 @@
 				<td class="status-ok">204</td>
 				<td class="notes">Deletes the test file</td>
 			</tr>
-			</tr><tr>
-				<td><code>DELETE</code></td>
-				<td><code>curl -X DELETE http://localhost:8080/nonexistent.txt</code></td>
-				<td class="status-error">404</td>
-				<td class="notes">File not found to delete</td>
-			</tr>
-			</tr><tr>
-				<td><code>DELETE</code></td>
-				<td><code>curl -X DELETE http://localhost:8080/read_only/test.txt</code></td>
-				<td class="status-error">403</td>
-				<td class="notes">No permission to delete the file</td>
-			</tr>
 
 			<!-- Autoindex Tests -->
 			<tr class="category">
@@ -152,6 +140,31 @@
 				<td><a href="http://localhost:8080/autoindex/off/invalid" class="test-link">http://localhost:8080/autoindex/off/invalid</a></td>
 				<td class="status-error">404</td>
 				<td class="notes">Custom 404 page</td>
+			</tr>
+			</tr><tr>
+				<td><code>PUT</code></td>
+				<td><code>curl -X PUT http://localhost:8080/read_only/ -d "test content"</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">Trying to write to a directory path</td>
+			</tr>
+			</tr>
+			</tr><tr>
+				<td><code>PUT</code></td>
+				<td><code>curl -X PUT http://localhost:8080/read_only/new_file.txt -d "your content"</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">Trying to upload to a read only folder</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/nonexistent.txt</code></td>
+				<td class="status-error">404</td>
+				<td class="notes">File not found to delete</td>
+			</tr>
+			</tr><tr>
+				<td><code>DELETE</code></td>
+				<td><code>curl -X DELETE http://localhost:8080/read_only/test.txt</code></td>
+				<td class="status-error">403</td>
+				<td class="notes">No permission to delete the file</td>
 			</tr>
 
 			<!-- Redirection Tests -->
