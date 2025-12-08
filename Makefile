@@ -5,7 +5,7 @@ CXX = c++
 
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 
-VALGRIND = valgrind --leak-check=full --track-fds=yes
+VALGRIND = valgrind --track-origins=yes --leak-check=full --track-fds=yes
 
 # ------- CONFIG --------
 

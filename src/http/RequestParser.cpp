@@ -72,6 +72,8 @@ bool	RequestParser::isRawRequestComplete(Request const& req)
 
 		// Compare to the actual body length
 		size_t bodyLength = rawRequest.size() - bodyStartPos;
+		if (bodyLength != contentLength)
+			return true;
 		return (bodyLength >= contentLength);
 	}
 	return true;

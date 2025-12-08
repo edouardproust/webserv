@@ -5,6 +5,7 @@ std::set<std::string>	Request::_existingMethods;
 
 Request::Request()
 : _status(HttpStatus())
+, _loggedBytes(0)
 {}
 
 Request::Request(const Request& other)
@@ -22,6 +23,7 @@ Request::Request(const Request& other)
 , _body(other._body)
 , _rawRequest(other._rawRequest)
 , _cookies(other._cookies)
+, _loggedBytes(other._loggedBytes)
 {}
 
 Request& Request::operator=(const Request& other)
@@ -41,6 +43,7 @@ Request& Request::operator=(const Request& other)
 		_body = other._body;
 		_rawRequest = other._rawRequest;
 		_cookies = other._cookies;
+		_loggedBytes = other._loggedBytes;
 	}
 	return (*this);
 }

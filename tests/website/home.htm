@@ -26,7 +26,10 @@
 			</ul>
 		</div>
 		<div class="highlight-box">
-			<h2>Charge testing</h2>
+			<h2>Raw Request manual testing</h2>
+			<p>Eg with netcat <code>printf "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n" | nc localhost 8080</code></p>
+			<p>Eg with curl <code>curl -v http://localhost:8080/</code></p>
+			<h2>Siege testing</h2>
 			<p><code>sudo apt install siege</code></p>
 			<ol>
 				<li>
