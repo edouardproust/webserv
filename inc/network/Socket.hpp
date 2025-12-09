@@ -34,7 +34,7 @@ class Socket
 
 		void	safeBind();
 		void	safeListen();
-		int		createNewClientSocket();
+		int		createNewClientSocket(std::string& clientIpOut);
 
 		HostPortPair const&	getListenDirective() const;
 		int					getFd() const;

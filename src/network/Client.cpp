@@ -8,6 +8,7 @@ Client::Client(int fd, Socket* socket, Network* network)
 , _lastActivity(time(NULL))
 , _responseSendPos(0)
 , _shouldCloseAfterResponse(false)
+, _remoteAddr("")
 {}
 
 Client::~Client()
@@ -152,6 +153,17 @@ bool	Client::shouldCloseAfterResponse() const
 	return _shouldCloseAfterResponse;
 }
 
+std::string const&	Client::getRemoteAddr() const
+{
+	return _remoteAddr;
+}
+
+// SETTERS
+
+void	Client::setRemoteAddr(const std::string& remoteAddr)
+{
+	_remoteAddr = remoteAddr;
+}
 
 // PRINT
 

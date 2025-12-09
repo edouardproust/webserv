@@ -91,11 +91,11 @@ bool	Response::isConnectionClose() const {
 
 // CGI
 
-Response	Response::initCgiResponse(RoutingDecision const& rd, std::string const& scriptName, HostPortPair const& listeningOn)
+Response	Response::initCgiResponse(RoutingDecision const& rd, std::string const& scriptName, HostPortPair const& listeningOn, std::string const& remoteAddr)
 {
 	Response resp;
 	resp._needsCgiExecution = true;
-	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn);
+	resp._cgiData = new CgiData(rd.getRequest(), *rd.getLocation(), scriptName, listeningOn, remoteAddr);
 	//Log::dev("debug", "Pending CGI response data:\n" + utils::str(*resp._cgiData));
 	return resp;
 }

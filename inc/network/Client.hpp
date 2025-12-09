@@ -18,6 +18,8 @@ class Client
 	size_t		_responseSendPos;
 	bool		_shouldCloseAfterResponse;
 
+	std::string	_remoteAddr;
+
 	// TODO canonical ?
 	Client(Client const&);
 	Client&	operator=(Client const&);
@@ -43,7 +45,9 @@ class Client
 		std::string const&	getResponse() const;
 		size_t const&		getResponseSendPos() const;
 		bool			shouldCloseAfterResponse() const;
+		std::string const&	getRemoteAddr() const;
 
+		void	setRemoteAddr(const std::string&);
 
 };
 

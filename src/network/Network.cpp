@@ -266,7 +266,8 @@ void Network::_dispatchAndSendResponse(Client* client)
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", req.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(client->getFd()) + ").");
 		//Log::dev("debug", "Request:\n" + utils::str(request));
-		Response response = Router::dispatchRequest(_config, req, listenDirective);
+		std::string remoteAddr = client->getRemoteAddr();
+		Response response = Router::dispatchRequest(_config, req, listenDirective, remoteAddr);
 
 		if (response.needsCgiExecution()) { // CGI -> async response (stays in EPOLLIN to wait for CGI output)
 			_cgi.launchAsync(client->getFd(), response); // => Stay in EPOLLIN + ownership transfert of CgiData from Response to CgiContext
@@ -393,10 +394,13 @@ Client* Network::_acceptNewClient(int listeningFd)
 {
 	for (size_t i = 0; i < _listeningSockets.size(); ++i) {
 		if (listeningFd == _listeningSockets[i]->getFd()) {
-			int clientFd =  _listeningSockets[i]->createNewClientSocket();
+			std::string clientIp;
+			int clientFd =  _listeningSockets[i]->createNewClientSocket(clientIp);
 			if (clientFd > 0) {
 				Client* client = new Client(clientFd, _listeningSockets[i], this);
+				client->setRemoteAddr(clientIp);
 				_activeClients.push_back(client);
+				Log::prod("event", "New client from " + Log::hl(clientIp) + " (fd " + Log::hl(clientFd) + ")");
 				return client;
 			}
 		}

@@ -89,9 +89,9 @@ void	Socket::safeListen()
  * Accepts a new client connection on this listening socket.
  * Returns new client socket's fd (or -1 in case of accept() error).
  */
-int	Socket::createNewClientSocket()
+int	Socket::createNewClientSocket(std::string& clientIpOut)
 {
-	struct sockaddr_storage clientInfos;
+	struct sockaddr_in clientInfos;
 
 	socklen_t clientInfoSize = sizeof(clientInfos);
 	int newClientSocketFd = accept(_fd, (struct sockaddr*)&clientInfos, &clientInfoSize);
@@ -99,6 +99,7 @@ int	Socket::createNewClientSocket()
 		Log::prod("error", "accept(): " + utils::str(strerror(errno)));
 		return -1;
 	}
+	clientIpOut = utils::sockaddrInToIP(clientInfos);
 	//Log::dev("setup", "Setting Client socket to non-blocking mode...");
 	setNonBlocking(newClientSocketFd, true);
 	Log::dev("setup", "Socket accept() success.");

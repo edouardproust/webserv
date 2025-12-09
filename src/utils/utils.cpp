@@ -142,6 +142,18 @@ std::string	utils::toUpper(std::string const& s)
 	return up;
 }
 
+std::string	utils::sockaddrInToIP(const struct sockaddr_in& addr)
+{
+	size_t ip = ntohl(addr.sin_addr.s_addr); //to normalize to correct order
+	std::ostringstream oss;
+
+	oss << ((ip >> 24) & 0xFF) << "."
+		<< ((ip >> 16) & 0xFF) << "."
+		<< ((ip >> 8) & 0xFF) << "."
+		<< (ip & 0xFF);
+	return oss.str();
+}
+
 std::string	utils::readFile(std::string const& path)
 {
 	std::ifstream file(path.c_str(), std::ios::binary);

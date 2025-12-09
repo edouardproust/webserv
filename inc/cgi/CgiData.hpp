@@ -14,6 +14,7 @@ class CgiData
 	std::string			_executor;
 	Request const&		_request; // non-owning
 	ErrorPages const&	_errorPages; // non-owning
+	std::string			_remoteAddr;
 
 	// Storage for execve (need to stay valid during execution)
 	std::vector<std::string>	_envStorage;	// Persistant storage for environment strings
@@ -34,7 +35,7 @@ class CgiData
 	public:
 
 		CgiData(CgiData const&);
-		CgiData(Request const&, LocationBlock const&, std::string const&, HostPortPair const&);
+		CgiData(Request const&, LocationBlock const&, std::string const&, HostPortPair const&, std::string const&);
 		~CgiData();
 
 		bool				isValid() const;

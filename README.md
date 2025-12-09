@@ -184,6 +184,8 @@ make
 
 - https://www.rfc-editor.org/rfc/rfc9112.html
 - https://www.rfc-editor.org/rfc/rfc9110
+- https://www.rfc-editor.org/rfc/rfc3875.html#section-4.1.1
 - https://en.wikipedia.org/wiki/HTTP
 - https://http.dev/400
 - https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/
+- https://stackoverflow.com/
