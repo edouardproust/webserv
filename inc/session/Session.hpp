@@ -5,14 +5,15 @@
 # include <ctime>
 # include <map>
 /**
- * Represents a single user session with identity, timing, and custom data
+ * Represents a single user session with identity and timing.
  * 
  * Each Session object contains:
  * - Private attributes: session ID (_sessionId) and username (_username)
  * - Creation and last activity timestamps for expiration tracking
  * - Logic to determine session validity based on timeout
  * 
- * This class is a data container for individual user sessions!
+ * Simple data container for session information.
+ * Value-type class: copyable, assignable, holds its own data.
  */
 
 class Session

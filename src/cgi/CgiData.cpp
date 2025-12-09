@@ -51,7 +51,8 @@ void	CgiData::_setEnvStorage(Request const& req, std::string const& locRoot, Hos
 	tmp["SCRIPT_NAME"] = req.getScriptName(); // relative path
 	if (UBUNTU_TESTER)
 		tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //!\ full path for the ubuntu_tester to work
-	tmp["PATH_INFO"] = req.getPathInfo();
+	else
+		tmp["PATH_INFO"] = req.getPathInfo();
 	tmp["PATH_TRANSLATED"] = utils::pathsJoin(locRoot, tmp["PATH_INFO"]);
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();

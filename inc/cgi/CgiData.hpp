@@ -4,7 +4,14 @@
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
 
-// TODO canonical class verification + justification message
+/**
+ * Holds all data needed for CGI execution.
+ *
+ * Contains both owned data (_scriptName, _extension, etc.) and 
+ * non-owning references (_request, _errorPages).
+ * 
+ * Value-type class: copyable, assignable, holds its own data.
+ */
 class CgiData
 {
 	bool	_isValid;

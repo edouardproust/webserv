@@ -288,7 +288,7 @@ void	Network::_checkClientsInactivity()
 	for (size_t i = 0; i < _activeClients.size(); ++i) {
 		Client* client = _activeClients[i];
 		if (client->isInactive(now, _CLIENT_TIMEOUT_SECONDS)) {
-			Log::dev("close", "Client fd " + Log::hl(client->getFd()) + " disconnected for inactivity after " + Log::hl(_CLIENT_TIMEOUT_SECONDS) + " seconds.");
+			Log::dev("close", "Client fd " + Log::hl(client->getFd()) + " disconnected due to inactivity after " + Log::hl(_CLIENT_TIMEOUT_SECONDS) + " seconds.");
 			_disconnectClient(client);
 		}
 	}
