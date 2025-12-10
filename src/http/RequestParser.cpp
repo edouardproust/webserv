@@ -227,9 +227,9 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 	if (!_isValidHeaderName(name))
 		return HttpStatus("bad_request");
 	value = utils::trim(value);
-	if (!_isValidHeaderValue(value))
-		return HttpStatus("bad_request");
 	std::string normalizedName = _normalizeHeaderName(name);
+	if (!_isValidHeaderValue(value, normalizedName))
+		return HttpStatus("bad_request");
 	if (normalizedName == "cookie") {
 		HttpStatus cookieStatus = _parseCookies(request, value);
 		if (cookieStatus.getSlug() != "ok")
@@ -260,7 +260,6 @@ HttpStatus	RequestParser::_parseHeaderLine(Request& request, std::string const& 
 HttpStatus	RequestParser::_parseCookies(Request& request, std::string const& cookieHeader)
 {
 	std::vector<std::string> cookies = utils::split(cookieHeader, ';');
-
 	for (size_t i = 0; i < cookies.size(); ++i)
 	{
 		std::string cookie = utils::trim(cookies[i]);
@@ -273,6 +272,8 @@ HttpStatus	RequestParser::_parseCookies(Request& request, std::string const& coo
 		{
 			std::string name = utils::trim(cookie.substr(0, equalPos));
 			std::string value = utils::trim(cookie.substr(equalPos + 1));
+			if (name.find_first_of(" \t") != std::string::npos)
+				return HttpStatus("bad_request");
 			if (value.length() >= 2 && value[0] == '"' && value[value.length() - 1] == '"')
 				value = value.substr(1, value.length() - 2);
 			if (!name.empty())
@@ -477,14 +478,7 @@ bool	RequestParser::_isValidHeaderName(std::string const& name)
 	return true;
 }
 
-bool	RequestParser::_headersIndicateBody(Request const& request)
-{
-	UniqHeaders const& headers = request.getUniqHeaders();
-	return (headers.find("content-length") != headers.end() ||
-			headers.find("transfer-encoding") != headers.end());
-}
-
-bool	RequestParser::_isValidHeaderValue(std::string const& value)
+bool	RequestParser::_isValidHeaderValue(std::string const& value, std::string const& headerName)
 {
 	for (size_t i = 0; i < value.length(); i++) {
 		if (value[i] == '\0')
@@ -492,7 +486,38 @@ bool	RequestParser::_isValidHeaderValue(std::string const& value)
 		if (value[i] < 0x20 || value[i] == 0x7F)
 			return false;
 	}
+	if (headerName == "host") {
+		if (value.find_first_of(" \t") != std::string::npos)
+			return false;
+		if (value.empty() || value[0] == ':')
+			return false;
+		size_t colon = value.find(':');
+		if (colon != std::string::npos) {
+			std::string port = value.substr(colon + 1);
+			if (port.empty())
+				return false;
+			for (size_t i = 0; i < port.length(); ++i) {
+				if (!std::isdigit(port[i]))
+					return false;
+			}
+			try {
+				size_t portNum = utils::toSizeT(port);
+				if (portNum < 1 || portNum > 65535)
+					return false;
+			}
+			catch (const std::exception& e) {
+				return false;
+			}
+		}
+	}
 	return true;
+}
+
+bool	RequestParser::_headersIndicateBody(Request const& request)
+{
+	UniqHeaders const& headers = request.getUniqHeaders();
+	return (headers.find("content-length") != headers.end() ||
+			headers.find("transfer-encoding") != headers.end());
 }
 
 bool	RequestParser::_isValidContentType(std::string const& contentType)

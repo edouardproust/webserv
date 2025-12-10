@@ -32,7 +32,7 @@ class RequestParser
 	static bool			_isValidVersionNumber(std::string const&);
 	static bool			_hasDuplicateSingleHeaders(const AllHeaders&);
 	static bool			_isValidHeaderName(std::string const&);
-	static bool			_isValidHeaderValue(std::string const&);
+	static bool			_isValidHeaderValue(std::string const&, std::string const&);
 	static bool			_headersIndicateBody(Request const&);
 	static bool			_isValidContentType(std::string const&);
 	static bool			_isValidContentLength(std::string const&);
