@@ -18,6 +18,11 @@ class Client
 	size_t		_responseSendPos;
 	bool		_shouldCloseAfterResponse;
 
+	static size_t const	_CLOSE_TIMEOUT_SECONDS;
+	static size_t const	_KEEPALIVE_TIMEOUT_SECONDS;
+
+	void	_resetForNextRequest();
+
 	// TODO canonical ?
 	Client(Client const&);
 	Client&	operator=(Client const&);
@@ -28,12 +33,10 @@ class Client
 		~Client();
 
 		void	updateActivity();
-		void	setCloseAfterResponse(bool);
 		void	closeSocket();
-		void	resetForNextRequest();
 		void	prepareResponseSend(Response const&);
 		bool	continueResponseSend();
-		bool	isInactive(time_t, size_t) const;
+		bool	isInactive(time_t) const;
 
 		int				getFd() const;
 		Socket*			getSocket() const;
