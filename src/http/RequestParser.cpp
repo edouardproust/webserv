@@ -491,24 +491,6 @@ bool	RequestParser::_isValidHeaderValue(std::string const& value, std::string co
 			return false;
 		if (value.empty() || value[0] == ':')
 			return false;
-		size_t colon = value.find(':');
-		if (colon != std::string::npos) {
-			std::string port = value.substr(colon + 1);
-			if (port.empty())
-				return false;
-			for (size_t i = 0; i < port.length(); ++i) {
-				if (!std::isdigit(port[i]))
-					return false;
-			}
-			try {
-				size_t portNum = utils::toSizeT(port);
-				if (portNum < 1 || portNum > 65535)
-					return false;
-			}
-			catch (const std::exception& e) {
-				return false;
-			}
-		}
 	}
 	return true;
 }
