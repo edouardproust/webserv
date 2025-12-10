@@ -55,7 +55,7 @@ bool	Client::continueResponseSend()
 
 	// Check if send if complete
 	if (_responseSendPos >= _pendingResponse.size()) {
-		Log::prod("ok", "Response sent to client (fd " + Log::hl(_responseSendPos) + ").");
+		Log::prod("ok", "Response sent to client (fd " + Log::hl(_fd) + ").");
 		// Cleanup
 		_pendingResponse.clear();
 		_responseSendPos = 0;
