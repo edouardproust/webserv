@@ -285,9 +285,8 @@ void	Network::_checkClientsInactivity()
 	time_t now = time(NULL);
 	for (size_t i = 0; i < _activeClients.size(); ++i) {
 		Client* client = _activeClients[i];
-		if (_cgi.hasActiveCgi(client->getFd())) {
+		if (_cgi.hasActiveCgi(client->getFd()))
 			continue;  // Skip clients with running CGI executable
-		}
 		if (client->isInactive(now)) {
 			Log::dev("close", "Disconnecting client (fd " + Log::hl(client->getFd()) + ") for inactivity.");
 			_disconnectClient(client);
