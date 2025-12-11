@@ -45,7 +45,7 @@ bool	RequestParser::isRawRequestComplete(Request& req)
 {
 	std::string const& rawRequest = req.getRawRequest();
 	// Check headers
-	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(rawRequest);
+	std::pair<size_t, size_t> const& sep = utils::headersBodySeparatorPos(rawRequest, true);
 	if (sep.first == std::string::npos)
 		return false; // incomplete
 	std::string headersLower = rawRequest.substr(0, std::min(sep.first, RequestParser::_HEADER_MAX_LEN));

@@ -57,7 +57,7 @@ namespace utils {
 	std::string	trim(std::string const&);
 	std::string	formatDate(time_t, const std::string&);
 	std::string extractHostname(UniqHeaders const&);
-	std::pair<size_t, size_t>	headersBodySeparatorPos(std::string const&);
+	std::pair<size_t, size_t>	headersBodySeparatorPos(std::string const&, bool = false);
 	std::string	getParentDirectory(const std::string&);
 
 }

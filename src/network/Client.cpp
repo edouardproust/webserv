@@ -1,11 +1,16 @@
 #include "network/Client.hpp"
 #include "network/Network.hpp"
 
+size_t const	Client::_CLOSE_TIMEOUT_SECONDS = 10;
+size_t const	Client::_KEEPALIVE_TIMEOUT_SECONDS = 60;
+
 Client::Client(int fd, Socket* socket, Network* network)
 : _fd(fd)
 , _socket(socket)
 , _network(network)
 , _lastActivity(time(NULL))
+, _pendingRequest() //!\ creates a new emmpty Request object
+, _pendingResponse()
 , _responseSendPos(0)
 , _shouldCloseAfterResponse(false)
 , _remoteAddr("")
@@ -23,21 +28,6 @@ void Client::closeSocket()
 }
 
 /**
- * Resets the client's internal state so it can process another request on a keep-alive connection.
- */
-void	Client::resetForNextRequest()
-{
-	_pendingRequest = Request();
-	_pendingResponse.clear();
-	_responseSendPos = 0;
-	_shouldCloseAfterResponse = false;
-	updateActivity();
-
-	Log::dev("event", "Connection: keep-alive -> Resetting fd " + Log::hl(_fd) + " to 'recv'.");
-	_network->epollControl(_fd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
-}
-
-/**
  * Sends the next part of the pending HTTP response.
  * Continues until everything is sent or the next EPOLLOUT event.
  * Called when EPOLLOUT indicates the client is ready for more data.
@@ -50,7 +40,7 @@ bool	Client::continueResponseSend()
 {
 	if (_pendingResponse.empty()) {
 		Log::dev("warning", "No pending response for fd " + utils::str(_fd));
-		return true; // no client deconnection
+		return true; // no client disconnection
 	}
 
 	// Send remaining part of the response
@@ -60,22 +50,22 @@ bool	Client::continueResponseSend()
 	if (bytesSent < 0) {
 		// Sending error -> Disconnect client
 		Log::prod("error", "Send failed for fd " + Log::hl(_fd) + ".");
-		return false; // client deconnection
+		return false; // client disconnection
 	}
 	_responseSendPos += bytesSent;
 
 	// Check if send if complete
 	if (_responseSendPos >= _pendingResponse.size()) {
-		Log::prod("ok", "Response sent to client (fd " + Log::hl(_responseSendPos) + ").");
+		Log::prod("ok", "Response sent to client (fd " + Log::hl(_fd) + ").");
 		// Cleanup
 		_pendingResponse.clear();
 		_responseSendPos = 0;
 		// Handle connection
 		if (_shouldCloseAfterResponse) {
-			return true; // no clent deconnection
+			return false; // client disconnection
 		} else {
-			resetForNextRequest(); // keep-alive
-			return true; // no client deconection
+			_resetForNextRequest(); // keep-alive
+			return true; // no client disconnection
 		}
 	}
 	Log::dev("event", "Sent " + Log::hl(_responseSendPos) + "/" + utils::str(_pendingResponse.size()) + " bytes to client " + Log::hl(_fd) + ".");
@@ -93,9 +83,33 @@ void	Client::prepareResponseSend(Response const& response)
 	Log::dev("cgi", "Queued " + Log::hl(rawResponse.size()) + " bytes to fd " + Log::hl(_fd));
 }
 
-bool	Client::isInactive(time_t now, size_t timeoutSeconds) const
+/**
+ * Resets the client's internal state so it can process another request on a keep-alive connection.
+ */
+void	Client::_resetForNextRequest()
 {
-	return (now - _lastActivity) > (time_t)timeoutSeconds;
+	_pendingRequest = Request(); //!\ Create a new empty Request object
+	_pendingResponse.clear();
+	_responseSendPos = 0;
+	updateActivity();
+	// we keep _shouldCloseAfterResponse at the value it was before
+
+	Log::dev("event", "Connection: keep-alive -> Resetting fd " + Log::hl(_fd) + " to 'recv'.");
+	_network->epollControl(_fd, EPOLL_CTL_MOD, EPOLLIN, "keep-alive reset"); // throw
+}
+
+bool	Client::isInactive(time_t now) const
+{
+	time_t timeout;
+	if (_shouldCloseAfterResponse)
+		timeout = (time_t)_CLOSE_TIMEOUT_SECONDS;
+	else
+		timeout = (time_t)_KEEPALIVE_TIMEOUT_SECONDS;
+	if (now - _lastActivity >= timeout) {
+		Log::dev("status", "Client (fd " + Log::hl(_fd) + ") is inactive for " + Log::hl(timeout) + " seconds.");
+		return true;
+	}
+	return false;
 }
 
 // SETTERS
@@ -104,12 +118,6 @@ void	Client::updateActivity()
 {
 	_lastActivity = time(NULL);
 }
-
-void	Client::setCloseAfterResponse(bool close)
-{
-	_shouldCloseAfterResponse = close;
-}
-
 
 // GETTERS
 

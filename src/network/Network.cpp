@@ -2,8 +2,6 @@
 
 size_t const	Network::_CLIENT_BUFFER_SIZE = 1024 * 1024; // 1MB
 size_t const	Network::_MAX_NB_OF_EVENTS = 1024;
-size_t const	Network::_MAX_READS_PER_CYCLE = 50;
-size_t const	Network::_CLIENT_TIMEOUT_SECONDS = 10;
 
 Network::Network(Config const& config)
 : _config(config)
@@ -137,7 +135,8 @@ void Network::startServers()
 		}
 		if (!_cgi.getContextsByPid().empty())
 			_cgi.checkCompletion();
-		_checkClientsInactivity();
+		if (!_activeClients.empty())
+			_checkClientsInactivity();
 	}
 }
 
@@ -287,8 +286,10 @@ void	Network::_checkClientsInactivity()
 	time_t now = time(NULL);
 	for (size_t i = 0; i < _activeClients.size(); ++i) {
 		Client* client = _activeClients[i];
-		if (client->isInactive(now, _CLIENT_TIMEOUT_SECONDS)) {
-			Log::dev("close", "Client fd " + Log::hl(client->getFd()) + " disconnected due to inactivity after " + Log::hl(_CLIENT_TIMEOUT_SECONDS) + " seconds.");
+		if (_cgi.hasActiveCgi(client->getFd()))
+			continue;  // Skip clients with running CGI executable
+		if (client->isInactive(now)) {
+			Log::dev("close", "Disconnecting client (fd " + Log::hl(client->getFd()) + ") due to inactivity.");
 			_disconnectClient(client);
 		}
 	}
