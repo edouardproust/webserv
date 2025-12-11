@@ -5,7 +5,12 @@
 #include "http/Response.hpp"
 class Network;
 
-// TODO calss message with canonical explanation
+/**
+ * Represents a single client connection with its state.
+ *
+ * Tracks connection lifecycle, buffers requests/responses, and manages I/O timing.
+ * Entity-type class: not copyable or assignable; owned and cleaned up by Network.
+ */
 class Client
 {
 	int			_fd;
@@ -25,7 +30,6 @@ class Client
 
 	void	_resetForNextRequest();
 
-	// TODO canonical ?
 	Client(Client const&);
 	Client&	operator=(Client const&);
 
