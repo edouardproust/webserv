@@ -139,9 +139,6 @@ Response	StaticHandler::put(RoutingDecision const& rd)
 	return resp;
 }
 
-/**
- * // TODO (optionnal): If is CGI file, call CGIHandler instead
- */
 Response	StaticHandler::_serveFile(std::string const& filePath, RoutingDecision const& rd)
 {
 	size_t fileSize = utils::getFileSize(filePath);

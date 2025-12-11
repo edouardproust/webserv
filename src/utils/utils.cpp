@@ -325,16 +325,19 @@ std::string	utils::extractHostname(UniqHeaders const& headers)
 /**
  * Get the position and the with of the headers-body seperator in a raw request or in a raw response.
  * returns a pair: `[size_t position_of_separator, size_t width_of_seperator]`.
+ * if `strict` (false by default) is on true, then we only check for "\r\n\r\n" (check for "\n\n" is skiped).
  */
-std::pair<size_t, size_t> utils::headersBodySeparatorPos(std::string const& rawResponse)
+std::pair<size_t, size_t> utils::headersBodySeparatorPos(std::string const& rawResponse, bool strict)
 {
 	size_t pos = rawResponse.find("\r\n\r\n");
 	if (pos != std::string::npos)
 		return std::make_pair(pos, 4);
 
-	pos = rawResponse.find("\n\n");
-	if (pos != std::string::npos)
-		return std::make_pair(pos, 2);
+	if (!strict) {
+		pos = rawResponse.find("\n\n");
+		if (pos != std::string::npos)
+			return std::make_pair(pos, 2);
+	}
 
 	return std::make_pair(std::string::npos, 0);
 }

@@ -12,7 +12,6 @@
 # Specific folders
 build/
 subject/
-tests/
 test_files/
 .vscode/
 YoupiBanane/
@@ -21,12 +20,18 @@ tmp/
 # Specific files
 webserv
 webserv_dev
+webserv_42
 README.md
 .gitignore
 .gitkeep
 log*
 /*.config
+tests/website/*.txt
+!tests/website/put_test.txt
 tests/*[0-9][gGmMkK][bB]
+ubuntu_tester
+ubuntu_cgi_tester
+README.md
 
 # Development files
 dev.*

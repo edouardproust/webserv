@@ -7,7 +7,7 @@ class Network;
 #include "utils/Const.hpp"
 #include <sys/wait.h>
 
-// TODO make canonical ? + class comment
+// TODO canonical class verification + justification message
 class CgiHandler
 {
 	static size_t const	_READ_BUFFER_SIZE;
@@ -31,7 +31,6 @@ class CgiHandler
 	void		_closeStdinPipe(CgiContext*, int, std::string const&);
 	void		_sendErrorResponse(std::string const&, int, CgiData const*, std::string const&, bool = false);
 
-	// TODO canonical ? + comment
 	CgiHandler();
 	CgiHandler(CgiHandler const&);
 	CgiHandler&	operator=(CgiHandler const&);
