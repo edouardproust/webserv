@@ -38,6 +38,10 @@ Non-verbose logs in `log/access.log` and `log/error.log` for `docker` comptiblit
 ```
 make test_prod
 ```
+Using a custom config file:
+```
+make && ./webserv [config_file]
+```
 
 **Development environment**
 
@@ -46,12 +50,14 @@ Verbose logs in the terminal with `valgrind` tests:
 make test_dev
 ```
 
-**42 ubuntu_tester**
+**42 tester**
 
 Stress tests without `valgrind`:
 ```
 make test_42
 ```
+
+**Custom test**
 
 ## Features
 
