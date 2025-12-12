@@ -15,7 +15,7 @@
 class Router
 {
 	static Response	_handleRedirectionDecision(RoutingDecision const&);
-	static Response	_handleCgiDecision(RoutingDecision const&, HostPortPair const&);
+	static Response	_handleCgiDecision(RoutingDecision const&, HostPortPair const&, std::string const&);
 	static Response	_handleStaticDecision(RoutingDecision const&);
 
 	// Not instantiable
@@ -26,7 +26,7 @@ class Router
 
 	public:
 
-		static Response 	dispatchRequest(Config const&, Request const&, HostPortPair const&);
+		static Response 	dispatchRequest(Config const&, Request const&, HostPortPair const&, std::string const&);
 };
 
 #endif

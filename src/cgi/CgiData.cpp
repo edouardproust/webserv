@@ -1,4 +1,5 @@
 #include "cgi/CgiData.hpp"
+#include "network/Client.hpp"
 
 CgiData::CgiData(CgiData const& other)
 : _scriptName(other._scriptName)
@@ -6,6 +7,7 @@ CgiData::CgiData(CgiData const& other)
 , _executor(other._executor)
 , _request(other._request)
 , _errorPages(other._errorPages)
+, _remoteAddr(other._remoteAddr)
 , _envStorage(other._envStorage)
 , _argStorage(other._argStorage)
 {
@@ -13,12 +15,13 @@ CgiData::CgiData(CgiData const& other)
 	_setArgv();
 }
 
-CgiData::CgiData(Request const& req, LocationBlock const& loc, std::string const& scriptName, HostPortPair const& listeningOn)
+CgiData::CgiData(Request const& req, LocationBlock const& loc, std::string const& scriptName, HostPortPair const& listeningOn, std::string const& remoteAddr)
 : _scriptName(scriptName)
 , _extension(utils::getFileExtension(_scriptName))
 , _executor(loc.getCgiExecutor(_extension))
 , _request(req)
 , _errorPages(loc.getErrorPages())
+, _remoteAddr(remoteAddr)
 {
 	if (_extension.empty() || _executor.empty()) {
 		Log::prod("error", "CGI params: failed to initalise");
@@ -46,7 +49,10 @@ void	CgiData::_setEnvStorage(Request const& req, std::string const& locRoot, Hos
 	tmp["REQUEST_METHOD"] = req.getMethod();
 	tmp["SCRIPT_FILENAME"] = _scriptName; // absolute path
 	tmp["SCRIPT_NAME"] = req.getScriptName(); // relative path
-	tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //!\ full path for the ubuntu_tester to work
+	if (UBUNTU_TESTER)
+		tmp["PATH_INFO"] = req.getPath().empty() ? "/" : req.getPath(); //!\ full path for the ubuntu_tester to work
+	else
+		tmp["PATH_INFO"] = req.getPathInfo();
 	tmp["PATH_TRANSLATED"] = utils::pathsJoin(locRoot, tmp["PATH_INFO"]);
 	tmp["QUERY_STRING"] = req.getQueryString();
 	tmp["CONTENT_TYPE"] = req.getContentType();
@@ -56,9 +62,9 @@ void	CgiData::_setEnvStorage(Request const& req, std::string const& locRoot, Hos
 	tmp["GATEWAY_INTERFACE"] = "CGI/1.1";
 	tmp["SERVER_PROTOCOL"] = req.getVersion();
 	tmp["SERVER_SOFTWARE"] = Const::SERVER_SOFTWARE;
-	// Additional variables from old subject requirements to pass ubuntu_tester
-	tmp["REMOTE_ADDR"] = "0.0.0.0";  //!\ Not implemented (Client IP to be extracted by Network and pass it to Router)
-	tmp["REMOTE_IDENT"] = "";
+	tmp["REMOTE_ADDR"] = _remoteAddr;
+	tmp["REMOTE_HOST"] = _remoteAddr; // Same as REMOTE_ADDR/default
+	tmp["REMOTE_IDENT"] = ""; // Not implemented
 	tmp["AUTH_TYPE"] = ""; //!\ Auth not implemented
 	tmp["REMOTE_USER"] = ""; //!\ Auth not implemented
 	tmp["REQUEST_URI"] = req.getUri();

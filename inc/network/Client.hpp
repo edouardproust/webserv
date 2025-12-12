@@ -5,7 +5,12 @@
 #include "http/Response.hpp"
 class Network;
 
-// TODO calss message with canonical explanation
+/**
+ * Represents a single client connection with its state.
+ *
+ * Tracks connection lifecycle, buffers requests/responses, and manages I/O timing.
+ * Entity-type class: not copyable or assignable; owned and cleaned up by Network.
+ */
 class Client
 {
 	int			_fd;
@@ -18,12 +23,13 @@ class Client
 	size_t		_responseSendPos;
 	bool		_shouldCloseAfterResponse;
 
+	std::string	_remoteAddr;
+
 	static size_t const	_CLOSE_TIMEOUT_SECONDS;
 	static size_t const	_KEEPALIVE_TIMEOUT_SECONDS;
 
 	void	_resetForNextRequest();
 
-	// TODO canonical ?
 	Client(Client const&);
 	Client&	operator=(Client const&);
 
@@ -46,7 +52,9 @@ class Client
 		std::string const&	getResponse() const;
 		size_t const&		getResponseSendPos() const;
 		bool			shouldCloseAfterResponse() const;
+		std::string const&	getRemoteAddr() const;
 
+		void	setRemoteAddr(const std::string&);
 
 };
 

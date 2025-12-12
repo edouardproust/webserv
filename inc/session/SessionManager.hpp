@@ -13,7 +13,7 @@
  * - Maintains collection of all active Session objects
  * - Performs automatic cleanup of expired sessions
  *
- * Only one instance manages all sessions across the application.
+ * Singleton-type class: not instantiable externally; single instance via getInstance().
  */
 
 class SessionManager

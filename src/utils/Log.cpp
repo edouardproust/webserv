@@ -24,7 +24,7 @@ const Log::Category Log::_CATEGORIES[] = {
 	{"ok", _BOLD + _GREEN, _ACCESS_STREAM}, // Succeeded requests
 	{"event", _BLUE, _ACCESS_STREAM}, // Request event
 	{"status", _CYAN, _ACCESS_STREAM}, // Status, metrics
-	{"info", _BOLD + _YELLOW, _ACCESS_STREAM}, // General acitivity informations
+	{"info", _BOLD + _YELLOW, _ACCESS_STREAM}, // General activity information
 	{"cgi", _LIGHT_MAGENTA, _ACCESS_STREAM}, // CGI-related logs
 
 	{"error", _BOLD + _RED, _ERROR_STREAM}, // Critical errors

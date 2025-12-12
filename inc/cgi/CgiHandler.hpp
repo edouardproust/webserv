@@ -7,7 +7,13 @@ class Network;
 #include "utils/Const.hpp"
 #include <sys/wait.h>
 
-// TODO canonical class verification + justification message
+/**
+ * Manages CGI process execution and I/O.
+ *
+ * Manages lifecycle of CGI processes and their file descriptors.
+ * Single instance per Network instance.
+ * Entity-type class: owns resources (processes, pipes), non-copyable.
+ */
 class CgiHandler
 {
 	static size_t const	_READ_BUFFER_SIZE;

@@ -4,7 +4,16 @@
 #include "config/LocationBlock.hpp"
 #include "config/HostPortPair.hpp"
 
-// TODO canonical class verification + justification message
+/**
+ * Holds all data needed for CGI execution.
+ *
+ * Non-Value type class (it contains non-owning references: _request, _errorPages):
+ * - Copy-constructible only (for ownership transfer)
+ * - Not default-constructible (requires valid Request reference)
+ * - Not assignable (references cannot be reassigned)
+ *
+ * Intended usage: Create once, transfer ownership via copy, never reassign.
+ */
 class CgiData
 {
 	bool	_isValid;
@@ -14,6 +23,7 @@ class CgiData
 	std::string			_executor;
 	Request const&		_request; // non-owning
 	ErrorPages const&	_errorPages; // non-owning
+	std::string			_remoteAddr;
 
 	// Storage for execve (need to stay valid during execution)
 	std::vector<std::string>	_envStorage;	// Persistant storage for environment strings
@@ -28,13 +38,14 @@ class CgiData
 
 	static std::string	_headerToEnvVar(std::string const&);
 
-	CgiData();
-	CgiData&	operator=(CgiData const&);
+	// Forbidden
+	CgiData(); // Cannot init references
+	CgiData&	operator=(CgiData const&); // Cannot reassign references
 
 	public:
 
-		CgiData(CgiData const&);
-		CgiData(Request const&, LocationBlock const&, std::string const&, HostPortPair const&);
+		CgiData(CgiData const&); // Allowed: for ownership transfer
+		CgiData(Request const&, LocationBlock const&, std::string const&, HostPortPair const&, std::string const&);
 		~CgiData();
 
 		bool				isValid() const;

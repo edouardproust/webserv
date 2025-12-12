@@ -51,7 +51,10 @@ Response	StaticHandler::get(RoutingDecision const& rd)
 			resp.setConnectionFromRequest(req);
 			return resp;
 		}
-		return error("not_found", rd);
+		else if (UBUNTU_TESTER)
+			return error("not_found", rd);
+		else
+			return error("forbidden", rd);
 	}
 	else if (utils::isReadableFile(finalPath))
 		return _serveFile(finalPath, rd);

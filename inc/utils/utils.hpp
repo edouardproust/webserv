@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 #include <sys/stat.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <fstream>
 #include <cerrno>
@@ -42,6 +43,7 @@ namespace utils {
 	size_t	hexToSizeT(std::string const&);
 	char	hexToChar(std::string const&);
 	std::string	toUpper(std::string const& s);
+	std::string	sockaddrInToIP(const struct sockaddr_in&);
 
 	std::string	readFile(std::string const&);
 	std::string	getFileName(std::string const&);

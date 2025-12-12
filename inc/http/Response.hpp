@@ -49,7 +49,7 @@ class Response
 		void		clearBodyForHead();
 		bool		isConnectionClose() const;
 
-		static Response	initCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&);
+		static Response	initCgiResponse(RoutingDecision const&, std::string const&, HostPortPair const&, std::string const&);
 		void			parseFromCgiOutput(std::string const&, const Request&);
 		void			parseHeadersFromCgiOutput(std::string const&);
 		CgiData*		transferCgiDataOwnership();

@@ -12,7 +12,7 @@
  *   listing page if needed.
  * - It is the role of CgiHandler to check if the script exists and is executable.
  */
-Response	Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn)
+Response	Router::dispatchRequest(Config const& config, Request const& req, HostPortPair const& listeningOn, std::string const& remoteAddr)
 {
 	RoutingDecision rd(config, req, listeningOn);
 	Log::dev("debug", "Routing Decision:\n" + utils::str(rd));
@@ -26,7 +26,7 @@ Response	Router::dispatchRequest(Config const& config, Request const& req, HostP
 	if (decision == RoutingDecision::REDIRECTION)
 		return _handleRedirectionDecision(rd);
 	if (decision == RoutingDecision::CGI)
-		return _handleCgiDecision(rd, listeningOn);
+		return _handleCgiDecision(rd, listeningOn, remoteAddr);
 	if (decision == RoutingDecision::STATIC)
 		return _handleStaticDecision(rd);
 	return StaticHandler::error("internal_server_error", rd);
@@ -39,10 +39,10 @@ Response	Router::_handleRedirectionDecision(RoutingDecision const& rd)
 	return redirect.run();
 }
 
-Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair const& listeningOn)
+Response	Router::_handleCgiDecision(RoutingDecision const& rd, HostPortPair const& listeningOn, std::string const& remoteAddr)
 {
 	std::string const& scriptName = rd.getFinalPath();
-	return Response::initCgiResponse(rd, scriptName, listeningOn);
+	return Response::initCgiResponse(rd, scriptName, listeningOn, remoteAddr);
 }
 
 Response	Router::_handleStaticDecision(RoutingDecision const& rd)

@@ -12,7 +12,8 @@ Client::Client(int fd, Socket* socket, Network* network)
 , _pendingRequest() //!\ creates a new emmpty Request object
 , _pendingResponse()
 , _responseSendPos(0)
-, _shouldCloseAfterResponse(true) //!\ close by default
+, _shouldCloseAfterResponse(false)
+, _remoteAddr("")
 {}
 
 Client::~Client()
@@ -160,6 +161,17 @@ bool	Client::shouldCloseAfterResponse() const
 	return _shouldCloseAfterResponse;
 }
 
+std::string const&	Client::getRemoteAddr() const
+{
+	return _remoteAddr;
+}
+
+// SETTERS
+
+void	Client::setRemoteAddr(const std::string& remoteAddr)
+{
+	_remoteAddr = remoteAddr;
+}
 
 // PRINT
 
