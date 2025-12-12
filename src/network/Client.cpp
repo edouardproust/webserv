@@ -12,7 +12,7 @@ Client::Client(int fd, Socket* socket, Network* network)
 , _pendingRequest() //!\ creates a new emmpty Request object
 , _pendingResponse()
 , _responseSendPos(0)
-, _shouldCloseAfterResponse(false)
+, _shouldCloseAfterResponse(true)
 , _remoteAddr("")
 {}
 
