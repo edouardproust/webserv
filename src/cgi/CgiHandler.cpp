@@ -1,7 +1,7 @@
 #include "cgi/CgiHandler.hpp"
 #include "network/Network.hpp"
 
-size_t const	CgiHandler::_TIMEOUT_SECONDS = 20; // Increase this for big requests!!
+size_t const	CgiHandler::_TIMEOUT_SECONDS = UBUNTU_TESTER ? 60 : 20;
 size_t const	CgiHandler::_READ_BUFFER_SIZE = 4096;
 size_t const	CgiHandler::_LINUX_PIPE_BUFFER_SIZE = 65536;
 

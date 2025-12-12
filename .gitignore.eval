@@ -12,10 +12,11 @@
 # Specific folders
 build/
 subject/
-test_files/
 .vscode/
-YoupiBanane/
 tmp/
+tests/config/replaced/
+log/
+screenshots/
 
 # Specific files
 webserv
@@ -29,8 +30,6 @@ log*
 tests/website/*.txt
 !tests/website/put_test.txt
 tests/*[0-9][gGmMkK][bB]
-ubuntu_tester
-ubuntu_cgi_tester
 README.md
 
 # Development files

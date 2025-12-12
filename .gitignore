@@ -14,6 +14,7 @@ build/
 .vscode/
 tests/config/replaced
 tmp/
+log/
 
 # Specific files
 webserv

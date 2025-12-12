@@ -4,47 +4,63 @@ Description: *This project is about writing your own HTTP server. You will be ab
 
 Subject: [click here](subject/en.subject.pdf)
 
-Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
+Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [edouardproust](https://github.com/edouardproust)
 
-## TODO
-- General:
-	- Add "explicit" keyword to constructors declaration with only 1 argument
-	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
-	- Check remaining "// TODO"s and "// DEBUG"s
-- RequestParser:
-	- Add check for 411 error (length required for POST and PUT)
-	- Add check for 414 URI Too Long (+ add this HttpStatus too the list)
-	- Test chunked request
-	- test URL decoding / encoding
-- Config parsing:
-	- Accept `ssl` option in `listen` directive ?
-	- check if `clientMaxBodySize` is well formated ?
-	- Support `alias` directive in `location` block ?
-	- Support IPv6 ?
-- CGI:
-	- Implement **timeout** on CGI execution ?
-	- Now using `_exit()` in CGIHandler. It is NOT in the list af allowed functions -> How to do ?
-	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
-- StaticHandler:
-	- If URI does not end by a / and is the path of a directory -> `301 Moved Permanently` with header `Location: http://localhost:8003/test/`
-	- `StaticHandler::_generateAutoindex`
-	- (?) If location > `index` directive is a CGI extension -> redirect to CGI
-- Network:
-	- What socket(s) to open if only "0.0.0.0" is defined as an open port in config file ?
+![Project webserv - 42 Barcelona](screenshots/webserv-eproust-fpapadak.gif)
+
+## Table of Contents
+
+- [How to use](#how-to-use)
+- [Features](#features)
+- [Configuration Syntax](#configuration-syntax)
+- [Used methods per module](#used-methods-per-module)
+- [Resources](#-resources)
 
 ## How to use
 
-1. Install dependencies
+### 1. Install dependencies
 ```
 sudo apt-get update
 sudo apt-get install php
+```
 
-2. Clone repo and build the program
+### 2. Clone repo and build the program
+
 ```bash
 git clone https://github.com/edouardproust/webserv.git webserv
 cd webserv
 make
 ```
+
+### 3. Tests
+
+**Production environment**
+
+Non-verbose logs in `log/access.log` and `log/error.log` for `docker` comptiblity, no `valgrind` tests:
+```
+make test_prod
+```
+Using a custom config file:
+```
+make && ./webserv [config_file]
+```
+
+**Development environment**
+
+Verbose logs in the terminal with `valgrind` tests:
+```
+make test_dev
+```
+
+**42 tester**
+
+Stress tests without `valgrind`:
+```
+make test_42
+```
+
+**Custom test**
+
 ## Features
 
 ### HTTP Protocol
@@ -87,45 +103,96 @@ make
 ./webserv [configuration file]
 ```
 
-## Project structure
+## Configuration Syntax
 
-**Modules**
-- **`utils`**: [shared] Utils functions, like error and signal handling.
-- **`server`:** [Daniel] Listen for TCP connections, read raw request, send raw response.
-- **`http`:** [Ava] Parse raw request into Request object and build raw response.
-- **`config`:** [Edouard] Parse configuration file into a structured Config object.
-- **`router`:** [Edouard] Determine if request is for static content or CGI.
-- **`static`:** [Ava] Read static files and produce raw HTTP response.
-- **`cgi`:** [Edouard] Execute CGI program and retrieve output.
-- **`session`:** [Ava] Cookie headers and session management support
+### Structure
 
-**Mandatory Updates**
-- **HTML1.0 to HTML 1.1:** will concern `server` (keep-alive connexions) and `http` modules (and `config`?)
-- **Implement signals:** will be spread over the project
+```nginx
+server {
+    # Server directives
+    listen host:port [host2:port2 ...];
+    server_name name1 [name2 ...];
+    root /absolute/path;
 
-**Global logic**
-- `main` init `Config` object (based on program argument) then start, run and stop server.
-- `server` is the starting point of the program (infinite loop listening for requests).
-- On request catch, `server` performs several actions. Quick example:
-	```cpp
-	std::string raw_request = get_request(socket);
-	Request request = parseRequest(std::string); // module 'http'
-	std:string plain_response;
-	if (is_static(req)) // module `router`
-		raw_response = process_static(req); // module 'static'
-	else
-		raw_response = process_cgi(req); // module 'cgi'
-	Reponse response = parse_response(); // module 'http'
-	send_response(socket, response);
-	```
+    location /path {
+        # Location directives
+    }
+}
+```
 
-### Allowed functions used per module
+### Server Directives
 
-**util**
-- `strerror`, `errno`, `gai_strerror` → error handling
-- `signal`, `kill` → signal handling for shutdown/interrupts
+| Directive | Syntax | Default | Description |
+|-----------|--------|---------|-------------|
+| `listen` | `host:port` \| `port` \| `host` | `0.0.0.0:80` | Listening address(es). Use `localhost` or IPv4. Omit host for `0.0.0.0`, omit port for `80` |
+| `server_name` | `name1 [name2 ...]` | - | Virtual host names for request matching |
+| `root` | `/absolute/path` | - | **Required.** Document root (must be absolute) |
+| `client_max_body_size` | `size[K\|M\|G]` | `1G` | Max request body size (e.g., `10M`, `1G`) |
+| `upload_store` | `path` | - | Upload directory for PUT requests (absolute or relative to root) |
+| `index` | `file1 [file2 ...]` | `index.html index.htm` | Index files for directories |
+| `error_page` | `code [...] /path` | - | Custom error pages (codes 300-599) |
 
-**server**
+### Location Directives
+
+| Directive | Syntax | Default | Description |
+|-----------|--------|---------|-------------|
+| `allowed_methods` | `GET [POST PUT ...]` | All methods | Whitelist of allowed HTTP methods |
+| `return` | `code [url]` | - | Return status or redirect (url required for 3xx codes) |
+| `autoindex` | `on` \| `off` | `on` | Enable directory listing |
+| `client_max_body_size` | `size[K\|M\|G]` | Server value | Override server limit |
+| `upload_store` | `path` | Server value | Override server upload directory |
+| `index` | `file1 [file2 ...]` | Server value | Override server index files |
+| `error_page` | `code [...] /path` | Server value | Override server error pages |
+| `cgi` | `.ext /path/to/executor` | - | CGI handler (e.g., `cgi .py /usr/bin/python3`) |
+
+### Notes
+
+- Comments start with `#`
+- Paths in `location` blocks inherit server `root`
+- Relative paths resolved against server `root`
+- PUT requires `upload_store` to be enabled
+- Multiple servers on same `host:port` require unique `server_name` for virtual hosting
+- Location paths must be absolute (e.g., `/`, `/api`, `/static`)
+
+### Example
+
+```nginx
+server {
+    listen 8080 localhost:8081;
+    server_name example.com;
+    root /var/www/html;
+    client_max_body_size 10M;
+    error_page 404 /errors/404.html;
+
+    location / {
+        index index.html;
+        autoindex on;
+        allowed_methods GET POST;
+    }
+
+    location /uploads {
+        allowed_methods GET POST PUT DELETE;
+        upload_store /var/uploads;
+        client_max_body_size 100M;
+    }
+
+    location /cgi-bin {
+        allowed_methods GET POST;
+        cgi .py /usr/bin/python3;
+        cgi .php /usr/bin/php-cgi;
+    }
+
+    location /redirect {
+        return 301 https://example.com;
+    }
+}
+```
+
+## Used methods per module
+
+### `network`
+
+Handles TCP socket creation, client connections, and non-blocking I/O multiplexing using epoll/kqueue for concurrent request handling.
 
 - `socket` → create server socket
 - `bind` → bind socket to address/port
@@ -135,7 +202,7 @@ make
 - `recv` → read bytes from socket
 - `send` → write bytes to socket
 - `close` → close socket
-- `select`, `poll`, `epoll` (`epoll_create`, `epoll_ctl`, `epoll_wait`) → handle multiple simultaneous connections
+- `epoll_create`, `epoll_ctl`, `epoll_wait` → handle multiple simultaneous connections. Register, modify and delete fds from epoll surveillance.
 - `kqueue`, `kevent` → BSD alternative to epoll for event-driven I/O
 - `socketpair` → create pair of connected sockets (used sometimes in IPC or special cases in servers)
 - `fcntl` → set socket to non-blocking mode
@@ -145,30 +212,32 @@ make
 - `getaddrinfo`, `freeaddrinfo` → hostname resolution if needed
 - `getprotobyname` → resolve protocol (e.g., "tcp")
 
-**http**
+### `config`
 
-- `std::string` functions (`str.find`, `str.substr`...) → Parsing
-
-**config**
+Parses nginx-style configuration files and validates server/location blocks, directives, and file paths.
 
 - `open`, `read`, `close` → open config file, read its contents, close it
 - `access` → check existence of files/directories referenced in config
 - `stat` → file/directory information (root, cgi-bin, error pages)
 - `opendir`, `readdir`, `closedir` → optionally for directory indexes or listings
 
-**router**
+### `http`
+
+Parses HTTP/1.1 requests (headers, body, chunked encoding) and builds compliant HTTP responses.
+
+- `std::string` functions (`str.find`, `str.substr`...) → Parsing
+
+### `router`
+
+Routes incoming requests to appropriate handlers based on URI matching and location block configuration.
 
 - `access` → check if file exists
 - `stat` → check if path is file or directory
 
-**static**
 
-- `open`, `read`, `close` → open requested static file, read its content, close it
-- `stat` → get file size for Content-Length
-- `access` → check file permissions
-- `opendir`, `readdir`, `closedir` → for directory listings or index.html handling
+### `cgi`
 
-**cgi**
+Executes CGI scripts (PHP, Python) in child processes with pipe-based communication for stdin/stdout redirection.
 
 - `pipe` → create parent/child communication channels for stdin/stdout
 - `fork` → create child process
@@ -179,8 +248,26 @@ make
 - `read` → read CGI output
 - `close` → close unused pipe ends
 - `waitpid` → wait for child process
+- `fcntl` → set pipes to non-blocking mode
+- `epoll_ctl` → register pipes fd to epoll for surveillance, and unregister them.
 
-📚 **Resources**
+### `static`
+
+Serves static files with MIME type detection, directory indexing, and proper Content-Length headers.
+
+- `open`, `read`, `close` → open requested static file, read its content, close it
+- `stat` → get file size for Content-Length
+- `access` → check file permissions
+- `opendir`, `readdir`, `closedir` → for directory listings or index.html handling
+
+### `utils`
+
+Provides logs, signal management, and helper functions used across all modules.
+
+- `strerror`, `errno`, `gai_strerror` → error handling
+- `signal`, `kill` → signal handling for shutdown/interrupts
+
+## 📚 Resources
 
 - https://www.rfc-editor.org/rfc/rfc9112.html
 - https://www.rfc-editor.org/rfc/rfc9110
