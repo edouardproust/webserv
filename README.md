@@ -167,19 +167,19 @@ server {
         autoindex on;
         allowed_methods GET POST;
     }
-    
+
     location /uploads {
         allowed_methods GET POST PUT DELETE;
         upload_store /var/uploads;
         client_max_body_size 100M;
     }
-    
+
     location /cgi-bin {
         allowed_methods GET POST;
         cgi .py /usr/bin/python3;
         cgi .php /usr/bin/php-cgi;
     }
-    
+
     location /redirect {
         return 301 https://example.com;
     }
@@ -188,7 +188,9 @@ server {
 
 ## Used methods per module
 
-**`network` module**
+### `network`
+
+Handles TCP socket creation, client connections, and non-blocking I/O multiplexing using epoll/kqueue for concurrent request handling.
 
 - `socket` → create server socket
 - `bind` → bind socket to address/port
@@ -208,7 +210,32 @@ server {
 - `getaddrinfo`, `freeaddrinfo` → hostname resolution if needed
 - `getprotobyname` → resolve protocol (e.g., "tcp")
 
-**`cgi` module**
+### `config`
+
+Parses nginx-style configuration files and validates server/location blocks, directives, and file paths.
+
+- `open`, `read`, `close` → open config file, read its contents, close it
+- `access` → check existence of files/directories referenced in config
+- `stat` → file/directory information (root, cgi-bin, error pages)
+- `opendir`, `readdir`, `closedir` → optionally for directory indexes or listings
+
+### `http`
+
+Parses HTTP/1.1 requests (headers, body, chunked encoding) and builds compliant HTTP responses.
+
+- `std::string` functions (`str.find`, `str.substr`...) → Parsing
+
+### `router`
+
+Routes incoming requests to appropriate handlers based on URI matching and location block configuration.
+
+- `access` → check if file exists
+- `stat` → check if path is file or directory
+
+
+### `cgi`
+
+Executes CGI scripts (PHP, Python) in child processes with pipe-based communication for stdin/stdout redirection.
 
 - `pipe` → create parent/child communication channels for stdin/stdout
 - `fork` → create child process
@@ -222,30 +249,19 @@ server {
 - `fcntl` → set pipes to non-blocking mode
 - `epoll_ctl` → register pipes fd to epoll for surveillance, and unregister them.
 
-**`config` module**
+### `static`
 
-- `open`, `read`, `close` → open config file, read its contents, close it
-- `access` → check existence of files/directories referenced in config
-- `stat` → file/directory information (root, cgi-bin, error pages)
-- `opendir`, `readdir`, `closedir` → optionally for directory indexes or listings
-
-**Router module**
-
-- `access` → check if file exists
-- `stat` → check if path is file or directory
-
-**`http` module**
-
-- `std::string` functions (`str.find`, `str.substr`...) → Parsing
-
-**`static` module**
+Serves static files with MIME type detection, directory indexing, and proper Content-Length headers.
 
 - `open`, `read`, `close` → open requested static file, read its content, close it
 - `stat` → get file size for Content-Length
 - `access` → check file permissions
 - `opendir`, `readdir`, `closedir` → for directory listings or index.html handling
 
-**`utils` module**
+### `utils`
+
+Provides logs, signal management, and helper functions used across all modules.
+
 - `strerror`, `errno`, `gai_strerror` → error handling
 - `signal`, `kill` → signal handling for shutdown/interrupts
 
