@@ -6,6 +6,8 @@ Subject: [click here](subject/en.subject.pdf)
 
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [edouardproust](https://github.com/edouardproust)
 
+![Project webserv - 42 Barcelona](screenshots/webserv-eproust-fpapadak.gif)
+
 ## Table of Contents
 
 - [How to use](#how-to-use)

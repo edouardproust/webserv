@@ -16,6 +16,7 @@ subject/
 tmp/
 tests/config/replaced/
 log/
+screenshots/
 
 # Specific files
 webserv
