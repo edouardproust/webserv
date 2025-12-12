@@ -7,9 +7,12 @@
 /**
  * Holds all data needed for CGI execution.
  *
- * Contains both owned data (_scriptName, _extension, etc.) and 
- * non-owning references (_request, _errorPages).
- * 
+ * Non-Value type class (it contains non-owning references: _request, _errorPages):
+ * - Copy-constructible only (for ownership transfer)
+ * - Not default-constructible (requires valid Request reference)
+ * - Not assignable (references cannot be reassigned)
+ *
+ * Intended usage: Create once, transfer ownership via copy, never reassign.
  */
 class CgiData
 {
@@ -35,12 +38,13 @@ class CgiData
 
 	static std::string	_headerToEnvVar(std::string const&);
 
-	CgiData();
-	CgiData&	operator=(CgiData const&);
+	// Forbidden
+	CgiData(); // Cannot init references
+	CgiData&	operator=(CgiData const&); // Cannot reassign references
 
 	public:
 
-		CgiData(CgiData const&);
+		CgiData(CgiData const&); // Allowed: for ownership transfer
 		CgiData(Request const&, LocationBlock const&, std::string const&, HostPortPair const&, std::string const&);
 		~CgiData();
 
