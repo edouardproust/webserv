@@ -87,45 +87,9 @@ make test_42
 ./webserv [configuration file]
 ```
 
-## Project structure
+## Used methods per module
 
-**Modules**
-- **`utils`**: [shared] Utils functions, like error and signal handling.
-- **`server`:** [Daniel] Listen for TCP connections, read raw request, send raw response.
-- **`http`:** [Ava] Parse raw request into Request object and build raw response.
-- **`config`:** [Edouard] Parse configuration file into a structured Config object.
-- **`router`:** [Edouard] Determine if request is for static content or CGI.
-- **`static`:** [Ava] Read static files and produce raw HTTP response.
-- **`cgi`:** [Edouard] Execute CGI program and retrieve output.
-- **`session`:** [Ava] Cookie headers and session management support
-
-**Mandatory Updates**
-- **HTML1.0 to HTML 1.1:** will concern `server` (keep-alive connexions) and `http` modules (and `config`?)
-- **Implement signals:** will be spread over the project
-
-**Global logic**
-- `main` init `Config` object (based on program argument) then start, run and stop server.
-- `server` is the starting point of the program (infinite loop listening for requests).
-- On request catch, `server` performs several actions. Quick example:
-	```cpp
-	std::string raw_request = get_request(socket);
-	Request request = parseRequest(std::string); // module 'http'
-	std:string plain_response;
-	if (is_static(req)) // module `router`
-		raw_response = process_static(req); // module 'static'
-	else
-		raw_response = process_cgi(req); // module 'cgi'
-	Reponse response = parse_response(); // module 'http'
-	send_response(socket, response);
-	```
-
-### Allowed functions used per module
-
-**util**
-- `strerror`, `errno`, `gai_strerror` → error handling
-- `signal`, `kill` → signal handling for shutdown/interrupts
-
-**server**
+**`network` module**
 
 - `socket` → create server socket
 - `bind` → bind socket to address/port
@@ -135,7 +99,7 @@ make test_42
 - `recv` → read bytes from socket
 - `send` → write bytes to socket
 - `close` → close socket
-- `select`, `poll`, `epoll` (`epoll_create`, `epoll_ctl`, `epoll_wait`) → handle multiple simultaneous connections
+- `epoll_create`, `epoll_ctl`, `epoll_wait` → handle multiple simultaneous connections. Register, modify and delete fds from epoll surveillance.
 - `kqueue`, `kevent` → BSD alternative to epoll for event-driven I/O
 - `socketpair` → create pair of connected sockets (used sometimes in IPC or special cases in servers)
 - `fcntl` → set socket to non-blocking mode
@@ -145,30 +109,7 @@ make test_42
 - `getaddrinfo`, `freeaddrinfo` → hostname resolution if needed
 - `getprotobyname` → resolve protocol (e.g., "tcp")
 
-**http**
-
-- `std::string` functions (`str.find`, `str.substr`...) → Parsing
-
-**config**
-
-- `open`, `read`, `close` → open config file, read its contents, close it
-- `access` → check existence of files/directories referenced in config
-- `stat` → file/directory information (root, cgi-bin, error pages)
-- `opendir`, `readdir`, `closedir` → optionally for directory indexes or listings
-
-**router**
-
-- `access` → check if file exists
-- `stat` → check if path is file or directory
-
-**static**
-
-- `open`, `read`, `close` → open requested static file, read its content, close it
-- `stat` → get file size for Content-Length
-- `access` → check file permissions
-- `opendir`, `readdir`, `closedir` → for directory listings or index.html handling
-
-**cgi**
+**`cgi` module**
 
 - `pipe` → create parent/child communication channels for stdin/stdout
 - `fork` → create child process
@@ -179,8 +120,37 @@ make test_42
 - `read` → read CGI output
 - `close` → close unused pipe ends
 - `waitpid` → wait for child process
+- `fcntl` → set pipes to non-blocking mode
+- `epoll_ctl` → register pipes fd to epoll for surveillance, and unregister them.
 
-📚 **Resources**
+**`config` module**
+
+- `open`, `read`, `close` → open config file, read its contents, close it
+- `access` → check existence of files/directories referenced in config
+- `stat` → file/directory information (root, cgi-bin, error pages)
+- `opendir`, `readdir`, `closedir` → optionally for directory indexes or listings
+
+**Router module**
+
+- `access` → check if file exists
+- `stat` → check if path is file or directory
+
+**`http` module**
+
+- `std::string` functions (`str.find`, `str.substr`...) → Parsing
+
+**`static` module**
+
+- `open`, `read`, `close` → open requested static file, read its content, close it
+- `stat` → get file size for Content-Length
+- `access` → check file permissions
+- `opendir`, `readdir`, `closedir` → for directory listings or index.html handling
+
+**`utils` module**
+- `strerror`, `errno`, `gai_strerror` → error handling
+- `signal`, `kill` → signal handling for shutdown/interrupts
+
+## 📚 Resources
 
 - https://www.rfc-editor.org/rfc/rfc9112.html
 - https://www.rfc-editor.org/rfc/rfc9110
