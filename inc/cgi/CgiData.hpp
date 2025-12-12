@@ -10,7 +10,6 @@
  * Contains both owned data (_scriptName, _extension, etc.) and 
  * non-owning references (_request, _errorPages).
  * 
- * Value-type class: copyable, assignable, holds its own data.
  */
 class CgiData
 {

@@ -265,8 +265,7 @@ void Network::_dispatchAndSendResponse(Client* client)
 		HostPortPair listenDirective = listeningSocket->getListenDirective();
 		Log::prod("ok", req.getMethod() + " request received on " + Log::hl(listenDirective) + " (fd " + Log::hl(client->getFd()) + ").");
 		Log::dev("debug", "Request:\n" + utils::str(req));
-		std::string remoteAddr = client->getRemoteAddr();
-		Response response = Router::dispatchRequest(_config, req, listenDirective, remoteAddr);
+		Response response = Router::dispatchRequest(_config, req, listenDirective, client->getRemoteAddr());
 
 		if (response.needsCgiExecution()) { // CGI -> async response (stays in EPOLLIN to wait for CGI output)
 			_cgi.launchAsync(client->getFd(), response); // => Stay in EPOLLIN + ownership transfert of CgiData from Response to CgiContext
