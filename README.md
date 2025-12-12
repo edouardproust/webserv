@@ -4,47 +4,47 @@ Description: *This project is about writing your own HTTP server. You will be ab
 
 Subject: [click here](subject/en.subject.pdf)
 
-Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [devmarchesotti](https://github.com/devmarchesotti), [edouardproust](https://github.com/edouardproust)
-
-## TODO
-- General:
-	- Add "explicit" keyword to constructors declaration with only 1 argument
-	- Verify if **orthodox canonical form** implies to implement all of default constructor, copy constructor, copy operator, destructor in the .cpp (and not only in the hpp)
-	- Check remaining "// TODO"s and "// DEBUG"s
-- RequestParser:
-	- Add check for 411 error (length required for POST and PUT)
-	- Add check for 414 URI Too Long (+ add this HttpStatus too the list)
-	- Test chunked request
-	- test URL decoding / encoding
-- Config parsing:
-	- Accept `ssl` option in `listen` directive ?
-	- check if `clientMaxBodySize` is well formated ?
-	- Support `alias` directive in `location` block ?
-	- Support IPv6 ?
-- CGI:
-	- Implement **timeout** on CGI execution ?
-	- Now using `_exit()` in CGIHandler. It is NOT in the list af allowed functions -> How to do ?
-	- if `execve()` return `-1` (wrong executable, or else ?) -> return response `500` (Internal server error)
-- StaticHandler:
-	- If URI does not end by a / and is the path of a directory -> `301 Moved Permanently` with header `Location: http://localhost:8003/test/`
-	- `StaticHandler::_generateAutoindex`
-	- (?) If location > `index` directive is a CGI extension -> redirect to CGI
-- Network:
-	- What socket(s) to open if only "0.0.0.0" is defined as an open port in config file ?
+Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [edouardproust](https://github.com/edouardproust)
 
 ## How to use
 
-1. Install dependencies
+### 1. Install dependencies
 ```
 sudo apt-get update
 sudo apt-get install php
+```
 
-2. Clone repo and build the program
+### 2. Clone repo and build the program
+
 ```bash
 git clone https://github.com/edouardproust/webserv.git webserv
 cd webserv
 make
 ```
+
+### 3. Tests
+
+**Production environment**
+
+Non-verbose logs in `log/access.log` and `log/error.log` for `docker` comptiblity, no `valgrind` tests:
+```
+make test_prod
+```
+
+**Development environment**
+
+Verbose logs in the terminal with `valgrind` tests:
+```
+make test_42
+```
+
+**42 ubuntu_tester**
+
+Stress tests without `valgrind`:
+```
+make test_42
+```
+
 ## Features
 
 ### HTTP Protocol
