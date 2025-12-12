@@ -6,6 +6,14 @@ Subject: [click here](subject/en.subject.pdf)
 
 Coworkers: [Skoteini-42](https://github.com/Skoteini-42), [edouardproust](https://github.com/edouardproust)
 
+## Table of Contents
+
+- [How to use](#how-to-use)
+- [Features](#features)
+- [Configuration Syntax](#configuration-syntax)
+- [Used methods per module](#used-methods-per-module)
+- [Resources](#-resources)
+
 ## How to use
 
 ### 1. Install dependencies
@@ -35,7 +43,7 @@ make test_prod
 
 Verbose logs in the terminal with `valgrind` tests:
 ```
-make test_42
+make test_dev
 ```
 
 **42 ubuntu_tester**
@@ -85,6 +93,91 @@ make test_42
 3. Run the server
 ```bash
 ./webserv [configuration file]
+```
+
+## Configuration Syntax
+
+### Structure
+
+```nginx
+server {
+    # Server directives
+    listen host:port [host2:port2 ...];
+    server_name name1 [name2 ...];
+    root /absolute/path;
+
+    location /path {
+        # Location directives
+    }
+}
+```
+
+### Server Directives
+
+| Directive | Syntax | Default | Description |
+|-----------|--------|---------|-------------|
+| `listen` | `host:port` \| `port` \| `host` | `0.0.0.0:80` | Listening address(es). Use `localhost` or IPv4. Omit host for `0.0.0.0`, omit port for `80` |
+| `server_name` | `name1 [name2 ...]` | - | Virtual host names for request matching |
+| `root` | `/absolute/path` | - | **Required.** Document root (must be absolute) |
+| `client_max_body_size` | `size[K\|M\|G]` | `1G` | Max request body size (e.g., `10M`, `1G`) |
+| `upload_store` | `path` | - | Upload directory for PUT requests (absolute or relative to root) |
+| `index` | `file1 [file2 ...]` | `index.html index.htm` | Index files for directories |
+| `error_page` | `code [...] /path` | - | Custom error pages (codes 300-599) |
+
+### Location Directives
+
+| Directive | Syntax | Default | Description |
+|-----------|--------|---------|-------------|
+| `allowed_methods` | `GET [POST PUT ...]` | All methods | Whitelist of allowed HTTP methods |
+| `return` | `code [url]` | - | Return status or redirect (url required for 3xx codes) |
+| `autoindex` | `on` \| `off` | `on` | Enable directory listing |
+| `client_max_body_size` | `size[K\|M\|G]` | Server value | Override server limit |
+| `upload_store` | `path` | Server value | Override server upload directory |
+| `index` | `file1 [file2 ...]` | Server value | Override server index files |
+| `error_page` | `code [...] /path` | Server value | Override server error pages |
+| `cgi` | `.ext /path/to/executor` | - | CGI handler (e.g., `cgi .py /usr/bin/python3`) |
+
+### Notes
+
+- Comments start with `#`
+- Paths in `location` blocks inherit server `root`
+- Relative paths resolved against server `root`
+- PUT requires `upload_store` to be enabled
+- Multiple servers on same `host:port` require unique `server_name` for virtual hosting
+- Location paths must be absolute (e.g., `/`, `/api`, `/static`)
+
+### Example
+
+```nginx
+server {
+    listen 8080 localhost:8081;
+    server_name example.com;
+    root /var/www/html;
+    client_max_body_size 10M;
+    error_page 404 /errors/404.html;
+
+    location / {
+        index index.html;
+        autoindex on;
+        allowed_methods GET POST;
+    }
+    
+    location /uploads {
+        allowed_methods GET POST PUT DELETE;
+        upload_store /var/uploads;
+        client_max_body_size 100M;
+    }
+    
+    location /cgi-bin {
+        allowed_methods GET POST;
+        cgi .py /usr/bin/python3;
+        cgi .php /usr/bin/php-cgi;
+    }
+    
+    location /redirect {
+        return 301 https://example.com;
+    }
+}
 ```
 
 ## Used methods per module
