@@ -1,5 +1,8 @@
 #include "config/Config.hpp"
 
+std::string const	Config::_CONFIG_FILE_PLACEHOLDER = "PATH_TO_WEBSERV_DIR";
+	// also needs to be updated in `tests/config/replace-path.sh` and in `tests/config/*`
+
 Config::Config(std::string const& filePath)
 {
 	try {
@@ -7,7 +10,7 @@ Config::Config(std::string const& filePath)
 		_parse(content);
 		_validate();
 	} catch(const std::exception& e) {
-		throw std::runtime_error("Config: " + std::string(e.what()));
+		throw std::runtime_error("Config (" + filePath + "): " + std::string(e.what()));
 	}
 }
 
@@ -76,7 +79,7 @@ void	Config::_addServer(Tokens const& tokens, std::string const& content, size_t
 
 /**
  * Validates the server blocks inside Config file.
- * 
+ *
  * - Tracks all IP+PORT pairs and which server blocks use them
  * - For each IP+PORT that has multiple servers:
  *    - Checks if ANY of those servers have server_name defined
@@ -109,7 +112,7 @@ void	Config::_validate() const
 					hasServerName = true;
 			}
 			if (!hasServerName) {
-				Log::prod("warning", "Config: conflicting server name \"\" on " + it->first + 
+				Log::prod("warning", "Config: conflicting server name \"\" on " + it->first +
 					", first server will be used");
 			}
 		}

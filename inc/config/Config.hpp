@@ -11,6 +11,7 @@
  */
 class Config
 {
+	static std::string const	_CONFIG_FILE_PLACEHOLDER;
 
 	std::vector<ServerBlock>	_servers;
 
