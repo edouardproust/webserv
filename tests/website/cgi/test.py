@@ -32,9 +32,10 @@ if query_string:
 get_section = ""
 if get_params:
 	lines = [f"{escape(k)} = {escape(', '.join(v))}" for k, v in get_params.items()]
+	joined_lines = "\n".join(lines)
 	get_section = f"""
 <h2>GET Parameters</h2>
-<pre>{"\n".join(lines)}</pre>
+<pre>{joined_lines}</pre>
 """
 
 # ---------- POST PARAMETERS ----------
@@ -56,9 +57,10 @@ if request_method == "POST":
 post_section = ""
 if post_params:
 	lines = [f"{escape(k)} = {escape(', '.join(v))}" for k, v in post_params.items()]
+	joined_lines = "\n".join(lines)
 	post_section = f"""
 <h2>POST Parameters</h2>
-<pre>{"\n".join(lines)}</pre>
+<pre>{joined_lines}</pre>
 """
 else:
 	post_section = """

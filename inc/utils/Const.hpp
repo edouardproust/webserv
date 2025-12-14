@@ -20,9 +20,10 @@ class Const
 {
 	public:
 
-		static size_t const	MAX_SIZE_T;
-		static size_t const	ABSOLUTE_MAX_CLIENT_BODY_SIZE;
-		static size_t const	READ_WRITE_LOG_THRESHOLD_SIZE;
+		static std::string const	DEFAULT_CONFIG_FILE_PATH;
+		static size_t const			MAX_SIZE_T;
+		static size_t const			ABSOLUTE_MAX_CLIENT_BODY_SIZE;
+		static size_t const			READ_WRITE_LOG_THRESHOLD_SIZE;
 
 		static std::string const	SERVER_NAME;
 		static std::string const	SERVER_VERSION;
